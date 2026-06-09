@@ -1,11 +1,17 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI News Tutor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
 /* ── tokens ─────────────────────────────────────────────────────────── */
 :root {
   --accent: #c75b39;
-  --answer-font: var(--font-serif), Georgia, serif;
+  --answer-font: 'Newsreader', Georgia, serif;
 
   --bg:        oklch(0.991 0.006 252);
   --panel:     oklch(0.996 0.004 252);
@@ -17,8 +23,8 @@
   --line:      oklch(0.90 0.010 255);
   --line-2:    oklch(0.945 0.007 255);
 
-  --sans: var(--font-sans), system-ui, -apple-system, sans-serif;
-  --mono: var(--font-mono), ui-monospace, monospace;
+  --sans: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
 
   --r-sm: 8px; --r: 12px; --r-lg: 16px; --r-xl: 22px;
   --shadow-sm: 0 1px 2px oklch(0.4 0.02 60 / 0.06), 0 1px 3px oklch(0.4 0.02 60 / 0.05);
@@ -76,6 +82,7 @@ button { font-family: inherit; cursor: pointer; }
   width: 13px; height: 13px; border-radius: 50%;
   background: var(--accent);
   box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent) 70%, transparent);
+  animation: pulse 2.6s ease-out infinite;
 }
 @keyframes pulse {
   0%   { box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent) 55%, transparent); }
@@ -98,6 +105,7 @@ button { font-family: inherit; cursor: pointer; }
   transition: .18s;
 }
 .kb-refresh:hover { color: var(--ink); border-color: var(--faint); }
+.kb-refresh.spinning svg { animation: spin .9s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .kb-meta { display: flex; align-items: center; gap: 10px; margin-top: 9px; }
 .kb-live {
@@ -108,6 +116,7 @@ button { font-family: inherit; cursor: pointer; }
   width: 7px; height: 7px; border-radius: 50%;
   background: oklch(0.66 0.16 150);
   box-shadow: 0 0 0 0 oklch(0.66 0.16 150 / .6);
+  animation: pulse-green 2s infinite;
 }
 @keyframes pulse-green {
   0% { box-shadow: 0 0 0 0 oklch(0.66 0.16 150 / .5); }
@@ -220,7 +229,7 @@ button { font-family: inherit; cursor: pointer; }
 .thinking-dots { display: inline-flex; gap: 4px; align-items: center; }
 .thinking-dots i {
   width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
-  opacity: .35;
+  opacity: .35; animation: blink 1.2s infinite;
 }
 .thinking-dots i:nth-child(2) { animation-delay: .2s; }
 .thinking-dots i:nth-child(3) { animation-delay: .4s; }
@@ -235,7 +244,7 @@ button { font-family: inherit; cursor: pointer; }
 .ai-para em { font-style: italic; }
 .caret {
   display: inline-block; width: 2px; height: 1.05em; vertical-align: -0.18em;
-  background: var(--accent); margin-left: 2px;
+  background: var(--accent); margin-left: 2px; animation: caret 1s step-end infinite;
 }
 @keyframes caret { 50% { opacity: 0; } }
 
@@ -301,6 +310,7 @@ button { font-family: inherit; cursor: pointer; }
   background: currentColor; opacity: .55;
 }
 .wave.is-active span {
+  animation: wv 0.9s ease-in-out infinite;
   animation-delay: calc(var(--i) * -0.07s);
   background: var(--accent); opacity: .85;
 }
@@ -457,18 +467,6 @@ button { font-family: inherit; cursor: pointer; }
 }
 .scroll::-webkit-scrollbar-thumb { border-color: var(--bg); }
 
-/* ── motion ─────────────────────────────────────────────────────────── */
-/* Keyframe-driven animations only run when the user has not requested
-   reduced motion (SPEC §7). pulse / pulse-green / wv / blink / spin / caret. */
-@media (prefers-reduced-motion: no-preference) {
-  .brand-pulse { animation: pulse 2.6s ease-out infinite; }
-  .kb-refresh.spinning svg { animation: spin .9s linear infinite; }
-  .live-dot { animation: pulse-green 2s infinite; }
-  .thinking-dots i { animation: blink 1.2s infinite; }
-  .wave.is-active span { animation: wv 0.9s ease-in-out infinite; }
-  .caret { animation: caret 1s step-end infinite; }
-}
-
 /* ── responsive ─────────────────────────────────────────────────────── */
 @media (max-width: 880px) {
   .app { grid-template-columns: 1fr; }
@@ -478,3 +476,18 @@ button { font-family: inherit; cursor: pointer; }
   .welcome-title { font-size: 30px; }
   .drawer { width: 100%; }
 }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script src="data.js"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="components.jsx"></script>
+<script type="text/babel" src="app.jsx"></script>
+</body>
+</html>
