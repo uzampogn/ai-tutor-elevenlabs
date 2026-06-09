@@ -1,0 +1,304 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+/**
+ * Fixture-based unit tests for the Claude blog scraper.
+ *
+ * `global.fetch` is stubbed with hand-authored HTML fixtures that match the
+ * selectors/strategies the scraper actually uses:
+ *   - the index page exposes >=10 `<a href="/blog/...">` cards
+ *   - each article page carries a JSON-LD `Article` block (datePublished + description)
+ *
+ * The scraper caches in-process, so each test re-imports the module via
+ * `vi.resetModules()` + dynamic `import()` to get a fresh cache — except the
+ * cache-hit test, which intentionally reuses one instance.
+ */
+
+const ORIGIN = 'https://claude.com';
+
+// --- Fixtures -------------------------------------------------------------
+
+const SLUGS = [
+  'claude-for-foundation-models', // i=0 → newest
+  'introducing-dynamic-workflows-in-claude-code',
+  'claude-opus-4-8',
+  'constitutional-ai-2',
+  'economic-index-q2',
+  'agent-sdk-ga',
+  'mcp-everywhere',
+  'voice-mode-launch',
+  'enterprise-controls',
+  'research-preview-notes',
+  'oldest-eleventh-article', // i=10 → oldest, dropped when we take the latest 10
+];
+
+/** Deterministic date per slug: lower index = more recent (day 11 down to day 01). */
+function isoFor(i: number): string {
+  return `2026-06-${String(11 - i).padStart(2, '0')}T09:00:00.000Z`;
+}
+
+function indexHtml(): string {
+  // Render cards in REVERSE chronological-index order (oldest anchor first) so document
+  // order is the opposite of recency — this proves the scraper sorts by date, not position.
+  const cards = SLUGS.map((slug, i) => ({ slug, i }))
+    .reverse()
+    .map(
+      ({ slug, i }) => `
+      <article class="card">
+        <a href="/blog/${slug}">Article Title ${i + 1}: ${slug}</a>
+        <time datetime="${isoFor(i)}">provisional</time>
+      </article>`
+    )
+    .join('\n');
+  return `<!doctype html><html><body><main>${cards}</main></body></html>`;
+}
+
+function articleHtml(slug: string, i: number): string {
+  // Real claude.com uses BlogPosting with a human "Jun 08, 2026" date; here we use ISO,
+  // and a separate test exercises the human-format → ISO normalization path.
+  const ld = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      { '@type': 'WebSite', name: 'Claude' },
+      {
+        '@type': 'BlogPosting',
+        headline: `Article Title ${i + 1}`,
+        datePublished: isoFor(i),
+        description: `This is the JSON-LD description for ${slug}. It explains the article in detail.`,
+      },
+    ],
+  };
+  return `<!doctype html><html><head>
+    <meta property="og:description" content="OG fallback for ${slug}" />
+    <script type="application/ld+json">${JSON.stringify(ld)}</script>
+  </head><body><main><p>First paragraph fallback content for ${slug}.</p></main></body></html>`;
+}
+
+function htmlResponse(body: string, ok = true, status = 200): Response {
+  return {
+    ok,
+    status,
+    text: () => Promise.resolve(body),
+  } as unknown as Response;
+}
+
+/** A fetch mock that routes the index URL vs per-article URLs to the right fixture. */
+function makeFetchMock() {
+  return vi.fn((input: string | URL) => {
+    const url = typeof input === 'string' ? input : input.toString();
+    if (url === `${ORIGIN}/blog`) {
+      return Promise.resolve(htmlResponse(indexHtml()));
+    }
+    const m = url.match(/\/blog\/([^/?#]+)/);
+    if (m) {
+      const slug = m[1];
+      const i = SLUGS.indexOf(slug);
+      return Promise.resolve(htmlResponse(articleHtml(slug, i < 0 ? 0 : i)));
+    }
+    return Promise.resolve(htmlResponse('<html></html>', false, 404));
+  });
+}
+
+async function freshScraper() {
+  vi.resetModules();
+  return import('./scraper');
+}
+
+beforeEach(() => {
+  vi.restoreAllMocks();
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+// --- Parsing --------------------------------------------------------------
+
+describe('getClaudeArticles — parsing', () => {
+  it('returns the 10 most recent articles, sorted newest-first (drops the oldest of 11)', async () => {
+    vi.stubGlobal('fetch', makeFetchMock());
+    const { getClaudeArticles } = await freshScraper();
+    const articles = await getClaudeArticles();
+
+    expect(articles).toHaveLength(10);
+
+    const slugs = articles.map((a) => a.url.replace(`${ORIGIN}/blog/`, ''));
+    // The oldest candidate must be dropped, the newest must be present...
+    expect(slugs).not.toContain('oldest-eleventh-article');
+    expect(slugs).toContain(SLUGS[0]);
+    // ...and despite the index listing cards oldest-first, results are newest-first.
+    const times = articles.map((a) => new Date(a.pubDate).getTime());
+    expect(times).toEqual([...times].sort((a, b) => b - a));
+  });
+
+  it('absolutizes every url to https://claude.com/blog/...', async () => {
+    vi.stubGlobal('fetch', makeFetchMock());
+    const { getClaudeArticles } = await freshScraper();
+    const articles = await getClaudeArticles();
+    for (const a of articles) {
+      expect(a.url.startsWith('https://claude.com/blog/')).toBe(true);
+    }
+  });
+
+  it('emits ISO pubDates that parse to valid Dates', async () => {
+    vi.stubGlobal('fetch', makeFetchMock());
+    const { getClaudeArticles } = await freshScraper();
+    const articles = await getClaudeArticles();
+    for (const a of articles) {
+      // ISO from JSON-LD datePublished.
+      expect(a.pubDate).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+      expect(Number.isNaN(new Date(a.pubDate).getTime())).toBe(false);
+    }
+  });
+
+  it('gives every happy-path article a non-empty description', async () => {
+    vi.stubGlobal('fetch', makeFetchMock());
+    const { getClaudeArticles } = await freshScraper();
+    const articles = await getClaudeArticles();
+    for (const a of articles) {
+      expect(a.description.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('de-duplicates by slug (a repeated card appears once)', async () => {
+    // Inject a duplicate of the first slug; it must not appear twice.
+    const dupIndex = `<!doctype html><html><body><main>
+      <a href="/blog/${SLUGS[0]}">Dup A</a>
+      <a href="/blog/${SLUGS[0]}">Dup A again</a>
+      ${SLUGS.slice(1)
+        .map((s, i) => `<a href="/blog/${s}">Card ${i}</a>`)
+        .join('\n')}
+    </main></body></html>`;
+    const fetchMock = vi.fn((input: string | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url === `${ORIGIN}/blog`) return Promise.resolve(htmlResponse(dupIndex));
+      const m = url.match(/\/blog\/([^/?#]+)/);
+      const slug = m ? m[1] : 'x';
+      return Promise.resolve(htmlResponse(articleHtml(slug, SLUGS.indexOf(slug))));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const { getClaudeArticles } = await freshScraper();
+    const articles = await getClaudeArticles();
+    const slugs = articles.map((a) => a.url.replace(`${ORIGIN}/blog/`, ''));
+    expect(new Set(slugs).size).toBe(slugs.length); // no dupes
+    expect(slugs[0]).toBe(SLUGS[0]); // newest still surfaces first
+  });
+
+  it('normalizes a human "Jun 08, 2026" datePublished to ISO 8601', async () => {
+    // Mirrors the real claude.com BlogPosting date format (not ISO).
+    const humanLd = (slug: string) =>
+      `<!doctype html><html><head><script type="application/ld+json">${JSON.stringify({
+        '@type': 'BlogPosting',
+        headline: slug,
+        datePublished: 'Jun 08, 2026',
+        description: `Human-dated article ${slug} with a descriptive body.`,
+      })}</script></head><body></body></html>`;
+    const fetchMock = vi.fn((input: string | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url === `${ORIGIN}/blog`) {
+        return Promise.resolve(
+          htmlResponse(
+            `<main><a href="/blog/only-one">Only One</a></main>`
+          )
+        );
+      }
+      return Promise.resolve(htmlResponse(humanLd('only-one')));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const { getClaudeArticles } = await freshScraper();
+    const [article] = await getClaudeArticles();
+    expect(article.pubDate).toMatch(/^\d{4}-\d{2}-\d{2}T/); // ISO
+    expect(new Date(article.pubDate).getUTCFullYear()).toBe(2026);
+  });
+});
+
+// --- Caching --------------------------------------------------------------
+
+describe('getClaudeArticles — caching', () => {
+  it('does not re-invoke fetch on a second call within TTL (cache hit)', async () => {
+    const fetchMock = makeFetchMock();
+    vi.stubGlobal('fetch', fetchMock);
+    const { getClaudeArticles } = await freshScraper();
+
+    const first = await getClaudeArticles();
+    const callsAfterFirst = fetchMock.mock.calls.length;
+    expect(callsAfterFirst).toBe(12); // 1 index + 11 candidate article pages (all fetched, then sorted)
+
+    const second = await getClaudeArticles();
+    expect(fetchMock.mock.calls.length).toBe(callsAfterFirst); // unchanged
+    expect(second).toBe(first); // same cached reference
+  });
+});
+
+// --- Resilience -----------------------------------------------------------
+
+describe('getClaudeArticles — resilience', () => {
+  it('returns [] (no throw) when the index fetch rejects', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.reject(new Error('network down')))
+    );
+    const { getClaudeArticles } = await freshScraper();
+    await expect(getClaudeArticles()).resolves.toEqual([]);
+  });
+
+  it('returns [] (no throw) when the index fetch 404s', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(htmlResponse('not found', false, 404)))
+    );
+    const { getClaudeArticles } = await freshScraper();
+    await expect(getClaudeArticles()).resolves.toEqual([]);
+  });
+
+  it('degrades only the failing article when one body fetch errors', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const badSlug = SLUGS[2];
+    const fetchMock = vi.fn((input: string | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url === `${ORIGIN}/blog`) return Promise.resolve(htmlResponse(indexHtml()));
+      const m = url.match(/\/blog\/([^/?#]+)/);
+      const slug = m ? m[1] : 'x';
+      if (slug === badSlug) return Promise.resolve(htmlResponse('boom', false, 500));
+      return Promise.resolve(htmlResponse(articleHtml(slug, SLUGS.indexOf(slug))));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const { getClaudeArticles } = await freshScraper();
+    const articles = await getClaudeArticles();
+
+    expect(articles).toHaveLength(10); // whole feed survives
+    const degraded = articles.find((a) => a.url.endsWith(badSlug))!;
+    expect(degraded).toBeDefined();
+    expect(degraded.url).toBe(`${ORIGIN}/blog/${badSlug}`); // index title/url kept
+    expect(degraded.description).toBe(''); // body left empty
+    // The others still have descriptions.
+    expect(
+      articles.filter((a) => a.description.length > 0).length
+    ).toBe(9);
+  });
+});
+
+// --- Context --------------------------------------------------------------
+
+describe('buildArticleContext', () => {
+  it('produces the expected ## [Article n] markdown blocks', async () => {
+    vi.stubGlobal('fetch', makeFetchMock());
+    const { getClaudeArticles, buildArticleContext } = await freshScraper();
+    const articles = await getClaudeArticles();
+    const ctx = buildArticleContext(articles);
+
+    expect(ctx).toContain('## [Article 1] ');
+    expect(ctx).toContain('## [Article 10] ');
+    expect(ctx).toContain(`URL: ${articles[0].url}`);
+    expect(ctx).toContain(`Published: ${articles[0].pubDate}`);
+    expect(ctx).toContain(articles[0].description);
+    // Blocks are joined by the --- separator.
+    expect(ctx.split('\n\n---\n\n')).toHaveLength(10);
+  });
+
+  it('returns the unavailable message for an empty list', async () => {
+    const { buildArticleContext } = await freshScraper();
+    expect(buildArticleContext([])).toMatch(/No articles currently available/);
+  });
+});

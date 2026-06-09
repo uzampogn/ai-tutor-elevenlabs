@@ -1,13 +1,13 @@
 import { NextRequest } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
-import { getAnthropicArticles, buildArticleContext } from '@/lib/scraper';
+import { getClaudeArticles, buildArticleContext } from '@/lib/scraper';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 export async function POST(req: NextRequest) {
   const { messages } = await req.json();
 
-  const articles = await getAnthropicArticles();
+  const articles = await getClaudeArticles();
   const articleContext = buildArticleContext(articles);
 
   const systemPrompt = `You are an engaging AI news tutor specialising in the latest developments from Anthropic.
@@ -15,12 +15,16 @@ export async function POST(req: NextRequest) {
 Your teaching approach:
 - Open with a one-sentence summary of the most relevant point
 - Use **bold** for KEY CONCEPTS and bullet points for lists
-- Include a "💼 Business Impact" section in every answer
 - Keep responses concise (3–5 short paragraphs max)
-- Reference the article title and date when citing a source
+- When citing a source, write the article title EXACTLY as it appears in the knowledge base below (verbatim, no rewording or truncation)
 - If the question is outside the provided articles, say so clearly
 
-KNOWLEDGE BASE — Anthropic's 10 most recent blog articles:
+Formatting requirement (strict):
+- End EVERY answer with a Business Impact section as the LAST block of the response.
+- It MUST use this exact heading on its own line, with nothing before or after it on that line: "💼 Business Impact"
+- Do not add any text after the Business Impact section.
+
+KNOWLEDGE BASE — the Claude blog's 10 most recent articles:
 
 ${articleContext}`;
 
