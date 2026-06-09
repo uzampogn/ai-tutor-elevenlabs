@@ -233,6 +233,15 @@ button { font-family: inherit; cursor: pointer; }
 }
 .ai-para strong { font-weight: 600; color: var(--ink); }
 .ai-para em { font-style: italic; }
+.ai-list {
+  margin: 0 0 14px; padding-left: 22px;
+  font-family: var(--answer-font); font-size: 17px;
+  line-height: 1.62; color: var(--ink);
+}
+.ai-list-item { margin-bottom: 6px; }
+.ai-list-item:last-child { margin-bottom: 0; }
+.ai-list-item strong { font-weight: 600; color: var(--ink); }
+.ai-list-item em { font-style: italic; }
 .caret {
   display: inline-block; width: 2px; height: 1.05em; vertical-align: -0.18em;
   background: var(--accent); margin-left: 2px;
@@ -293,6 +302,15 @@ button { font-family: inherit; cursor: pointer; }
 }
 .act:hover { background: var(--panel-2); color: var(--ink); border-color: var(--line); }
 .act.is-on { color: var(--accent); background: color-mix(in oklab, var(--accent) 9%, transparent); }
+.act:disabled { opacity: .55; cursor: default; }
+.sound-wave { display: inline-flex; align-items: center; gap: 2px; height: 14px; }
+.sound-wave i {
+  display: block; width: 2px; border-radius: 2px; background: var(--accent);
+  animation: wv 0.7s ease-in-out infinite;
+}
+.sound-wave i:nth-child(1) { height: 8px; animation-delay: 0s; }
+.sound-wave i:nth-child(2) { height: 14px; animation-delay: -0.2s; }
+.sound-wave i:nth-child(3) { height: 6px; animation-delay: -0.4s; }
 
 /* ── waveform ───────────────────────────────────────────────────────── */
 .wave { display: inline-flex; align-items: center; gap: 2px; height: 18px; }

@@ -2,6 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const ELEVENLABS_BASE = 'https://api.elevenlabs.io/v1';
 
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/`[^`]*`/g, (m) => m.replace(/`/g, ''))
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/(\*\*|__)([\s\S]*?)\1/g, '$2')
+    .replace(/(\*|_)([\s\S]*?)\1/g, '$2')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/^>\s+/gm, '')
+    .replace(/^[-*_]{3,}\s*$/gm, '')
+    .replace(/^[\s]*[-*+]\s+/gm, '')
+    .replace(/^[\s]*\d+\.\s+/gm, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 export async function POST(req: NextRequest) {
   const { text } = await req.json();
 
@@ -23,7 +40,7 @@ export async function POST(req: NextRequest) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      text: text.slice(0, 1200),
+      text: stripMarkdown(text).slice(0, 1200),
       model_id: 'eleven_turbo_v2',
       voice_settings: {
         stability: 0.5,

@@ -10,6 +10,12 @@ env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
+# GITHUB_TOKEN is read-only by default; the preview-URL comment step needs
+# write access to the PR. Grant only what's required.
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   deploy-preview:
     name: Deploy Preview
