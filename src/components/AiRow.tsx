@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { Article } from '@/lib/types';
-import { parseAnswer, matchSources } from '@/lib/parseAnswer';
+import { parseAnswer, matchSources, parseBlocks } from '@/lib/parseAnswer';
 import InlineMarkdown from './InlineMarkdown';
 import ImpactCard from './ImpactCard';
 import SourceChips from './SourceChips';
@@ -13,19 +13,20 @@ interface AiRowProps {
   /** True when this is the last assistant message and the stream is in progress. */
   streaming: boolean;
   articles: Article[];
+  speaking: boolean;
   /** Speak this answer aloud via the parent's TTS pipeline. */
   onReadAloud: (text: string) => void;
+  onStopAudio: () => void;
 }
 
-export default function AiRow({ content, streaming, articles, onReadAloud }: AiRowProps) {
+export default function AiRow({ content, streaming, articles, speaking, onReadAloud, onStopAudio }: AiRowProps) {
   const [copied, setCopied] = useState(false);
   const [liked, setLiked] = useState(false);
 
   const { body, impact } = parseAnswer(content);
   const sources = matchSources(content, articles);
 
-  // Split the body into paragraphs on blank lines.
-  const paragraphs = body.split(/\n{2,}/).filter((p) => p.trim().length > 0);
+  const blocks = parseBlocks(body);
 
   function handleCopy() {
     navigator.clipboard?.writeText(content).then(
@@ -54,11 +55,41 @@ export default function AiRow({ content, streaming, articles, onReadAloud }: AiR
           </div>
         )}
 
-        {paragraphs.map((para, i) => {
-          const isLast = i === paragraphs.length - 1;
+        {blocks.map((block, i) => {
+          const isLast = i === blocks.length - 1;
+          if (block.type === 'ul') {
+            return (
+              <ul key={i} className="ai-list">
+                {block.items.map((item, j) => {
+                  const isLastItem = j === block.items.length - 1;
+                  return (
+                    <li key={j} className="ai-list-item">
+                      <InlineMarkdown text={item} />
+                      {streaming && impact === null && isLast && isLastItem && <span className="caret" />}
+                    </li>
+                  );
+                })}
+              </ul>
+            );
+          }
+          if (block.type === 'ol') {
+            return (
+              <ol key={i} className="ai-list">
+                {block.items.map((item, j) => {
+                  const isLastItem = j === block.items.length - 1;
+                  return (
+                    <li key={j} className="ai-list-item">
+                      <InlineMarkdown text={item} />
+                      {streaming && impact === null && isLast && isLastItem && <span className="caret" />}
+                    </li>
+                  );
+                })}
+              </ol>
+            );
+          }
           return (
             <p key={i} className="ai-para">
-              <InlineMarkdown text={para} />
+              <InlineMarkdown text={block.text} />
               {streaming && impact === null && isLast && <span className="caret" />}
             </p>
           );
@@ -81,12 +112,18 @@ export default function AiRow({ content, streaming, articles, onReadAloud }: AiR
             </button>
             <button
               type="button"
-              className="act"
-              onClick={() => onReadAloud(content)}
-              aria-label="Read aloud"
+              className={`act${speaking ? ' is-on' : ''}`}
+              onClick={() => speaking ? onStopAudio() : onReadAloud(content)}
+              aria-label={speaking ? 'Stop audio' : 'Read aloud'}
             >
-              <SoundIcon />
-              Read aloud
+              {speaking ? (
+                <span className="sound-wave" aria-hidden="true">
+                  <i /><i /><i />
+                </span>
+              ) : (
+                <SoundIcon />
+              )}
+              {speaking ? 'Stop' : 'Read aloud'}
             </button>
             <button
               type="button"

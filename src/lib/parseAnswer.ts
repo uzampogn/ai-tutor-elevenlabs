@@ -87,6 +87,70 @@ export function matchSources(answer: string, articles: Article[]): Article[] {
   return matched;
 }
 
+export type Block =
+  | { type: 'paragraph'; text: string }
+  | { type: 'ul'; items: string[] }
+  | { type: 'ol'; items: string[] };
+
+const UL_LINE = /^[-*] /;
+const OL_LINE = /^\d+\. /;
+
+type LineKind = 'ul' | 'ol' | 'para';
+
+function lineKind(line: string): LineKind {
+  if (UL_LINE.test(line)) return 'ul';
+  if (OL_LINE.test(line)) return 'ol';
+  return 'para';
+}
+
+/**
+ * Split a markdown body into renderable blocks.
+ *
+ * Chunks are separated by blank lines, but within each chunk we group
+ * CONSECUTIVE lines by kind — so a label line immediately followed by bullets
+ * (model skipped the blank line) still yields a `[paragraph, ul]` pair instead
+ * of one mangled paragraph. Streaming-safe: a partial trailing line with no
+ * confirmed list prefix simply lands in a paragraph run.
+ */
+export function parseBlocks(body: string): Block[] {
+  if (!body || !body.trim()) return [];
+
+  const chunks = body.split(/\n{2,}/);
+  const blocks: Block[] = [];
+
+  for (const chunk of chunks) {
+    const lines = chunk.split('\n').filter((l) => l.trim().length > 0);
+    if (lines.length === 0) continue;
+
+    let run: { kind: LineKind; lines: string[] } | null = null;
+
+    const flush = () => {
+      if (!run) return;
+      if (run.kind === 'ul') {
+        blocks.push({ type: 'ul', items: run.lines.map((l) => l.replace(UL_LINE, '')) });
+      } else if (run.kind === 'ol') {
+        blocks.push({ type: 'ol', items: run.lines.map((l) => l.replace(OL_LINE, '')) });
+      } else {
+        blocks.push({ type: 'paragraph', text: run.lines.join('\n').trim() });
+      }
+      run = null;
+    };
+
+    for (const line of lines) {
+      const kind = lineKind(line);
+      if (run && run.kind === kind) {
+        run.lines.push(line);
+      } else {
+        flush();
+        run = { kind, lines: [line] };
+      }
+    }
+    flush();
+  }
+
+  return blocks;
+}
+
 export type InlineToken = { type: 'text' | 'strong' | 'em'; value: string };
 
 /**

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseAnswer, matchSources, parseInline } from './parseAnswer';
+import { parseAnswer, matchSources, parseInline, parseBlocks } from './parseAnswer';
 import type { Article } from './scraper';
 
 const article = (over: Partial<Article> = {}): Article => ({
@@ -70,6 +70,80 @@ describe('matchSources', () => {
     const answer = 'Economic Index Q2 ... and again Economic Index Q2.';
     const found = matchSources(answer, articles);
     expect(found.filter((a) => a.url === 'https://a/3')).toHaveLength(1);
+  });
+});
+
+describe('parseBlocks', () => {
+  it('returns a single paragraph block for plain text', () => {
+    const blocks = parseBlocks('Hello world');
+    expect(blocks).toEqual([{ type: 'paragraph', text: 'Hello world' }]);
+  });
+
+  it('parses two ul blocks separated by a blank line', () => {
+    const blocks = parseBlocks('- a\n- b\n\n- c\n- d');
+    expect(blocks).toEqual([
+      { type: 'ul', items: ['a', 'b'] },
+      { type: 'ul', items: ['c', 'd'] },
+    ]);
+  });
+
+  it('parses an ol block', () => {
+    const blocks = parseBlocks('1. a\n2. b');
+    expect(blocks).toEqual([{ type: 'ol', items: ['a', 'b'] }]);
+  });
+
+  it('returns [paragraph, ul] for mixed text + list', () => {
+    const blocks = parseBlocks('Some intro\n\n- a\n- b');
+    expect(blocks).toEqual([
+      { type: 'paragraph', text: 'Some intro' },
+      { type: 'ul', items: ['a', 'b'] },
+    ]);
+  });
+
+  it('handles a partial/streaming bullet list without crashing', () => {
+    expect(() => parseBlocks('- first item\n- second item')).not.toThrow();
+    const blocks = parseBlocks('- first item\n- second item');
+    expect(blocks[0].type).toBe('ul');
+  });
+
+  it('returns [] for empty input', () => {
+    expect(parseBlocks('')).toEqual([]);
+    expect(parseBlocks('   ')).toEqual([]);
+  });
+
+  it('supports * as a ul prefix', () => {
+    const blocks = parseBlocks('* x\n* y');
+    expect(blocks).toEqual([{ type: 'ul', items: ['x', 'y'] }]);
+  });
+
+  it('groups a label line + bullets (no blank line) into [paragraph, ul]', () => {
+    const blocks = parseBlocks('**Developer Tools**\n- a\n- b');
+    expect(blocks).toEqual([
+      { type: 'paragraph', text: '**Developer Tools**' },
+      { type: 'ul', items: ['a', 'b'] },
+    ]);
+  });
+
+  it('splits a mixed ol + ul run within one chunk into [ol, ul]', () => {
+    const blocks = parseBlocks('1. a\n2. b\n- c\n- d');
+    expect(blocks).toEqual([
+      { type: 'ol', items: ['a', 'b'] },
+      { type: 'ul', items: ['c', 'd'] },
+    ]);
+  });
+
+  it('groups single-newline-separated bullets into one ul', () => {
+    const blocks = parseBlocks('- a\n- b\n- c');
+    expect(blocks).toEqual([{ type: 'ul', items: ['a', 'b', 'c'] }]);
+  });
+
+  it('does not crash on a trailing partial line after bullets', () => {
+    expect(() => parseBlocks('- a\n- b\nSome trailing prose')).not.toThrow();
+    const blocks = parseBlocks('- a\n- b\nSome trailing prose');
+    expect(blocks).toEqual([
+      { type: 'ul', items: ['a', 'b'] },
+      { type: 'paragraph', text: 'Some trailing prose' },
+    ]);
   });
 });
 

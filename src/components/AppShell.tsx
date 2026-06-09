@@ -16,7 +16,7 @@ export default function AppShell() {
   const [isLoading, setIsLoading] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [speaking, setSpeaking] = useState(false);
+  const [speakingContent, setSpeakingContent] = useState<string | null>(null);
 
   const [articles, setArticles] = useState<Article[]>([]);
   const [articlesLoading, setArticlesLoading] = useState(true);
@@ -28,6 +28,7 @@ export default function AppShell() {
   const [density] = useState<Density>('normal');
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const speakAbortRef = useRef<AbortController | null>(null);
   // The KB card that opened the drawer, so focus returns there on close.
   const drawerTriggerRef = useRef<HTMLButtonElement | null>(null);
 
@@ -44,6 +45,12 @@ export default function AppShell() {
     loadArticles();
   }, [loadArticles]);
 
+  function stopAudio() {
+    speakAbortRef.current?.abort();
+    audioRef.current?.pause();
+    setSpeakingContent(null);
+  }
+
   const playVoice = useCallback(
     async (text: string) => {
       if (!voiceEnabled) return;
@@ -59,13 +66,13 @@ export default function AppShell() {
         const url = URL.createObjectURL(blob);
         const audio = new Audio(url);
         audioRef.current = audio;
-        audio.onplay = () => setSpeaking(true);
-        audio.onended = () => setSpeaking(false);
-        audio.onpause = () => setSpeaking(false);
-        audio.play().catch(() => setSpeaking(false));
+        audio.onplay = () => setSpeakingContent(text);
+        audio.onended = () => setSpeakingContent(null);
+        audio.onpause = () => setSpeakingContent(null);
+        audio.play().catch(() => setSpeakingContent(null));
       } catch (err) {
         console.error('[voice]', err);
-        setSpeaking(false);
+        setSpeakingContent(null);
       }
     },
     [voiceEnabled],
@@ -137,24 +144,31 @@ export default function AppShell() {
   }
 
   function readAloud(text: string) {
+    speakAbortRef.current?.abort();
     audioRef.current?.pause();
+    setSpeakingContent(text);
+    const controller = new AbortController();
+    speakAbortRef.current = controller;
     void (async () => {
       try {
         const res = await fetch('/api/speak', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text }),
+          signal: controller.signal,
         });
-        if (!res.ok) return;
+        if (!res.ok) { setSpeakingContent(null); return; }
         const blob = await res.blob();
         const audio = new Audio(URL.createObjectURL(blob));
         audioRef.current = audio;
-        audio.onplay = () => setSpeaking(true);
-        audio.onended = () => setSpeaking(false);
-        audio.onpause = () => setSpeaking(false);
-        audio.play().catch(() => setSpeaking(false));
+        audio.onplay = () => setSpeakingContent(text);
+        audio.onended = () => setSpeakingContent(null);
+        audio.onpause = () => setSpeakingContent(null);
+        audio.play().catch(() => setSpeakingContent(null));
       } catch (err) {
+        if ((err as Error).name === 'AbortError') return;
         console.error('[voice]', err);
+        setSpeakingContent(null);
       }
     })();
   }
@@ -175,7 +189,7 @@ export default function AppShell() {
       <main className="main">
         <Topbar
           voiceEnabled={voiceEnabled}
-          speaking={speaking || isListening}
+          speaking={speakingContent !== null || isListening}
           onToggleVoice={() => setVoiceEnabled((v) => !v)}
           onNewChat={handleNewChat}
         />
@@ -183,8 +197,10 @@ export default function AppShell() {
           messages={messages}
           isLoading={isLoading}
           articles={articles}
+          speakingContent={speakingContent}
           onAsk={(q) => void sendMessage(q)}
           onReadAloud={readAloud}
+          onStopAudio={stopAudio}
         />
         <Composer
           input={input}

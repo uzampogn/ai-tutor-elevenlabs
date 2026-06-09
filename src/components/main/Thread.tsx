@@ -10,11 +10,13 @@ interface ThreadProps {
   messages: Message[];
   isLoading: boolean;
   articles: Article[];
+  speakingContent: string | null;
   onAsk: (question: string) => void;
   onReadAloud: (text: string) => void;
+  onStopAudio: () => void;
 }
 
-export default function Thread({ messages, isLoading, articles, onAsk, onReadAloud }: ThreadProps) {
+export default function Thread({ messages, isLoading, articles, speakingContent, onAsk, onReadAloud, onStopAudio }: ThreadProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -36,7 +38,9 @@ export default function Thread({ messages, isLoading, articles, onAsk, onReadAlo
                 content={msg.content}
                 streaming={isLoading && i === messages.length - 1}
                 articles={articles}
+                speaking={speakingContent === msg.content}
                 onReadAloud={onReadAloud}
+                onStopAudio={onStopAudio}
               />
             ),
           )
