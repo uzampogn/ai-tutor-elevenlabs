@@ -1,10 +1,10 @@
 # AI News Tutor
 
-A voice-enabled chatbot that scrapes Anthropic's latest blog articles and teaches you the key concepts and business impact — powered by Claude and ElevenLabs.
+A voice-enabled chatbot that scrapes the latest [Claude blog](https://claude.com/blog) articles and teaches you the key concepts and business impact — powered by Claude and ElevenLabs.
 
 ## Features
 
-- **Live knowledge base** — fetches Anthropic's 10 most recent blog posts via RSS, refreshed every hour
+- **Live knowledge base** — scrapes the Claude blog's 10 most recent posts (sorted newest-first by publish date), refreshed every hour
 - **Streaming chat** — Claude answers questions about AI developments with article context injected automatically
 - **Voice responses** — ElevenLabs TTS reads every answer aloud (toggle on/off)
 - **Business-focused framing** — every response includes a Business Impact section
@@ -30,13 +30,13 @@ src/
 │   ├── layout.tsx
 │   └── api/
 │       ├── chat/route.ts        # Streams Claude responses
-│       ├── scrape/route.ts      # Returns cached Anthropic articles
+│       ├── scrape/route.ts      # Returns cached Claude blog articles
 │       └── speak/route.ts       # Proxies ElevenLabs TTS
 ├── components/
 │   ├── ChatInterface.tsx        # Full chat UI
 │   └── MessageBubble.tsx        # Single message with typing indicator
 └── lib/
-    └── scraper.ts               # RSS fetch + 1h in-memory cache
+    └── scraper.ts               # Claude blog HTML scrape (index + bodies) + 1h in-memory cache
 ```
 
 ## Local development

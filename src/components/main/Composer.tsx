@@ -92,7 +92,7 @@ export default function Composer({
       </form>
 
       <div className="composer-foot">
-        Answers are grounded in Anthropic&apos;s RSS feed and may be imperfect.
+        Answers are grounded in the Claude blog and may be imperfect.
       </div>
     </div>
   );

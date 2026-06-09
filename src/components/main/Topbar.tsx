@@ -15,7 +15,7 @@ export default function Topbar({ voiceEnabled, speaking, onToggleVoice, onNewCha
     <header className="topbar">
       <div className="topbar-l">
         <h1 className="topbar-title">AI News Tutor</h1>
-        <span className="topbar-sub">Grounded in Anthropic&apos;s latest articles</span>
+        <span className="topbar-sub">Grounded in Claude&apos;s latest articles</span>
       </div>
       <div className="topbar-r">
         <VoiceToggle enabled={voiceEnabled} speaking={speaking} onToggle={onToggleVoice} />

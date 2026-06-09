@@ -12,7 +12,7 @@ interface ArticleDrawerProps {
 }
 
 // A few static presentational tags for the reader (Article has no tag field).
-const TAGS = ['Anthropic', 'AI', 'Analysis'];
+const TAGS = ['Claude', 'AI', 'Analysis'];
 
 export default function ArticleDrawer({ article, open, onClose }: ArticleDrawerProps) {
   // Esc closes the drawer (focus return is handled by the shell).
@@ -53,7 +53,7 @@ export default function ArticleDrawer({ article, open, onClose }: ArticleDrawerP
             ))}
           </div>
           <div className="drawer-note">
-            This is a summary from the RSS feed. Open the original article for the full text.
+            This is a summary from the Claude blog. Open the original article for the full text.
           </div>
         </div>
       )}

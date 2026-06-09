@@ -23,7 +23,7 @@ const mono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: 'AI News Tutor',
-  description: 'Learn the latest AI developments from Anthropic — key concepts, business impact, Q&A.',
+  description: 'Learn the latest AI developments from the Claude blog — key concepts, business impact, Q&A.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

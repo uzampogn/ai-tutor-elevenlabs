@@ -21,7 +21,7 @@ const MONTHS = [
   'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
 ];
 
-/** Format an RSS pubDate to the short mono form, e.g. "JUN 03". */
+/** Format an ISO pubDate to the short mono form, e.g. "JUN 03". */
 export function formatShortDate(pubDate: string): string {
   const d = new Date(pubDate);
   if (Number.isNaN(d.getTime())) return '';

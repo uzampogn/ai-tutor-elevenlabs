@@ -61,7 +61,50 @@ Highest value, fully deterministic. Targets `parseAnswer` and `matchSources`.
 Inline-markdown helper (if extracted): `**x**` → strong token, `*x*`/`_x_` → em token, blank
 lines split paragraphs.
 
-### 2. Component — rendering & interaction (RTL)
+### 2. Unit — Claude blog scraper (`src/lib/scraper.test.ts`)
+
+Fixture-based unit tests for `getClaudeArticles()` (and `buildArticleContext()`), with
+`global.fetch` mocked via `vi.stubGlobal('fetch', ...)`. The fixtures are hand-authored HTML
+that matches the selectors/strategies the scraper actually uses:
+
+- **One index-page fixture** with 11 `<a href="/blog/...">` cards rendered **oldest-first**
+  (reverse chronological) so document order is the *opposite* of recency — this proves the
+  scraper sorts by date rather than trusting card position. (The real index mixes a featured
+  grid with the chronological list, so the first cards are not the most recent.)
+- **Per-article fixtures** carrying a JSON-LD `Article`/`BlogPosting` block (inside a `@graph`,
+  to exercise defensive parsing) with `datePublished` and `description`, plus `og:description`
+  and a first-paragraph fallback. One fixture uses the **human `"Jun 08, 2026"` format** that
+  the live site actually emits, to exercise ISO normalization.
+
+The scraper caches in-process, so each test gets a fresh cache via `vi.resetModules()` +
+dynamic `import('./scraper')` — except the cache-hit test, which intentionally reuses one
+instance to assert the second call does not re-fetch.
+
+Assertions (12 tests):
+
+- **Parsing / recency** — returns the **10 most recent** articles **sorted newest-first**: the
+  scraper fetches *every* candidate's authoritative `datePublished`, sorts descending, and takes
+  10 (the oldest of 11 is dropped). Every `url` is absolute and starts with
+  `https://claude.com/blog/`; every `pubDate` is **ISO** (`"Jun 08, 2026"` → `2026-…T…Z`) and
+  `new Date(pubDate)` is valid; every happy-path `description` is non-empty; cards are
+  de-duplicated by slug.
+- **Caching gate** — a second call within TTL does **not** re-invoke `fetch` (asserts the call
+  count stays at 1 index + 11 candidate fetches) and returns the same cached reference.
+- **Resilience gate** — when the index fetch **rejects** or **404s**, `getClaudeArticles()`
+  resolves to `[]` (or cached) and does **not** throw; when a single article-body fetch errors,
+  only that article degrades (index title/url kept, `description` empty) while the others keep
+  their excerpts and the feed stays at 10.
+- **Context** — `buildArticleContext()` over the parsed articles produces the expected
+  `## [Article 1] …` / `## [Article 10] …` markdown blocks (with `Published:`/`URL:` lines,
+  `---`-separated), and the empty-list path returns the "No articles currently available"
+  message.
+
+> **Real-network verification is manual:** the unit tests never hit claude.com. To confirm the
+> live source still parses (markup drift, bot-blocking), run the app and hit `GET /api/scrape`
+> — see §9 of [`CLAUDE-BLOG-FEED.md`](./CLAUDE-BLOG-FEED.md). Selectors are centralized as named
+> constants at the top of `src/lib/scraper.ts` so drift is cheap to fix.
+
+### 3. Component — rendering & interaction (RTL)
 
 One file per component group under `src/components/**.test.tsx`. Render in isolation with
 mock props; assert on accessible roles/text, not on CSS classes (classes are visual and
@@ -81,7 +124,7 @@ tested by eye against the mockup).
 - **VoiceToggle** — reflects on/off state and calls `onToggle`.
 - **KbCard** — renders title + formatted date; clicking calls `onOpen` with the article.
 
-### 3. Integration gates
+### 4. Integration gates
 
 - **Typecheck** catches prop/type drift between the agent-built foundation and components
   (e.g. `Message`, `Article`, parser signatures).

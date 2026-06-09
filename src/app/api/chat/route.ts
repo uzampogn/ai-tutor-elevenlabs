@@ -1,13 +1,13 @@
 import { NextRequest } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
-import { getAnthropicArticles, buildArticleContext } from '@/lib/scraper';
+import { getClaudeArticles, buildArticleContext } from '@/lib/scraper';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 export async function POST(req: NextRequest) {
   const { messages } = await req.json();
 
-  const articles = await getAnthropicArticles();
+  const articles = await getClaudeArticles();
   const articleContext = buildArticleContext(articles);
 
   const systemPrompt = `You are an engaging AI news tutor specialising in the latest developments from Anthropic.
@@ -24,7 +24,7 @@ Formatting requirement (strict):
 - It MUST use this exact heading on its own line, with nothing before or after it on that line: "💼 Business Impact"
 - Do not add any text after the Business Impact section.
 
-KNOWLEDGE BASE — Anthropic's 10 most recent blog articles:
+KNOWLEDGE BASE — the Claude blog's 10 most recent articles:
 
 ${articleContext}`;
 

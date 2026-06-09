@@ -8,7 +8,7 @@ export default function Brand() {
       </div>
       <div>
         <div className="brand-name">AI News Tutor</div>
-        <div className="brand-sub">Anthropic blog × voice</div>
+        <div className="brand-sub">Claude blog × voice</div>
       </div>
     </div>
   );
