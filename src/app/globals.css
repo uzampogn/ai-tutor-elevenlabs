@@ -7,15 +7,15 @@
   --accent: #c75b39;
   --answer-font: var(--font-serif), Georgia, serif;
 
-  --bg:        oklch(0.991 0.006 252);
-  --panel:     oklch(0.996 0.004 252);
-  --panel-2:   oklch(0.968 0.009 252);
-  --ink:       oklch(0.255 0.014 260);
-  --ink-soft:  oklch(0.44 0.014 260);
-  --muted:     oklch(0.60 0.012 260);
-  --faint:     oklch(0.72 0.010 260);
-  --line:      oklch(0.90 0.010 255);
-  --line-2:    oklch(0.945 0.007 255);
+  --bg:        oklch(0.968 0.0015 95);
+  --panel:     oklch(1 0 0);
+  --panel-2:   oklch(1 0 0);
+  --ink:       oklch(0.24 0.006 95);
+  --ink-soft:  oklch(0.44 0.006 95);
+  --muted:     oklch(0.60 0.005 95);
+  --faint:     oklch(0.74 0.004 95);
+  --line:      oklch(0.915 0.003 95);
+  --line-2:    oklch(0.95 0.002 95);
 
   --sans: var(--font-sans), system-ui, -apple-system, sans-serif;
   --mono: var(--font-mono), ui-monospace, monospace;
@@ -49,9 +49,7 @@ button { font-family: inherit; cursor: pointer; }
   height: 100%;
   display: grid;
   grid-template-columns: 320px 1fr;
-  background:
-    radial-gradient(120% 80% at 100% 0%, color-mix(in oklab, var(--accent) 5%, transparent), transparent 60%),
-    var(--bg);
+  background: var(--bg);
 }
 
 /* ── sidebar ────────────────────────────────────────────────────────── */
