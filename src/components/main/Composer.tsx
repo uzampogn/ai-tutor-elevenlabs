@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { SUGGESTED } from '@/lib/types';
-import MicBtn from './MicBtn';
+import VoiceOrb from './VoiceOrb';
 import SendBtn from './SendBtn';
 
 // A subset of the suggested questions surfaced as composer quick chips.
@@ -15,6 +15,7 @@ interface ComposerProps {
   listening: boolean;
   setListening: (v: boolean) => void;
   onSend: (override?: string) => void;
+  speaking?: boolean;
 }
 
 export default function Composer({
@@ -24,6 +25,7 @@ export default function Composer({
   listening,
   setListening,
   onSend,
+  speaking = false,
 }: ComposerProps) {
   const taRef = useRef<HTMLTextAreaElement>(null);
 
@@ -66,7 +68,7 @@ export default function Composer({
       </div>
 
       <form className="composer" onSubmit={handleSubmit}>
-        <MicBtn
+        <VoiceOrb
           listening={listening}
           setListening={setListening}
           onInterim={(t) => setInput(t)}
@@ -77,6 +79,7 @@ export default function Composer({
             if (AUTO_SEND) onSend(t);
           }}
           disabled={isLoading}
+          speaking={speaking}
         />
         <textarea
           ref={taRef}
