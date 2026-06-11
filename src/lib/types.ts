@@ -12,7 +12,7 @@ export interface Message {
 
 /** The 4 suggested questions surfaced in the Welcome empty-state and composer quick chips. */
 export const SUGGESTED: string[] = [
-  'What are the biggest AI developments this month?',
+  'What are the latest AI developments this month?',
   "How does Claude's latest update affect businesses?",
   "Explain the key research findings from Anthropic's recent posts",
   'What should a non-technical executive know about recent AI news?',
