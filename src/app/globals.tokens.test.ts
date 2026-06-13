@@ -110,10 +110,14 @@ describe('Conversation-first cleanup (pass 2) — removed chrome is gone', () =>
     );
   });
 
-  it('caps the orb at 25vh (--orb-size: min(248px, 25vh))', () => {
-    expect(normalizedCss, 'expected --orb-size capped at min(248px, 25vh)').toContain(
-      '--orb-size: min(248px, 25vh);',
-    );
+  it('caps the orb at 25vh and applies the −15% --orb-scale (spec/reduce-orb-size.md)', () => {
+    // The design cap (248px / 25vh) is preserved; --orb-scale: 0.85 trims the
+    // orb 15% to free vertical space for the conversation/text above it.
+    expect(normalizedCss, 'expected --orb-scale: 0.85 on .orb').toContain('--orb-scale: 0.85;');
+    expect(
+      normalizedCss,
+      'expected --orb-size capped at min(248px, 25vh) and scaled by --orb-scale',
+    ).toContain('--orb-size: calc(min(248px, 25vh) * var(--orb-scale));');
   });
 });
 

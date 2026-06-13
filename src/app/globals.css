@@ -550,8 +550,11 @@ button { font-family: inherit; cursor: pointer; }
    prefers-reduced-motion: no-preference guard below. */
 .orb {
   /* Capped so the orb stays compact and bottom-docked — the conversation
-     reads above it. 25vh ceiling, 248px otherwise. */
-  --orb-size: min(248px, 25vh);
+     reads above it. 25vh ceiling, 248px otherwise.
+     --orb-scale trims the orb −15% to free vertical space for the text above;
+     the caps (248/200/168px) stay the locked design values. */
+  --orb-scale: 0.85;
+  --orb-size: calc(min(248px, 25vh) * var(--orb-scale));
   position: relative;
   width: var(--orb-size); height: var(--orb-size);
   flex: none;
@@ -786,8 +789,8 @@ button { font-family: inherit; cursor: pointer; }
   .drawer { width: 100%; }
   /* Keep the voice dock centered; scale the orb down to fit. */
   .voice-dock { gap: 16px; }
-  .orb { --orb-size: min(200px, 25vh); }
+  .orb { --orb-size: calc(min(200px, 25vh) * var(--orb-scale)); }
 }
 @media (max-width: 480px) {
-  .orb { --orb-size: min(168px, 25vh); }
+  .orb { --orb-size: calc(min(168px, 25vh) * var(--orb-scale)); }
 }
