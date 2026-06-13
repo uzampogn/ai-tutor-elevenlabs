@@ -145,6 +145,42 @@ describe('Shell layout — .app is a full-width, non-centered grid', () => {
   });
 });
 
+describe('Welcome composition — text block + orb share main\'s center axis', () => {
+  // Regression lock: spec/center-welcome-composition.md.
+  // The welcome block is centered on main's axis at --welcome-col (text stays
+  // left-aligned inside it) and vertically centered above the docked orb in the
+  // welcome state only. Extract the bare `.welcome { … }` rule so these checks
+  // can't match `.welcome-title`/`-grid`/`-chip`.
+  const welcomeRule = (() => {
+    const start = normalizedCss.indexOf('.welcome {');
+    const end = normalizedCss.indexOf('}', start);
+    return normalizedCss.slice(start, end + 1);
+  })();
+
+  it('defines the --welcome-col content-width token (620px)', () => {
+    expectToken('--welcome-col', '620px');
+  });
+
+  it('centers the welcome block horizontally (margin-inline: auto)', () => {
+    expect(welcomeRule, 'expected .welcome to center its block with margin-inline: auto').toContain(
+      'margin-inline: auto',
+    );
+  });
+
+  it('caps the welcome block at --welcome-col', () => {
+    expect(welcomeRule, 'expected .welcome max-width: var(--welcome-col)').toContain(
+      'max-width: var(--welcome-col)',
+    );
+  });
+
+  it('vertically centers the thread in the welcome state only (:has scope)', () => {
+    expect(
+      normalizedCss,
+      'expected .scroll:has(.welcome) .thread { margin: auto; } for welcome-only vertical centering',
+    ).toContain('.scroll:has(.welcome) .thread { margin: auto; }');
+  });
+});
+
 describe('Dark-strip backstop — light UA canvas guaranteed', () => {
   // Regression lock for the bottom "dark strip" bug: commit 38cc6e1 lacked the
   // html background-color backstop, so in OS dark mode the transparent root

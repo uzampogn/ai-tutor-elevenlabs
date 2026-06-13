@@ -92,6 +92,10 @@ button { font-family: inherit; cursor: pointer; }
      .main (the 1fr track) fills the rest. Conversational content is centered
      within main via --content-max below — fluid, capped at a readable width. */
   --content-max: clamp(720px, 64vw, 920px);
+  /* Welcome content width = widest child (the 2×2 suggested-question grid).
+     The welcome block is centered at this width on main's axis (= orb's axis),
+     while text inside it stays left-aligned. See spec/center-welcome-composition.md. */
+  --welcome-col: 620px;
   display: grid;
   grid-template-columns: 320px 1fr;
   background: transparent;
@@ -218,8 +222,23 @@ button { font-family: inherit; cursor: pointer; }
 .newchat:hover { color: var(--ink-soft); border-color: var(--faint); background: var(--glass-strong); }
 
 /* ── scroll thread ──────────────────────────────────────────────────── */
-.scroll { flex: 1; overflow-y: auto; min-height: 0; }
+.scroll {
+  flex: 1; overflow-y: auto; min-height: 0;
+  /* Reserve the scrollbar gutter symmetrically so a classic (non-overlay)
+     scrollbar can't shift the centered welcome block off the orb's axis. No
+     effect with macOS overlay scrollbars (0 width). */
+  scrollbar-gutter: stable both-edges;
+}
 .thread { max-width: var(--content-max); margin: 0 auto; padding: 34px 32px 28px; }
+
+/* Welcome state only: center the welcome block vertically in the space above the
+   docked orb so the text + orb read as one centered composition. `.welcome` only
+   renders when messages.length === 0 (Thread.tsx), so the active answer thread is
+   untouched and keeps its top-down scroll. Auto margins (not justify-content:
+   center) are overflow-safe — they collapse to 0 when content exceeds the height,
+   so a tall welcome scrolls from the top instead of clipping. */
+.scroll:has(.welcome) { display: flex; flex-direction: column; }
+.scroll:has(.welcome) .thread { margin: auto; }
 
 .row { display: flex; margin-bottom: var(--gap); }
 .row-user { justify-content: flex-end; }
@@ -361,7 +380,9 @@ button { font-family: inherit; cursor: pointer; }
   50% { height: 16px; }
 }
 /* ── welcome ────────────────────────────────────────────────────────── */
-.welcome { padding: 30px 4px 10px; }
+/* Block centered on main's axis (= orb's axis) at --welcome-col; children stay
+   left-aligned, so the text is left-aligned WITHIN a centered block. */
+.welcome { max-width: var(--welcome-col); margin-inline: auto; padding: 30px 4px 10px; }
 .welcome-title {
   font-family: var(--answer-font); font-weight: 400; font-size: 38px;
   line-height: 1.14; letter-spacing: -0.02em; margin: 0 0 18px;
@@ -373,7 +394,7 @@ button { font-family: inherit; cursor: pointer; }
   max-width: 56ch; margin: 0 0 30px; text-wrap: pretty;
 }
 .welcome-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 620px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: var(--welcome-col);
 }
 .welcome-chip {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
