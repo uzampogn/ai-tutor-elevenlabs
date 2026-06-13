@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
-import { Newsreader, Hanken_Grotesk, JetBrains_Mono } from 'next/font/google';
+import { Newsreader, Plus_Jakarta_Sans, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 
-const sans = Hanken_Grotesk({
+const sans = Plus_Jakarta_Sans({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
   variable: '--font-sans',

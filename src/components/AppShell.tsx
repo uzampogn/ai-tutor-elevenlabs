@@ -5,7 +5,7 @@ import type { Message, Article } from '@/lib/types';
 import Sidebar from './sidebar/Sidebar';
 import Topbar from './main/Topbar';
 import Thread from './main/Thread';
-import Composer from './main/Composer';
+import InputDock from './main/InputDock';
 import ArticleDrawer from './ArticleDrawer';
 
 type Density = 'compact' | 'normal' | 'comfy';
@@ -17,6 +17,7 @@ export default function AppShell() {
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [speakingContent, setSpeakingContent] = useState<string | null>(null);
+  const [inputMode, setInputMode] = useState<'voice' | 'text'>('voice');
 
   const [articles, setArticles] = useState<Article[]>([]);
   const [articlesLoading, setArticlesLoading] = useState(true);
@@ -202,13 +203,16 @@ export default function AppShell() {
           onReadAloud={readAloud}
           onStopAudio={stopAudio}
         />
-        <Composer
+        <InputDock
+          inputMode={inputMode}
+          setInputMode={setInputMode}
           input={input}
           setInput={setInput}
           isLoading={isLoading}
           listening={isListening}
           setListening={setIsListening}
           onSend={(override) => void sendMessage(override)}
+          speaking={speakingContent !== null}
         />
       </main>
 
