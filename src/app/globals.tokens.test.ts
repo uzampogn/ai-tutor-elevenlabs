@@ -145,6 +145,25 @@ describe('Shell layout — .app is a full-width, non-centered grid', () => {
   });
 });
 
+describe('Dark-strip backstop — light UA canvas guaranteed', () => {
+  // Regression lock for the bottom "dark strip" bug: commit 38cc6e1 lacked the
+  // html background-color backstop, so in OS dark mode the transparent root
+  // canvas showed through the viewport's bottom gutter. Both of these guards
+  // must stay so the strip can never return — even in dark mode or on a
+  // partial CSS load.
+  it('declares color-scheme: light so the UA never paints dark chrome', () => {
+    expect(normalizedCss, 'expected `color-scheme: light;` (light-only design)').toContain(
+      'color-scheme: light;',
+    );
+  });
+
+  it('backstops the root canvas with html { background-color: var(--bg) }', () => {
+    expect(normalizedCss, 'expected an html { background-color: var(--bg); } backstop').toContain(
+      'html { background-color: var(--bg); }',
+    );
+  });
+});
+
 describe('Aurora Mist — motion guard present', () => {
   it('contains @media (prefers-reduced-motion: no-preference) guard for animations', () => {
     expect(
