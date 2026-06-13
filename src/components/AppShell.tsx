@@ -204,7 +204,7 @@ export default function AppShell() {
           listening={isListening}
           setListening={setIsListening}
           onSend={(override) => void sendMessage(override)}
-          speaking={speakingContent !== null}
+          speaking={!!speakingContent}
           onNewChat={handleNewChat}
         />
       </main>

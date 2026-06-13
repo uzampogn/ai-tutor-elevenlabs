@@ -473,6 +473,7 @@ button { font-family: inherit; cursor: pointer; }
 }
 .send-btn:hover:not(:disabled) { filter: brightness(1.06); }
 .send-btn:disabled { opacity: .4; cursor: default; }
+
 .composer-ta {
   flex: 1; border: none; outline: none; resize: none; background: transparent;
   font-family: var(--sans); font-size: 14.5px; line-height: 1.5; color: var(--ink);
