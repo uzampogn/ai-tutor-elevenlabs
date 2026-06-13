@@ -1,8 +1,8 @@
-import type { Metadata } from 'next';
-import { Newsreader, Hanken_Grotesk, JetBrains_Mono } from 'next/font/google';
+import type { Metadata, Viewport } from 'next';
+import { Newsreader, Plus_Jakarta_Sans, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 
-const sans = Hanken_Grotesk({
+const sans = Plus_Jakarta_Sans({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
   variable: '--font-sans',
@@ -24,6 +24,14 @@ const mono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: 'AI News Tutor',
   description: 'Learn the latest AI developments from the Claude blog — key concepts, business impact, Q&A.',
+};
+
+// Aurora Mist is a light-only design. Declaring color-scheme here emits
+// <meta name="color-scheme" content="light"> into <head>, so the browser never
+// paints its dark default canvas/scrollbars in OS dark mode — even if the CSS
+// chunk fails to load. Pairs with `color-scheme: light` in globals.css.
+export const viewport: Viewport = {
+  colorScheme: 'light',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

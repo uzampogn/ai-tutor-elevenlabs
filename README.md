@@ -1,6 +1,6 @@
 # AI News Tutor
 
-A voice-enabled AI tutor grounded in the [Claude blog](https://claude.com/blog)'s latest articles — editorial light design, streaming answers, Business Impact cards, source chips, and both text-to-speech and speech-to-text input.
+A voice-enabled AI tutor grounded in the [Claude blog](https://claude.com/blog)'s latest articles — **conversation-first** design in the soft, frosted-glass **Aurora Mist** palette, streaming answers, Business Impact cards, source chips, and both text-to-speech and speech-to-text input.
 
 ## Features
 
@@ -11,7 +11,9 @@ A voice-enabled AI tutor grounded in the [Claude blog](https://claude.com/blog)'
 | Business Impact card — extracted from every answer via client-side parsing | ✅ |
 | Source chips — articles referenced in the answer, linked to real URLs | ✅ |
 | Voice output (TTS) — ElevenLabs reads every answer aloud (toggle on/off) | ✅ |
-| Voice input (STT) — Web Speech API mic button; auto-sends final transcript | ✅ |
+| Voice input (STT) — Web Speech API; auto-sends final transcript | ✅ |
+| Voice-first mode (default) — large animated, state-reactive **orb**; tap to speak | ✅ |
+| Input-mode switch — segmented **Voice / Text** pill swaps the orb ↔ text composer | ✅ |
 | Knowledge-base sidebar — article list with category, date, and active state | ✅ |
 | Article drawer — slide-in reader with summary and tags, Esc to close | ✅ |
 | Welcome empty state — suggested questions as 2×2 card grid | ✅ |
@@ -24,7 +26,7 @@ A voice-enabled AI tutor grounded in the [Claude blog](https://claude.com/blog)'
 1. **Build the knowledge base.** On load, the app calls `/api/scrape`, which scrapes the 10 most recent posts from the Claude blog — title, URL, publish date, and an excerpt pulled from each article's page. Results are sorted newest-first and cached in memory for an hour. They populate the knowledge-base sidebar.
 2. **Ask a question.** Your message plus the 10 articles (injected as context) go to `/api/chat`. Claude streams back an answer grounded in those articles, written for a non-technical reader and ending with a **Business Impact** section.
 3. **Render the answer.** As the response streams in, the client splits it into the main body and the Business Impact card, and matches any article titles Claude cited to render **source chips** that link to the real post URLs.
-4. **Listen and speak.** Toggle voice output to have ElevenLabs read each answer aloud; tap the mic to dictate your question — the final transcript auto-sends. A waveform animates while speaking or listening.
+4. **Listen and speak.** The app opens in **voice-first** mode: a large animated orb sits where the composer would be — tap it to dictate your question and the final transcript auto-sends. The orb is state-reactive (idle → listening → thinking → speaking). Switch to **Text** mode for the frosted-glass composer. Toggle voice output to have ElevenLabs read each answer aloud; a waveform animates while speaking or listening.
 
 Clicking an article in the sidebar opens a slide-in **reader drawer** with its summary; the same articles are what ground the chat, so answers and sources stay in sync.
 
@@ -49,8 +51,8 @@ The following items are in [`ui-design-mockup/SPEC.md`](./ui-design-mockup/SPEC.
 | AI | Anthropic Claude (`claude-sonnet-4-6`) |
 | Voice output | ElevenLabs TTS (`eleven_turbo_v2`) |
 | Voice input | Web Speech API (browser-native, Chrome/Edge) |
-| Styling | Custom CSS (oklch design tokens) + Tailwind utilities |
-| Fonts | Newsreader (serif answers), Hanken Grotesk (UI), JetBrains Mono (labels) |
+| Styling | Custom CSS — "Aurora Mist" frosted-glass design tokens + Tailwind utilities |
+| Fonts | Newsreader (serif answers), Plus Jakarta Sans (UI), JetBrains Mono (labels) |
 | Deployment | Vercel |
 
 ## Project structure
@@ -76,8 +78,12 @@ src/
 │   ├── Waveform.tsx               # Animated bars (TTS speaking + STT listening)
 │   ├── icons.tsx                  # Inline SVG icons
 │   ├── main/
-│   │   ├── Composer.tsx           # Quick chips + textarea + MicBtn + SendBtn
-│   │   ├── MicBtn.tsx             # Web Speech API STT toggle
+│   │   ├── InputDock.tsx          # Voice/Text mode switch; renders VoiceDock or Composer
+│   │   ├── VoiceDock.tsx          # Voice-first layout: Orb + transcript readout
+│   │   ├── Orb.tsx                # Animated state-reactive voice orb (CSS-driven)
+│   │   ├── Composer.tsx           # Quick chips + textarea + MicBtn + SendBtn (text mode)
+│   │   ├── useSpeechRecognition.ts # Shared Web Speech API STT hook (MicBtn + Orb)
+│   │   ├── MicBtn.tsx             # STT toggle button (consumes useSpeechRecognition)
 │   │   ├── NewChat.tsx            # Reset conversation
 │   │   ├── SendBtn.tsx            # Submit
 │   │   ├── Thread.tsx             # Scroll container; renders Welcome or message list

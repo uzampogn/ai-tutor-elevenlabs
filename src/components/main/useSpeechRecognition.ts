@@ -1,31 +1,36 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { MicIcon } from '../icons';
 
-interface VoiceOrbProps {
+export interface UseSpeechRecognitionOptions {
   listening: boolean;
   setListening: (v: boolean) => void;
   onInterim: (text: string) => void;
   onFinal: (text: string) => void;
   disabled?: boolean;
-  speaking?: boolean;
 }
 
-export default function VoiceOrb({
+export interface UseSpeechRecognitionResult {
+  supported: boolean;
+  toggle: () => void;
+}
+
+export function useSpeechRecognition({
   listening,
   setListening,
   onInterim,
   onFinal,
   disabled = false,
-  speaking = false,
-}: VoiceOrbProps) {
+}: UseSpeechRecognitionOptions): UseSpeechRecognitionResult {
   const [supported, setSupported] = useState(true);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
+  // Latest callbacks held in a ref so the recognition instance is built once
+  // but its handlers always call current props.
   const cb = useRef({ onInterim, onFinal, setListening });
   cb.current = { onInterim, onFinal, setListening };
 
+  // Feature-detect and construct the recognition instance once on mount.
   useEffect(() => {
     const Ctor = window.SpeechRecognition ?? window.webkitSpeechRecognition;
     if (!Ctor) {
@@ -65,6 +70,7 @@ export default function VoiceOrb({
     };
   }, []);
 
+  // Stop listening if the shell disables the mic (e.g. a send started).
   useEffect(() => {
     if (disabled && listening) {
       recognitionRef.current?.abort();
@@ -88,29 +94,5 @@ export default function VoiceOrb({
     }
   }
 
-  const isDisabled = disabled || !supported;
-  const label = supported ? 'Voice input' : 'Voice input is not available in this browser';
-  const cls = ['orb', listening && 'is-listening', speaking && 'is-speaking']
-    .filter(Boolean)
-    .join(' ');
-
-  return (
-    <button
-      type="button"
-      className={cls}
-      onClick={toggle}
-      disabled={isDisabled}
-      aria-label={label}
-      aria-pressed={listening}
-      title={label}
-    >
-      <span className="orb-ring orb-ring--outer" />
-      <span className="orb-ring orb-ring--mid" />
-      <span className="orb-ring orb-ring--arc" />
-      <span className="orb-ring orb-ring--dash" />
-      <span className="orb-core">
-        <MicIcon size={14} />
-      </span>
-    </button>
-  );
+  return { supported, toggle };
 }

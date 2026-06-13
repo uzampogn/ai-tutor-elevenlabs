@@ -14,6 +14,12 @@ describe('Welcome', () => {
     expect(SUGGESTED).toHaveLength(4);
   });
 
+  it('does not render the "Live knowledge base" badge', () => {
+    render(<Welcome onAsk={() => {}} />);
+    expect(screen.queryByText(/live knowledge base/i)).toBeNull();
+    expect(document.querySelector('.welcome-badge')).toBeNull();
+  });
+
   it('calls onAsk with the exact question string when a chip is clicked', async () => {
     const user = userEvent.setup();
     const onAsk = vi.fn();
