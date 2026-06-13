@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Message, Article } from '@/lib/types';
 import Sidebar from './sidebar/Sidebar';
-import Topbar from './main/Topbar';
 import Thread from './main/Thread';
 import InputDock from './main/InputDock';
 import ArticleDrawer from './ArticleDrawer';
@@ -14,7 +13,6 @@ export default function AppShell() {
   const [messages, setMessages] = useState<Message[]>([]); // start empty → Welcome
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [speakingContent, setSpeakingContent] = useState<string | null>(null);
   const [inputMode, setInputMode] = useState<'voice' | 'text'>('voice');
@@ -52,9 +50,9 @@ export default function AppShell() {
     setSpeakingContent(null);
   }
 
+  // Voice is always on in the conversation-first cleanup — there is no on/off toggle.
   const playVoice = useCallback(
     async (text: string) => {
-      if (!voiceEnabled) return;
       audioRef.current?.pause();
       try {
         const res = await fetch('/api/speak', {
@@ -76,7 +74,7 @@ export default function AppShell() {
         setSpeakingContent(null);
       }
     },
-    [voiceEnabled],
+    [],
   );
 
   const sendMessage = useCallback(
@@ -188,12 +186,6 @@ export default function AppShell() {
       />
 
       <main className="main">
-        <Topbar
-          voiceEnabled={voiceEnabled}
-          speaking={speakingContent !== null || isListening}
-          onToggleVoice={() => setVoiceEnabled((v) => !v)}
-          onNewChat={handleNewChat}
-        />
         <Thread
           messages={messages}
           isLoading={isLoading}
@@ -213,6 +205,7 @@ export default function AppShell() {
           setListening={setIsListening}
           onSend={(override) => void sendMessage(override)}
           speaking={speakingContent !== null}
+          onNewChat={handleNewChat}
         />
       </main>
 

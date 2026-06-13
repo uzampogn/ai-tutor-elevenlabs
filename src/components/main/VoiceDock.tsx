@@ -1,8 +1,6 @@
 'use client';
 
-import { useState } from 'react';
 import Orb, { type OrbState } from './Orb';
-import Waveform from '../Waveform';
 import { useSpeechRecognition } from './useSpeechRecognition';
 
 interface VoiceDockProps {
@@ -13,8 +11,8 @@ interface VoiceDockProps {
   setListening: (v: boolean) => void;
   onSend: (override?: string) => void;
   speaking: boolean;
-  /** Slot for the mode-switch element rendered by InputDock. */
-  modeSwitch?: React.ReactNode;
+  /** Session controls (Voice/Text switch + New chat) rendered below the orb. */
+  controls?: React.ReactNode;
 }
 
 export default function VoiceDock({
@@ -24,26 +22,22 @@ export default function VoiceDock({
   setListening,
   onSend,
   speaking,
-  modeSwitch,
+  controls,
 }: VoiceDockProps) {
-  const [interimText, setInterimText] = useState('');
-
   const { supported, toggle } = useSpeechRecognition({
     listening,
     setListening,
-    onInterim: (t) => {
-      setInterimText(t);
-      setInput(t);
-    },
+    onInterim: (t) => setInput(t),
     onFinal: (t) => {
-      setInterimText('');
       setInput(t);
       onSend(t);
     },
     disabled: isLoading,
   });
 
-  // Derive orb state with precedence: speaking > thinking > listening > idle
+  // Derive orb state with precedence: speaking > thinking > listening > idle.
+  // The orb's animation states are now the only voice cue — the orb's
+  // aria-label (set per state in Orb.tsx) covers screen readers.
   const orbState: OrbState = speaking
     ? 'speaking'
     : isLoading
@@ -52,29 +46,11 @@ export default function VoiceDock({
         ? 'listening'
         : 'idle';
 
-  const STATUS_TEXT: Record<OrbState, string> = {
-    idle: 'Tap to speak',
-    listening: 'Listening…',
-    thinking: 'Thinking…',
-    speaking: 'Speaking…',
-  };
-
-  const readoutText = listening && interimText ? interimText : STATUS_TEXT[orbState];
-
   return (
     <div className="voice-dock">
-      {modeSwitch}
+      <Orb state={orbState} onClick={toggle} disabled={isLoading || !supported} />
 
-      <Orb
-        state={orbState}
-        onClick={toggle}
-        disabled={isLoading || !supported}
-      />
-
-      <div className="voice-dock-readout" aria-live="polite" aria-atomic="true">
-        <Waveform active={listening || speaking} bars={12} />
-        <span className="voice-dock-readout-text">{readoutText}</span>
-      </div>
+      {controls}
 
       {!supported && (
         <p className="voice-dock-unsupported" role="status">

@@ -81,10 +81,67 @@ describe('Aurora Mist — orb and dock CSS classes present', () => {
     '.orb-ring',
     '.input-mode-switch',
     '.voice-dock',
+    '.session-controls',
+    '.newchat',
+    '.voice-dock-unsupported',
   ];
 
   it.each(requiredClasses)('contains class %s', (cls) => {
     expect(css, `expected class "${cls}" to be defined in globals.css`).toContain(cls);
+  });
+});
+
+describe('Conversation-first cleanup (pass 2) — removed chrome is gone', () => {
+  // spec/conversation-first-cleanup.md: top bar, voice on/off toggle, welcome
+  // badge, and the orb status readout were all removed.
+  const removedClasses = [
+    '.topbar',
+    '.topbar-title',
+    '.topbar-sub',
+    '.voice-toggle',
+    '.welcome-badge',
+    '.voice-dock-status',
+    '.voice-dock-hint',
+  ];
+
+  it.each(removedClasses)('does NOT contain removed class %s', (cls) => {
+    expect(css, `class "${cls}" should have been removed in the pass-2 cleanup`).not.toContain(
+      cls,
+    );
+  });
+
+  it('caps the orb at 25vh (--orb-size: min(248px, 25vh))', () => {
+    expect(normalizedCss, 'expected --orb-size capped at min(248px, 25vh)').toContain(
+      '--orb-size: min(248px, 25vh);',
+    );
+  });
+});
+
+describe('Shell layout — .app is a full-width, non-centered grid', () => {
+  // Regression lock: spec/layout-fix-sidebar-content-centering.md.
+  // The `.app` shell must NOT be capped/centered (no max-width / margin-inline:
+  // auto), or the 320px sidebar floats off the viewport's left edge. Extract
+  // just the `.app { … }` rule so these assertions can't catch other selectors.
+  const appRule = (() => {
+    const start = normalizedCss.indexOf('.app {');
+    const end = normalizedCss.indexOf('}', start);
+    return normalizedCss.slice(start, end + 1);
+  })();
+
+  it('keeps the two-column grid (320px 1fr)', () => {
+    expect(appRule, 'expected .app to keep grid-template-columns: 320px 1fr').toContain(
+      'grid-template-columns: 320px 1fr;',
+    );
+  });
+
+  it('does NOT center the shell with margin-inline: auto', () => {
+    expect(appRule, '.app must not re-introduce margin-inline: auto').not.toContain(
+      'margin-inline: auto',
+    );
+  });
+
+  it('does NOT cap the shell with a max-width', () => {
+    expect(appRule, '.app must not re-introduce a max-width cap').not.toContain('max-width:');
   });
 });
 

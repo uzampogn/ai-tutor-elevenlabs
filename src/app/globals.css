@@ -51,6 +51,10 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
+/* Backstop the root canvas with the base bg so no strip of the browser's
+   default canvas (dark in dark mode) shows through on the right edge — the
+   aurora itself stays on <body> with background-attachment: fixed below. */
+html { background-color: var(--bg); }
 body {
   font-family: var(--sans);
   /* Aurora Mist: low-saturation sky bloom top-left + lilac bloom bottom-right
@@ -80,6 +84,10 @@ button { font-family: inherit; cursor: pointer; }
 /* ── shell ──────────────────────────────────────────────────────────── */
 .app {
   height: 100%;
+  /* Full-width shell: the sidebar stays flush to the viewport's left edge and
+     .main (the 1fr track) fills the rest. Conversational content is centered
+     within main via --content-max below — fluid, capped at a readable width. */
+  --content-max: clamp(720px, 64vw, 920px);
   display: grid;
   grid-template-columns: 320px 1fr;
   background: transparent;
@@ -187,46 +195,27 @@ button { font-family: inherit; cursor: pointer; }
 }
 
 /* ── main column ────────────────────────────────────────────────────── */
+/* No top bar — the conversation/welcome fills the freed vertical space and
+   all session controls live at the bottom by the input dock. */
 .main { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
-.topbar {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 32px; border-bottom: 1px solid var(--line);
-  background: var(--glass-strong);
-  -webkit-backdrop-filter: blur(16px) saturate(125%);
-  backdrop-filter: blur(16px) saturate(125%);
-}
-.topbar-title {
-  font-family: var(--answer-font); font-weight: 500; font-size: 19px;
-  margin: 0; letter-spacing: -0.02em;
-}
-.topbar-sub { font-size: 12px; color: var(--muted); }
-.topbar-l { display: flex; align-items: baseline; gap: 12px; }
-.topbar-r { display: flex; align-items: center; gap: 10px; }
 
-.voice-toggle {
-  display: inline-flex; align-items: center; gap: 9px;
-  border: 1px solid var(--line); background: var(--panel);
-  color: var(--muted); font-weight: 600; font-size: 12.5px;
-  padding: 8px 14px 8px 11px; border-radius: 999px; transition: .18s;
-}
-.voice-toggle:hover { border-color: var(--faint); filter: brightness(1.02); }
-.voice-toggle.on {
-  color: var(--accent-strong);
-  border-color: color-mix(in oklab, var(--accent-strong) 42%, transparent);
-  background: color-mix(in oklab, var(--accent) 14%, var(--panel));
-}
-.vt-icon { display: inline-flex; height: 14px; align-items: center; }
-
+/* New chat: frosted-glass pill matching the Voice/Text switch, grouped with
+   it in .session-controls (reachable in both voice and text modes). */
 .newchat {
-  border: 1px solid transparent; background: var(--ink); color: #FFFFFF;
-  font-weight: 600; font-size: 12.5px; padding: 8px 15px; border-radius: 999px;
-  transition: background .16s ease-out, filter .16s ease-out;
+  appearance: none;
+  border: 1px solid var(--line); background: var(--glass);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  backdrop-filter: blur(14px) saturate(120%);
+  color: var(--muted); font-family: var(--sans);
+  font-weight: 600; font-size: 12.5px; padding: 8px 16px; border-radius: 999px;
+  box-shadow: var(--shadow-sm);
+  transition: color .16s ease-out, border-color .16s ease-out, background .16s ease-out;
 }
-.newchat:hover { background: var(--accent-strong); }
+.newchat:hover { color: var(--ink-soft); border-color: var(--faint); background: var(--glass-strong); }
 
 /* ── scroll thread ──────────────────────────────────────────────────── */
 .scroll { flex: 1; overflow-y: auto; min-height: 0; }
-.thread { max-width: 760px; margin: 0 auto; padding: 34px 32px 28px; }
+.thread { max-width: var(--content-max); margin: 0 auto; padding: 34px 32px 28px; }
 
 .row { display: flex; margin-bottom: var(--gap); }
 .row-user { justify-content: flex-end; }
@@ -367,20 +356,8 @@ button { font-family: inherit; cursor: pointer; }
   0%, 100% { height: 3px; }
   50% { height: 16px; }
 }
-.voice-toggle .wave span { background: currentColor; }
-.voice-toggle.on .wave.is-active span { background: var(--accent); }
-
 /* ── welcome ────────────────────────────────────────────────────────── */
 .welcome { padding: 30px 4px 10px; }
-.welcome-badge {
-  display: inline-flex; align-items: center; gap: 8px;
-  font-size: 11.5px; font-weight: 600; color: var(--ok);
-  background: color-mix(in oklab, var(--ok) 12%, var(--glass-strong));
-  border: 1px solid color-mix(in oklab, var(--ok) 30%, var(--line));
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  padding: 6px 13px; border-radius: 999px; margin-bottom: 22px;
-}
 .welcome-title {
   font-family: var(--answer-font); font-weight: 400; font-size: 38px;
   line-height: 1.14; letter-spacing: -0.02em; margin: 0 0 18px;
@@ -428,7 +405,7 @@ button { font-family: inherit; cursor: pointer; }
   backdrop-filter: blur(16px) saturate(120%);
 }
 .quick-row {
-  display: flex; gap: 8px; max-width: 760px; margin: 0 auto 12px;
+  display: flex; gap: 8px; max-width: var(--content-max); margin: 0 auto 12px;
   flex-wrap: wrap;
 }
 .quick-chip {
@@ -444,7 +421,7 @@ button { font-family: inherit; cursor: pointer; }
 .quick-chip:disabled { opacity: .45; cursor: default; }
 
 .composer {
-  max-width: 760px; margin: 0 auto;
+  max-width: var(--content-max); margin: 0 auto;
   display: flex; align-items: flex-end; gap: 8px;
   background: var(--glass-strong);
   -webkit-backdrop-filter: blur(18px) saturate(125%);
@@ -478,9 +455,15 @@ button { font-family: inherit; cursor: pointer; }
 }
 .composer-ta::placeholder { color: var(--faint); }
 .composer-foot {
-  max-width: 760px; margin: 10px auto 0; text-align: center;
+  max-width: var(--content-max); margin: 10px auto 0; text-align: center;
   font-size: 11px; color: var(--faint);
 }
+/* Voice mode: the dock cluster (orb + session controls + this footnote) are
+   direct children of .main and would otherwise sit flush to the viewport's
+   bottom edge, so the Voice/Text toggle clips under browser chrome. Lift the
+   cluster off the bottom. (Text mode's foot lives inside .composer-wrap, which
+   already has its own bottom padding, so this scoped selector leaves it alone.) */
+.main > .composer-foot { margin-bottom: clamp(16px, 3vh, 32px); }
 
 /* ── input dock: mode switch ────────────────────────────────────────── */
 /* Segmented glass "Voice / Text" pill. Sits near the input dock. */
@@ -512,25 +495,24 @@ button { font-family: inherit; cursor: pointer; }
 .input-mode-switch button svg { flex: none; }
 
 /* ── voice dock ─────────────────────────────────────────────────────── */
-/* Centered vertical column: orb + one-line status/transcript + mode switch. */
+/* Centered vertical column: compact orb, then session controls below it.
+   The orb is its own flex row (no absolute centering) so it never overlaps
+   the conversation/welcome content above. No status readout beneath it —
+   the orb's animation states are the only voice cue. */
 .voice-dock {
   display: flex; flex-direction: column; align-items: center;
-  gap: 22px;
-  max-width: 760px; margin: 0 auto;
+  gap: 18px;
+  max-width: var(--content-max); margin: 0 auto;
   padding: 6px 16px 4px;
   text-align: center;
 }
-.voice-dock-status {
-  min-height: 22px;
-  font-size: 14px; line-height: 1.45; font-weight: 500;
-  color: var(--ink-soft);
-  max-width: 52ch;
-  display: flex; align-items: center; justify-content: center; gap: 10px;
+.voice-dock-unsupported {
+  font-size: 13px; line-height: 1.5; color: var(--muted); max-width: 46ch;
 }
-.voice-dock-status .wave { color: var(--accent-strong); }
-.voice-dock-hint {
-  font-family: var(--mono); font-size: 10.5px; letter-spacing: .06em;
-  text-transform: uppercase; color: var(--faint);
+
+/* Session controls: Voice/Text switch + New chat, grouped in one row. */
+.session-controls {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
 }
 
 /* ── the orb ────────────────────────────────────────────────────────── */
@@ -541,7 +523,9 @@ button { font-family: inherit; cursor: pointer; }
    Base (this block) renders a STATIC glowing orb. All motion lives in the
    prefers-reduced-motion: no-preference guard below. */
 .orb {
-  --orb-size: 248px;
+  /* Capped so the orb stays compact and bottom-docked — the conversation
+     reads above it. 25vh ceiling, 248px otherwise. */
+  --orb-size: min(248px, 25vh);
   position: relative;
   width: var(--orb-size); height: var(--orb-size);
   flex: none;
@@ -775,9 +759,9 @@ button { font-family: inherit; cursor: pointer; }
   .welcome-title { font-size: 30px; }
   .drawer { width: 100%; }
   /* Keep the voice dock centered; scale the orb down to fit. */
-  .voice-dock { gap: 18px; }
-  .orb { --orb-size: 200px; }
+  .voice-dock { gap: 16px; }
+  .orb { --orb-size: min(200px, 25vh); }
 }
 @media (max-width: 480px) {
-  .orb { --orb-size: 168px; }
+  .orb { --orb-size: min(168px, 25vh); }
 }

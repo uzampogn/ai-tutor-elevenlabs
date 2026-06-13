@@ -2,6 +2,7 @@
 
 import Composer from './Composer';
 import VoiceDock from './VoiceDock';
+import NewChat from './NewChat';
 
 export type InputMode = 'voice' | 'text';
 
@@ -15,6 +16,7 @@ interface InputDockProps {
   setListening: (v: boolean) => void;
   onSend: (override?: string) => void;
   speaking: boolean;
+  onNewChat: () => void;
 }
 
 export default function InputDock({
@@ -27,25 +29,31 @@ export default function InputDock({
   setListening,
   onSend,
   speaking,
+  onNewChat,
 }: InputDockProps) {
-  const modeSwitch = (
-    <div className="input-mode-switch" role="group" aria-label="Input mode">
-      <button
-        type="button"
-        className={`input-mode-btn${inputMode === 'voice' ? ' is-active' : ''}`}
-        aria-pressed={inputMode === 'voice'}
-        onClick={() => setInputMode('voice')}
-      >
-        Voice
-      </button>
-      <button
-        type="button"
-        className={`input-mode-btn${inputMode === 'text' ? ' is-active' : ''}`}
-        aria-pressed={inputMode === 'text'}
-        onClick={() => setInputMode('text')}
-      >
-        Text
-      </button>
+  // Session controls live by the input dock and are reachable in both modes:
+  // the Voice/Text switch (selects orb vs. composer) + New chat (clears the session).
+  const sessionControls = (
+    <div className="session-controls">
+      <div className="input-mode-switch" role="group" aria-label="Input mode">
+        <button
+          type="button"
+          className={`input-mode-btn${inputMode === 'voice' ? ' is-active' : ''}`}
+          aria-pressed={inputMode === 'voice'}
+          onClick={() => setInputMode('voice')}
+        >
+          Voice
+        </button>
+        <button
+          type="button"
+          className={`input-mode-btn${inputMode === 'text' ? ' is-active' : ''}`}
+          aria-pressed={inputMode === 'text'}
+          onClick={() => setInputMode('text')}
+        >
+          Text
+        </button>
+      </div>
+      <NewChat onClick={onNewChat} />
     </div>
   );
 
@@ -60,7 +68,7 @@ export default function InputDock({
           setListening={setListening}
           onSend={onSend}
           speaking={speaking}
-          modeSwitch={modeSwitch}
+          controls={sessionControls}
         />
         <div className="composer-foot">
           Answers are grounded in the Claude blog and may be imperfect.
@@ -69,10 +77,10 @@ export default function InputDock({
     );
   }
 
-  // Text mode: Composer already renders .composer-wrap; prefix with mode switch.
+  // Text mode: Composer already renders .composer-wrap; prefix with the session controls.
   return (
     <>
-      {modeSwitch}
+      {sessionControls}
       <Composer
         input={input}
         setInput={setInput}

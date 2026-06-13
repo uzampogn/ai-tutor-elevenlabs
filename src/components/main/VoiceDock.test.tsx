@@ -51,6 +51,20 @@ describe('VoiceDock — orb state derivation', () => {
   });
 });
 
+describe('VoiceDock — no status readout (orb is the only voice cue)', () => {
+  it('does not render the "Tap to speak" / status readout beneath the orb', () => {
+    renderVoiceDock({ listening: true });
+    expect(screen.queryByText(/tap to speak|listening…|thinking…|speaking…/i)).toBeNull();
+    expect(document.querySelector('.voice-dock-readout')).toBeNull();
+  });
+
+  it('keeps a state-appropriate aria-label on the orb for screen readers', () => {
+    renderVoiceDock({ listening: true });
+    // The orb's aria-label is now the sole a11y cue that voice is active.
+    expect(screen.getByRole('button', { name: 'Stop listening' })).toBeInTheDocument();
+  });
+});
+
 describe('VoiceDock — orb interaction', () => {
   it('tapping the orb calls setListening(true) when not listening', async () => {
     const user = userEvent.setup();

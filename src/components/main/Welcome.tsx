@@ -1,4 +1,4 @@
-// Empty-state hero with badge, serif title, lede, and a 2x2 grid of the
+// Empty-state hero with serif title, lede, and a 2x2 grid of the
 // suggested questions. Clicking a chip sends that question.
 
 import { SUGGESTED } from '@/lib/types';
@@ -7,10 +7,6 @@ import { ArrowIcon } from '../icons';
 export default function Welcome({ onAsk }: { onAsk: (question: string) => void }) {
   return (
     <div className="welcome">
-      <div className="welcome-badge">
-        <span className="live-dot" />
-        Live knowledge base
-      </div>
       <h2 className="welcome-title">
         Understand the latest in AI, <em>explained clearly</em>.
       </h2>

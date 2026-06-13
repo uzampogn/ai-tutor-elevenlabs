@@ -15,6 +15,7 @@ function renderInputDock(overrides: Partial<React.ComponentProps<typeof InputDoc
     setListening: vi.fn(),
     onSend: vi.fn(),
     speaking: false,
+    onNewChat: vi.fn(),
     ...overrides,
   };
   render(<InputDock {...props} />);
@@ -82,6 +83,25 @@ describe('InputDock — mode switch', () => {
     const props = renderInputDock({ inputMode: 'voice' });
     await user.click(screen.getByRole('button', { name: 'Text' }));
     expect(props.setInputMode).toHaveBeenCalledWith('text');
+  });
+});
+
+describe('InputDock — New chat (session control)', () => {
+  it('renders New chat beside the mode switch in voice mode', () => {
+    renderInputDock({ inputMode: 'voice' });
+    expect(screen.getByRole('button', { name: 'New chat' })).toBeInTheDocument();
+  });
+
+  it('renders New chat beside the mode switch in text mode', () => {
+    renderInputDock({ inputMode: 'text' });
+    expect(screen.getByRole('button', { name: 'New chat' })).toBeInTheDocument();
+  });
+
+  it('clicking New chat calls onNewChat (clears the session)', async () => {
+    const user = userEvent.setup();
+    const props = renderInputDock({ inputMode: 'voice' });
+    await user.click(screen.getByRole('button', { name: 'New chat' }));
+    expect(props.onNewChat).toHaveBeenCalledTimes(1);
   });
 });
 
