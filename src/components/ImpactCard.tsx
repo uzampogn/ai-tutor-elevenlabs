@@ -1,16 +1,25 @@
 // "Business Impact" callout card. Renders the parsed impact text with inline
-// markdown support.
+// markdown support. When a read-along cursor is supplied, the impact words are
+// wrapped in addressable .s/.w spans (the decorative .impact-label is NOT a
+// spoken word and stays span-free).
 
 import InlineMarkdown from './InlineMarkdown';
+import type { WordCursor } from '@/lib/readAlong/spokenDoc';
 
-export default function ImpactCard({ text }: { text: string }) {
+interface ImpactCardProps {
+  text: string;
+  /** Optional read-along cursor over the impact region's words. */
+  cursor?: WordCursor;
+}
+
+export default function ImpactCard({ text, cursor }: ImpactCardProps) {
   return (
     <div className="impact">
       <div className="impact-label">
         <span aria-hidden="true">💼</span> Business Impact
       </div>
       <p className="impact-text">
-        <InlineMarkdown text={text} />
+        <InlineMarkdown text={text} cursor={cursor} />
       </p>
     </div>
   );
