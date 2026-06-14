@@ -1,155 +1,157 @@
 # AI News Tutor
 
-A voice-enabled AI tutor grounded in the [Claude blog](https://claude.com/blog)'s latest articles — **conversation-first** design in the soft, frosted-glass **Aurora Mist** palette, streaming answers, Business Impact cards, source chips, and both text-to-speech and speech-to-text input.
+**Understand the latest in AI — explained clearly, and read aloud.**
 
-## Features
+AI News Tutor is a conversational agent that turns the [Claude blog](https://claude.com/blog)'s latest posts into clear, on-demand explanations. Ask by voice or text. You can steer any answer to the level you want — high-level business impact or under-the-hood technical detail. Answers are streamed in and **read back aloud while the words highlight and the page follows along**, synced with real ElevenLabs timestamps.
 
-| Feature | Status |
+**▶ Try it live: [ai-tutor-elevenlabs.vercel.app](https://ai-tutor-elevenlabs.vercel.app)**
+
+![AI News Tutor — homepage](./docs/home.png)
+
+---
+
+## Who it's for
+
+Founders, curious product managers or engineers — anyone interested in AI. Steer the conversation just by using your voice whether you want the business headline or the technical specifics.
+
+## What it solves
+
+AI moves faster than most people can keep up with, and primary sources are written for builders. AI News Tutor closes that gap:
+
+- **Always current** — answers are grounded in the Claude blog's 10 most recent posts, not a stale training cutoff.
+- **Speaks at your level** — it makes complex AI topics approachable for anyone, and because the chat is fully interactive it explains them in whatever register you ask for: business impact one moment, technical detail the next. Every answer still ends with a **Business Impact** takeaway.
+- **Listen, don't just read** — full text-to-speech with synchronized read-along, so you can learn hands-free.
+- **Trustworthy** — answers cite the exact articles they draw from, linked to the real posts.
+
+---
+
+## What it does
+
+| | |
 |---|---|
-| Live knowledge base — 10 most recent Claude blog posts, refreshed on demand | ✅ |
-| Streaming chat — Claude answers with article context injected automatically | ✅ |
-| Business Impact card — extracted from every answer via client-side parsing | ✅ |
-| Source chips — articles referenced in the answer, linked to real URLs | ✅ |
-| Voice output (TTS) — ElevenLabs reads every answer aloud (toggle on/off) | ✅ |
-| Voice input (STT) — Web Speech API; auto-sends final transcript | ✅ |
-| Voice-first mode (default) — large animated, state-reactive **orb**; tap to speak | ✅ |
-| Input-mode switch — segmented **Voice / Text** pill swaps the orb ↔ text composer | ✅ |
-| Knowledge-base sidebar — article list with category, date, and active state | ✅ |
-| Article drawer — slide-in reader with summary and tags, Esc to close | ✅ |
-| Welcome empty state — suggested questions as 2×2 card grid | ✅ |
-| Message actions — Copy / Read aloud / Like per AI response | ✅ |
-| Responsive layout — sidebar hidden on ≤880 px, drawer goes full-width | ✅ |
-| Reduced-motion — all animations gated behind `prefers-reduced-motion` | ✅ |
+| 🗞️ **Live knowledge base** | Pulls the 10 most recent Claude blog posts on demand — title, date, and excerpt — into a browsable sidebar. |
+| 💬 **Grounded answers** | Claude answers your question using those articles as context, streamed token-by-token, structured to scan. |
+| 💼 **Business Impact takeaway** | Every answer closes with a one-line "so what does this mean" callout. |
+| 🔗 **Source citations** | Articles referenced in an answer appear as chips linking to the real posts. |
+| 🔊 **Read aloud** | ElevenLabs voices every answer; a waveform animates while it speaks. |
+| ✨ **Read-along** | The spoken sentence highlights and the view auto-scrolls to follow the voice. |
+| 🎙️ **Talk to it** | Voice-first mode: tap the orb, speak your question, and it sends automatically. |
+| 📰 **Article reader** | Click any article to open a slide-in reader with its summary. |
 
-## How it works
+### The experience
 
-1. **Build the knowledge base.** On load, the app calls `/api/scrape`, which scrapes the 10 most recent posts from the Claude blog — title, URL, publish date, and an excerpt pulled from each article's page. Results are sorted newest-first and cached in memory for an hour. They populate the knowledge-base sidebar.
-2. **Ask a question.** Your message plus the 10 articles (injected as context) go to `/api/chat`. Claude streams back an answer grounded in those articles, written for a non-technical reader and ending with a **Business Impact** section.
-3. **Render the answer.** As the response streams in, the client splits it into the main body and the Business Impact card, and matches any article titles Claude cited to render **source chips** that link to the real post URLs.
-4. **Listen and speak.** The app opens in **voice-first** mode: a large animated orb sits where the composer would be — tap it to dictate your question and the final transcript auto-sends. The orb is state-reactive (idle → listening → thinking → speaking). Switch to **Text** mode for the frosted-glass composer. Toggle voice output to have ElevenLabs read each answer aloud; a waveform animates while speaking or listening.
+The app opens in **voice-first** mode — a large, state-reactive **orb** invites you to tap and speak. Ask anything about recent AI news; the answer streams in, grounded in real articles, then plays back aloud. Want more business framing or more technical depth? Just ask a follow-up — the conversation adapts to you. As the voice reads, the current sentence lights up and the page scrolls to keep it in view. Prefer to type? Flip to **Text** mode for a frosted-glass composer. Every answer carries source chips and a Business Impact line, so you always know where a claim came from and why it matters.
 
-Clicking an article in the sidebar opens a slide-in **reader drawer** with its summary; the same articles are what ground the chat, so answers and sources stay in sync.
+---
 
-## What's missing vs. the design mockup
+## Read-along: the standout
 
-The following items are in [`ui-design-mockup/SPEC.md`](./ui-design-mockup/SPEC.md) but not yet built:
+Most "read aloud" features just play audio. AI News Tutor synchronizes the audio with the text — the spoken sentence highlights, already-spoken sentences dim, and the thread auto-scrolls to keep the active line in a comfortable reading band.
 
-| Gap | Notes |
-|---|---|
-| **Density toggle UI** | CSS classes (`density-compact` / `density-comfy`) exist; the `AppShell` state is wired; no button to change it yet. Default is normal. |
-| **"Open article" link in drawer** | The drawer shows a summary but the dashed note at the bottom is plain text — it doesn't link to `article.url`. |
-| **Mobile KB affordance** | On ≤880 px the sidebar is hidden with no way to reach the knowledge base. Noted in spec §7 as a follow-up (e.g. topbar button). |
-| Conversation persistence | Intentionally out of scope (spec §9). |
-| Real article hero images | Hatch placeholder used; intentionally out of scope (spec §9). |
-| Structured-JSON `/api/chat` | Client-side markdown parsing used instead; intentionally out of scope (spec §9). |
+The engineering crux is that **the spoken text ≠ the rendered text**: the screen shows full markdown (bold, lists, a separate Impact card, source chips) while the voice engine times a plain string. AI News Tutor solves this with **one canonical tokenization** that is the single source of truth for both what gets spoken and what gets highlighted:
 
-## Stack
+```
+buildSpokenDoc(answer)   → canonical spoken text + stable sentence/word spans
+        ▼
+POST /api/speak          → ElevenLabs /with-timestamps → stitched audio + char-level timing
+        ▼
+buildTimings(...)        → per-sentence & per-word [start,end] windows (pure, with a fallback)
+        ▼
+useReadAlong(...)        → maps audio.currentTime → active sentence, highlights + follow-scrolls
+```
+
+It's built to be unobtrusive and accessible: highlighting toggles CSS classes on stable spans (never re-rendering, so screen readers aren't spammed), follow-scroll moves only on sentence changes (no jitter), `prefers-reduced-motion` is honored, and if timing data is ever missing the audio still plays and the text stays fully readable.
+
+---
+
+## Built with
 
 | Layer | Technology |
 |---|---|
-| Framework | Next.js 14 (App Router) |
-| AI | Anthropic Claude (`claude-sonnet-4-6`) |
-| Voice output | ElevenLabs TTS (`eleven_turbo_v2`) |
+| Framework | Next.js 14 (App Router), TypeScript |
+| AI | Anthropic Claude — `claude-sonnet-4-6` (streamed) |
+| Voice output | ElevenLabs TTS — `eleven_turbo_v2`, timestamped `/with-timestamps` |
 | Voice input | Web Speech API (browser-native, Chrome/Edge) |
-| Styling | Custom CSS — "Aurora Mist" frosted-glass design tokens + Tailwind utilities |
-| Fonts | Newsreader (serif answers), Plus Jakarta Sans (UI), JetBrains Mono (labels) |
-| Deployment | Vercel |
+| Design | "Aurora Mist" frosted-glass design system (custom CSS + Tailwind) |
+| Tests | Vitest + Testing Library (jsdom) |
+| Hosting | Vercel (auto-deployed via GitHub Actions) |
 
-## Project structure
+---
 
-```
-src/
-├── app/
-│   ├── page.tsx                   # Renders <AppShell />
-│   ├── layout.tsx                 # Fonts + metadata
-│   ├── globals.css                # Design tokens, all component CSS
-│   └── api/
-│       ├── chat/route.ts          # Streams Claude responses
-│       ├── scrape/route.ts        # Returns cached Claude blog articles (1h TTL)
-│       └── speak/route.ts         # Proxies ElevenLabs TTS
-├── components/
-│   ├── AppShell.tsx               # Root client component; owns all state
-│   ├── ArticleDrawer.tsx          # Slide-in article reader
-│   ├── AiRow.tsx                  # AI message: avatar, body, Impact card, source chips, actions
-│   ├── ImpactCard.tsx             # "Business Impact" callout card
-│   ├── InlineMarkdown.tsx         # Bold/italic/paragraph renderer (no heavy library)
-│   ├── SourceChips.tsx            # Matched source links
-│   ├── UserRow.tsx                # User message bubble
-│   ├── Waveform.tsx               # Animated bars (TTS speaking + STT listening)
-│   ├── icons.tsx                  # Inline SVG icons
-│   ├── main/
-│   │   ├── InputDock.tsx          # Voice/Text mode switch; renders VoiceDock or Composer
-│   │   ├── VoiceDock.tsx          # Voice-first layout: Orb + transcript readout
-│   │   ├── Orb.tsx                # Animated state-reactive voice orb (CSS-driven)
-│   │   ├── Composer.tsx           # Quick chips + textarea + MicBtn + SendBtn (text mode)
-│   │   ├── useSpeechRecognition.ts # Shared Web Speech API STT hook (MicBtn + Orb)
-│   │   ├── MicBtn.tsx             # STT toggle button (consumes useSpeechRecognition)
-│   │   ├── NewChat.tsx            # Reset conversation
-│   │   ├── SendBtn.tsx            # Submit
-│   │   ├── Thread.tsx             # Scroll container; renders Welcome or message list
-│   │   ├── Topbar.tsx             # Title, VoiceToggle, NewChat
-│   │   ├── VoiceToggle.tsx        # TTS on/off pill
-│   │   └── Welcome.tsx            # Empty-state hero + suggested questions
-│   └── sidebar/
-│       ├── Brand.tsx              # Logo mark + pulsing dot
-│       ├── KbCard.tsx             # One article card
-│       ├── KbHeader.tsx           # "Knowledge base" header with refresh
-│       ├── KbList.tsx             # Scrollable article list
-│       ├── Sidebar.tsx            # Left column wrapper
-│       └── kb.ts                  # Category mapping + date formatter
-├── lib/
-│   ├── parseAnswer.ts             # parseAnswer (body/impact split) + matchSources
-│   ├── scraper.ts                 # Claude blog HTML scrape + 1h in-memory cache
-│   └── types.ts                   # Message, Article, SUGGESTED questions
-└── types/
-    └── speech.d.ts                # Ambient Web Speech API types
-```
-
-## Local development
-
-**1. Clone and install**
+## Run it yourself
 
 ```bash
 git clone https://github.com/uzampogn/ai-tutor-elevenlabs.git
 cd ai-tutor-elevenlabs
 npm install
+cp .env.example .env.local      # then fill in the keys below
+npm run dev                     # http://localhost:3000
 ```
 
-**2. Set up environment variables**
-
-```bash
-cp .env.example .env.local
-```
-
-Fill in `.env.local`:
+Fill `.env.local`:
 
 ```env
 ANTHROPIC_API_KEY=sk-ant-...
 ELEVENLABS_API_KEY=...
-ELEVENLABS_VOICE_ID=21m00Tcm4TlvDq8ikWAM
+ELEVENLABS_VOICE_ID=21m00Tcm4TlvDq8ikWAM   # optional; defaults to "Rachel"
 ```
 
-| Variable | Where to get it |
-|---|---|
-| `ANTHROPIC_API_KEY` | [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) |
-| `ELEVENLABS_API_KEY` | [elevenlabs.io/app/settings/api-keys](https://elevenlabs.io/app/settings/api-keys) |
-| `ELEVENLABS_VOICE_ID` | Default is Rachel. Browse voices at [elevenlabs.io/voice-library](https://elevenlabs.io/voice-library) |
+| Variable | Required | Where to get it |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | yes | [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) |
+| `ELEVENLABS_API_KEY` | yes | [elevenlabs.io/app/settings/api-keys](https://elevenlabs.io/app/settings/api-keys) |
+| `ELEVENLABS_VOICE_ID` | no | Browse [elevenlabs.io/voice-library](https://elevenlabs.io/voice-library); defaults to Rachel |
 
-**3. Run**
+Voice **input** uses the browser-native Web Speech API — works in Chrome/Edge, no key needed.
+
+### Scripts
 
 ```bash
-npm run dev
+npm run dev          # dev server (http://localhost:3000)
+npm run build        # production build
+npm run start        # serve the production build
+npm run lint         # next lint
+npm run typecheck    # tsc --noEmit
+npm run test         # vitest (watch)   ·   npm run test:run  (one-shot)
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+> ⚠️ Don't run `npm run build` while `npm run dev` is live — they share `.next` and the prod build corrupts the running dev server. Stop dev first.
 
-## Deployment
+---
 
-Runs on Vercel with no extra config. Set the same three environment variables (`ANTHROPIC_API_KEY`, `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`) in the project settings and connect the repo — pushes to `main` go to production, PRs get preview URLs.
+## How it's wired
 
-## Design reference
+All routes run server-side, so API keys never reach the browser.
 
-The editorial design is documented in [`ui-design-mockup/`](./ui-design-mockup/):
+| Route | Method | Purpose |
+|---|---|---|
+| `/api/scrape` | `GET` | Returns the 10 most recent Claude blog posts (1-hour in-memory cache). |
+| `/api/chat` | `POST` | Injects the articles as context and **streams** Claude's answer. |
+| `/api/speak` | `POST` | Strips markdown, chunks, calls ElevenLabs `/with-timestamps`, returns `{ audioBase64, alignment }` (`alignment.chars.join('') === text`). Fail-soft. |
 
-- `AI News Tutor.html` — static mockup; open in a browser for the visual source of truth
-- `SPEC.md` — full implementation spec mapping each screen to components
+```
+src/
+├── app/
+│   ├── page.tsx · layout.tsx · globals.css   # shell, fonts, Aurora Mist tokens + CSS
+│   └── api/{chat,scrape,speak}/              # Claude stream · blog scrape · ElevenLabs TTS
+├── components/
+│   ├── AppShell.tsx                          # root client component; owns all state
+│   ├── AiRow.tsx                             # answer: body, Impact card, source chips, [data-s] spans
+│   ├── main/                                 # InputDock, VoiceDock, Orb, Composer, Thread,
+│   │   └── useReadAlong.ts                   #   useReadAlong (highlight + follow-scroll), STT hook
+│   └── sidebar/                              # knowledge-base sidebar
+└── lib/
+    ├── scraper.ts · parseAnswer.ts · types.ts
+    └── readAlong/                            # pure, unit-tested read-along core
+        ├── spokenDoc.ts                      #   canonical tokenization (single source of truth)
+        ├── stripMarkdown.ts                  #   markdown → spoken text
+        └── timingMap.ts                      #   alignment → sentence/word time windows
+```
+
+Deploys to Vercel via GitHub Actions: **pull requests** get a preview URL commented on the PR; **pushes to `main`** promote to production. Set `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` as repo secrets and the three runtime keys in the Vercel project settings.
+
+---
+
+## Design
+
+The editorial **Aurora Mist** visual system — soft frosted-glass surfaces on a clean white canvas — is documented in [`ui-design-mockup/`](./ui-design-mockup/) (`AI News Tutor.html` is the visual source of truth; `SPEC.md` maps each screen to its components).
