@@ -204,6 +204,48 @@ describe('Dark-strip backstop — light UA canvas guaranteed', () => {
   });
 });
 
+describe('Read-along sentence highlight (Spec 04) — classes present, palette intact', () => {
+  // The first user-visible read-along adds .s-active (spoken sentence) and
+  // .s-read (already-spoken). These must exist, reuse existing tokens, and
+  // introduce NO new accent hex (Aurora Mist locked).
+  const requiredClasses = ['.s-active', '.s-read'];
+
+  it.each(requiredClasses)('contains class %s', (cls) => {
+    expect(css, `expected read-along class "${cls}" to be defined in globals.css`).toContain(cls);
+  });
+
+  // Isolate the two new rules + their transition so the hex check can't be
+  // satisfied (or tripped) by unrelated declarations elsewhere in the file.
+  const readAlongRules = (() => {
+    const pieces: string[] = [];
+    for (const sel of ['.s-active {', '.s-read {', '.s-active, .s-read {']) {
+      let from = 0;
+      for (;;) {
+        const start = normalizedCss.indexOf(sel, from);
+        if (start === -1) break;
+        const end = normalizedCss.indexOf('}', start);
+        pieces.push(normalizedCss.slice(start, end + 1));
+        from = end + 1;
+      }
+    }
+    return pieces.join(' ');
+  })();
+
+  it('derives the highlight from existing tokens (--accent / --ink / --ink-soft)', () => {
+    expect(readAlongRules, 'expected .s-active to wash with var(--accent)').toContain('var(--accent)');
+    expect(readAlongRules, 'expected .s-read to reuse var(--ink-soft)').toContain('var(--ink-soft)');
+  });
+
+  it('introduces NO new accent hex literal in the read-along rules', () => {
+    // Any `#rrggbb` / `#rgb` in the new rules would be a foreign accent value.
+    const hexInNewRules = readAlongRules.match(/#[0-9a-fA-F]{3,8}\b/g) ?? [];
+    expect(
+      hexInNewRules,
+      `read-along rules must use tokens, not hex literals — found ${hexInNewRules.join(', ')}`,
+    ).toEqual([]);
+  });
+});
+
 describe('Aurora Mist — motion guard present', () => {
   it('contains @media (prefers-reduced-motion: no-preference) guard for animations', () => {
     expect(

@@ -15,12 +15,18 @@ interface AiRowProps {
   streaming: boolean;
   articles: Article[];
   speaking: boolean;
+  /**
+   * Optional ref callback to the root row element, supplied for the speaking row
+   * so the read-along controller (Spec 04) can toggle classes on its `[data-s]`
+   * spans. Absent for non-speaking rows.
+   */
+  rowRef?: (el: HTMLElement | null) => void;
   /** Speak this answer aloud via the parent's TTS pipeline. */
   onReadAloud: (text: string) => void;
   onStopAudio: () => void;
 }
 
-export default function AiRow({ content, streaming, articles, speaking, onReadAloud, onStopAudio }: AiRowProps) {
+export default function AiRow({ content, streaming, articles, speaking, rowRef, onReadAloud, onStopAudio }: AiRowProps) {
   const [copied, setCopied] = useState(false);
   const [liked, setLiked] = useState(false);
 
@@ -58,7 +64,7 @@ export default function AiRow({ content, streaming, articles, speaking, onReadAl
   }
 
   return (
-    <div className="row row-ai">
+    <div className="row row-ai" ref={rowRef}>
       <div className="ai-avatar" aria-hidden="true">
         <span className="ai-spark" />
       </div>
