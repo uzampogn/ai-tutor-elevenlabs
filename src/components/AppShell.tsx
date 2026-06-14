@@ -1,14 +1,22 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Message, Article } from '@/lib/types';
 import { buildSpokenDoc } from '@/lib/readAlong/spokenDoc';
+import { buildTimings, type ReadAlongTimings } from '@/lib/readAlong/timingMap';
 import Sidebar from './sidebar/Sidebar';
 import Thread from './main/Thread';
 import InputDock from './main/InputDock';
 import ArticleDrawer from './ArticleDrawer';
 
 type Density = 'compact' | 'normal' | 'comfy';
+
+/**
+ * Read-along mode (Spec 00 cross-cutting flag). `'off'` is a total no-op
+ * equivalent to today; `'sentence'` is the dev default once Spec 04 lands;
+ * `'word'` arrives in Spec 07. A user-facing toggle is out of scope.
+ */
+export type ReadAlongMode = 'off' | 'sentence' | 'word';
 
 /** Character-level alignment returned by /api/speak (Spec 02). */
 interface SpeakAlignment {
@@ -39,6 +47,12 @@ export default function AppShell() {
   const [speakingContent, setSpeakingContent] = useState<string | null>(null);
   // Stashed alignment for the currently-speaking answer (consumed by Spec 03).
   const [speakingAlignment, setSpeakingAlignment] = useState<SpeakAlignment | null>(null);
+  // Read-along mode. Default 'sentence' (Spec 04): a true no-op visually until
+  // audio plays with valid timings; the controller is otherwise inert.
+  const [readAlong] = useState<ReadAlongMode>('sentence');
+  // The live audio element, surfaced to the view so the read-along controller
+  // can drive its rAF loop. Set on `onplay`, cleared on `ended`/`pause`.
+  const [audioEl, setAudioEl] = useState<HTMLAudioElement | null>(null);
   const [inputMode, setInputMode] = useState<'voice' | 'text'>('voice');
 
   const [articles, setArticles] = useState<Article[]>([]);
@@ -49,6 +63,14 @@ export default function AppShell() {
 
   // density default 'normal' = no class on .app.
   const [density] = useState<Density>('normal');
+
+  // Sentence/word time windows for the speaking answer (Spec 03), built from the
+  // canonical spoken doc + stashed alignment. Null until both are present; the
+  // read-along controller treats null as "inert".
+  const timings: ReadAlongTimings | null = useMemo(() => {
+    if (!speakingContent || !speakingAlignment) return null;
+    return buildTimings(buildSpokenDoc(speakingContent), speakingAlignment);
+  }, [speakingContent, speakingAlignment]);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const speakAbortRef = useRef<AbortController | null>(null);
@@ -73,6 +95,7 @@ export default function AppShell() {
     audioRef.current?.pause();
     setSpeakingContent(null);
     setSpeakingAlignment(null);
+    setAudioEl(null);
   }
 
   // Voice is always on in the conversation-first cleanup — there is no on/off toggle.
@@ -96,23 +119,28 @@ export default function AppShell() {
         audio.onplay = () => {
           setSpeakingContent(content);
           setSpeakingAlignment(alignment);
+          setAudioEl(audio);
         };
         audio.onended = () => {
           setSpeakingContent(null);
           setSpeakingAlignment(null);
+          setAudioEl(null);
         };
         audio.onpause = () => {
           setSpeakingContent(null);
           setSpeakingAlignment(null);
+          setAudioEl(null);
         };
         audio.play().catch(() => {
           setSpeakingContent(null);
           setSpeakingAlignment(null);
+          setAudioEl(null);
         });
       } catch (err) {
         console.error('[voice]', err);
         setSpeakingContent(null);
         setSpeakingAlignment(null);
+        setAudioEl(null);
       }
     },
     [],
@@ -170,6 +198,7 @@ export default function AppShell() {
     audioRef.current?.pause();
     setMessages([]);
     setInput('');
+    setAudioEl(null);
   }
 
   function openArticle(article: Article, trigger: HTMLButtonElement | null) {
@@ -199,31 +228,36 @@ export default function AppShell() {
           body: JSON.stringify({ text: spokenText }),
           signal: controller.signal,
         });
-        if (!res.ok) { setSpeakingContent(null); setSpeakingAlignment(null); return; }
+        if (!res.ok) { setSpeakingContent(null); setSpeakingAlignment(null); setAudioEl(null); return; }
         const { audioBase64, alignment } = (await res.json()) as SpeakResult;
         const audio = new Audio(audioUrlFromBase64(audioBase64));
         audioRef.current = audio;
         audio.onplay = () => {
           setSpeakingContent(content);
           setSpeakingAlignment(alignment);
+          setAudioEl(audio);
         };
         audio.onended = () => {
           setSpeakingContent(null);
           setSpeakingAlignment(null);
+          setAudioEl(null);
         };
         audio.onpause = () => {
           setSpeakingContent(null);
           setSpeakingAlignment(null);
+          setAudioEl(null);
         };
         audio.play().catch(() => {
           setSpeakingContent(null);
           setSpeakingAlignment(null);
+          setAudioEl(null);
         });
       } catch (err) {
         if ((err as Error).name === 'AbortError') return;
         console.error('[voice]', err);
         setSpeakingContent(null);
         setSpeakingAlignment(null);
+        setAudioEl(null);
       }
     })();
   }
@@ -247,6 +281,9 @@ export default function AppShell() {
           isLoading={isLoading}
           articles={articles}
           speakingContent={speakingContent}
+          readAlong={readAlong}
+          timings={timings}
+          audio={audioEl}
           onAsk={(q) => void sendMessage(q)}
           onReadAloud={readAloud}
           onStopAudio={stopAudio}

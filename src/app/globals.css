@@ -286,6 +286,24 @@ button { font-family: inherit; cursor: pointer; }
 }
 .ai-para strong { font-weight: 600; color: var(--ink); }
 .ai-para em { font-style: italic; }
+
+/* ── read-along sentence highlight (Spec 04) ────────────────────────────
+   Class toggles on the stable [data-s] spans (no text re-render → a11y safe).
+   Background/color only — never font-size/weight → no layout shift/reflow.
+   Aurora Mist locked: NO new accent hex — low-alpha washes are derived from
+   the existing --accent token via color-mix, and "read" text reuses
+   --ink-soft. The color transition is gated under the no-preference guard. */
+.s-active {
+  /* Soft low-alpha accent wash, legible on the white --panel; a touch of extra
+     box-padding via rounding without changing the box model. */
+  background: color-mix(in oklab, var(--accent) 22%, transparent);
+  color: var(--ink);
+  border-radius: 4px;
+}
+.s-read {
+  /* Already-spoken: quietly de-emphasised, signalling progress. */
+  color: var(--ink-soft);
+}
 .ai-list {
   margin: 0 0 14px; padding-left: 22px;
   font-family: var(--answer-font); font-size: 17px;
@@ -712,6 +730,11 @@ button { font-family: inherit; cursor: pointer; }
    Includes: pulse / pulse-green / wv / blink / spin / caret +
    orb-breathe / orb-bloom-breathe / orb-ripple / orb-shimmer / orb-rotate. */
 @media (prefers-reduced-motion: no-preference) {
+  /* Read-along highlight (Spec 04): smooth the color/background change only when
+     the user hasn't asked to reduce motion. The class toggle itself still works
+     under reduced motion (it's not animation) — just without the transition. */
+  .s-active, .s-read { transition: background-color .18s ease, color .18s ease; }
+
   .brand-pulse { animation: pulse 2.6s ease-out infinite; }
   .kb-refresh.spinning svg { animation: spin .9s linear infinite; }
   .live-dot { animation: pulse-green 2s infinite; }
