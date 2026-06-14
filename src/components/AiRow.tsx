@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { Article } from '@/lib/types';
 import { parseAnswer, matchSources, parseBlocks } from '@/lib/parseAnswer';
+import { buildSpokenDoc, makeWordCursor } from '@/lib/readAlong/spokenDoc';
 import InlineMarkdown from './InlineMarkdown';
 import ImpactCard from './ImpactCard';
 import SourceChips from './SourceChips';
@@ -27,6 +28,24 @@ export default function AiRow({ content, streaming, articles, speaking, onReadAl
   const sources = matchSources(content, articles);
 
   const blocks = parseBlocks(body);
+
+  // Single source of truth for read-along: one tokenization drives both the TTS
+  // string (later specs) and the addressable spans below. Built once per
+  // message; partial/streaming content is tolerated (never throws).
+  const doc = useMemo(() => buildSpokenDoc(content), [content]);
+  const bodyWords = useMemo(
+    () => doc.words.filter((w) => doc.sentences[w.sentenceId]?.region === 'body'),
+    [doc],
+  );
+  const impactWords = useMemo(
+    () => doc.words.filter((w) => doc.sentences[w.sentenceId]?.region === 'impact'),
+    [doc],
+  );
+  // Body blocks render in document order, consuming the shared body cursor in
+  // order (React renders children top-to-bottom), so word ids line up 1:1 with
+  // doc.words. The impact card consumes its own cursor.
+  const bodyCursor = makeWordCursor(bodyWords);
+  const impactCursor = makeWordCursor(impactWords);
 
   function handleCopy() {
     navigator.clipboard?.writeText(content).then(
@@ -64,7 +83,7 @@ export default function AiRow({ content, streaming, articles, speaking, onReadAl
                   const isLastItem = j === block.items.length - 1;
                   return (
                     <li key={j} className="ai-list-item">
-                      <InlineMarkdown text={item} />
+                      <InlineMarkdown text={item} cursor={bodyCursor} />
                       {streaming && impact === null && isLast && isLastItem && <span className="caret" />}
                     </li>
                   );
@@ -79,7 +98,7 @@ export default function AiRow({ content, streaming, articles, speaking, onReadAl
                   const isLastItem = j === block.items.length - 1;
                   return (
                     <li key={j} className="ai-list-item">
-                      <InlineMarkdown text={item} />
+                      <InlineMarkdown text={item} cursor={bodyCursor} />
                       {streaming && impact === null && isLast && isLastItem && <span className="caret" />}
                     </li>
                   );
@@ -89,13 +108,13 @@ export default function AiRow({ content, streaming, articles, speaking, onReadAl
           }
           return (
             <p key={i} className="ai-para">
-              <InlineMarkdown text={block.text} />
+              <InlineMarkdown text={block.text} cursor={bodyCursor} />
               {streaming && impact === null && isLast && <span className="caret" />}
             </p>
           );
         })}
 
-        {impact !== null && impact.length > 0 && <ImpactCard text={impact} />}
+        {impact !== null && impact.length > 0 && <ImpactCard text={impact} cursor={impactCursor} />}
 
         <SourceChips sources={sources} />
 
