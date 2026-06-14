@@ -2,7 +2,7 @@
 
 **Understand the latest in AI — explained clearly, and read aloud.**
 
-AI News Tutor is a voice-enabled tutor that turns the [Claude blog](https://claude.com/blog)'s latest posts into clear, on-demand explanations. Ask by voice or text, and because the conversation is fully interactive you can steer any answer to the level you want — high-level business impact or under-the-hood technical detail — just by asking. Answers stream in and are **read back aloud while the words highlight and the page follows along**, synced with real ElevenLabs timestamps.
+AI News Tutor is a conversational agent that turns the [Claude blog](https://claude.com/blog)'s latest posts into clear, on-demand explanations. Ask by voice or text. You can steer any answer to the level you want — high-level business impact or under-the-hood technical detail. Answers are streamed in and **read back aloud while the words highlight and the page follows along**, synced with real ElevenLabs timestamps.
 
 **▶ Try it live: [ai-tutor-elevenlabs.vercel.app](https://ai-tutor-elevenlabs.vercel.app)**
 
@@ -12,7 +12,7 @@ AI News Tutor is a voice-enabled tutor that turns the [Claude blog](https://clau
 
 ## Who it's for
 
-Founders, curious product managers or engineers — anyone interested in AI. Because you steer the depth of every answer, the same app works whether you want the business headline or the technical specifics.
+Founders, curious product managers or engineers — anyone interested in AI. Steer the conversation just by using your voice whether you want the business headline or the technical specifics.
 
 ## What it solves
 
