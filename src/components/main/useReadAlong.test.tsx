@@ -67,9 +67,12 @@ const timings: ReadAlongTimings = {
 function Harness({
   active = true,
   audio,
+  autoRef,
 }: {
   active?: boolean;
   audio: HTMLAudioElement | null;
+  /** Optional out-ref so tests can observe the `isAutoScrolling` flag. */
+  autoRef?: React.MutableRefObject<boolean>;
 }) {
   const rowRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -88,6 +91,7 @@ function Harness({
     rowEl: rowRef.current,
     scrollEl: scrollRef.current,
     granularity: 'sentence',
+    autoScrollingRef: autoRef,
   });
 
   return (
@@ -109,6 +113,54 @@ function Harness({
 
 function spanAt(i: number): HTMLElement {
   return document.querySelector(`[data-s="${i}"]`) as HTMLElement;
+}
+
+// ── Geometry harness (Spec 05) ─────────────────────────────────────────────
+// jsdom has no layout, so we stamp controllable geometry onto the scroll
+// container and each [data-s] span: the viewport height, current scrollTop,
+// total scrollHeight, and where each span's top sits (in container-relative px).
+// `scrollSpanIntoBand` reads `clientHeight`, `scrollTop`, `scrollHeight`,
+// `scrollEl.getBoundingClientRect().top` and `span.getBoundingClientRect().top`,
+// so those are exactly the knobs we override.
+interface Layout {
+  clientHeight: number;
+  scrollTop: number;
+  scrollHeight: number;
+  /** container-relative top (px) of each [data-s] span, by index. */
+  spanTops: number[];
+}
+
+const CONTAINER_TOP = 100; // arbitrary container viewport offset; cancels out.
+
+/** Apply a layout to the live DOM so the hook measures what we want. */
+function applyLayout(layout: Layout) {
+  const scrollEl = document.querySelector('.scroll') as HTMLElement;
+  Object.defineProperty(scrollEl, 'clientHeight', {
+    configurable: true,
+    get: () => layout.clientHeight,
+  });
+  Object.defineProperty(scrollEl, 'scrollHeight', {
+    configurable: true,
+    get: () => layout.scrollHeight,
+  });
+  // scrollTop is a real, settable property in jsdom; just assign it.
+  scrollEl.scrollTop = layout.scrollTop;
+  scrollEl.getBoundingClientRect = (() =>
+    ({ top: CONTAINER_TOP }) as DOMRect) as HTMLElement['getBoundingClientRect'];
+
+  for (let i = 0; i < layout.spanTops.length; i++) {
+    const span = spanAt(i);
+    if (!span) continue;
+    const top = CONTAINER_TOP + layout.spanTops[i];
+    span.getBoundingClientRect = (() =>
+      ({ top }) as DOMRect) as HTMLElement['getBoundingClientRect'];
+  }
+}
+
+/** The `top` value passed to the most recent scrollTo call. */
+function lastScrollTop(): number {
+  const call = scrollToSpy.mock.calls.at(-1);
+  return (call?.[0] as { top: number }).top;
 }
 
 function classesOf(i: number): string[] {
@@ -288,5 +340,233 @@ describe('useReadAlong — inert when off', () => {
     // Nothing rendered with read-along classes; no scroll.
     expect(classesOf(0)).toEqual([]);
     expect(scrollToSpy).not.toHaveBeenCalled();
+  });
+});
+
+// ── Spec 05 — follow-scroll (reading band) ─────────────────────────────────
+// BAND_TOP=0.30, BAND_BOTTOM=0.55 of clientHeight. On sentence change only,
+// if the active span sits outside the band, scroll it to BAND_TOP; if inside,
+// do nothing. With h=1000 the band is [300, 550]px and BAND_TOP target is 300.
+describe('useReadAlong — follow-scroll (band)', () => {
+  function startPlaying(autoRef?: React.MutableRefObject<boolean>) {
+    const audio = new FakeAudio() as unknown as HTMLAudioElement;
+    const fake = audio as unknown as FakeAudio;
+    render(<Harness audio={audio} autoRef={autoRef} />);
+    return { audio, fake };
+  }
+
+  it('follows on change: a sentence below the band scrolls so its top lands at BAND_TOP', () => {
+    const { fake } = startPlaying();
+
+    // Sentence 0 sits comfortably; sentence 1 has drifted well below the band.
+    applyLayout({
+      clientHeight: 1000,
+      scrollTop: 0,
+      scrollHeight: 10000,
+      spanTops: [200, 800, 1600],
+    });
+
+    fake.currentTime = 0.5; // sentence 0
+    act(() => fake.firePlay());
+    scrollToSpy.mockClear(); // ignore the one scroll-to-start call
+
+    fake.currentTime = 1.5; // → sentence 1 (top 800, below BAND_BOTTOM*h=550)
+    act(() => flushFrames(1));
+
+    expect(scrollToSpy).toHaveBeenCalledTimes(1);
+    // desiredScrollTop = scrollTop(0) + spanTop(800) - h*BAND_TOP(300) = 500.
+    expect(lastScrollTop()).toBe(500);
+    expect(scrollToSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ top: 500, behavior: 'smooth' }),
+    );
+  });
+
+  it('no jitter: when the next sentence is already inside the band, does not scroll', () => {
+    const { fake } = startPlaying();
+
+    // Sentence 1's top (400) sits inside the band [300, 550] → leave it alone.
+    applyLayout({
+      clientHeight: 1000,
+      scrollTop: 0,
+      scrollHeight: 10000,
+      spanTops: [120, 400, 700],
+    });
+
+    fake.currentTime = 0.5;
+    act(() => fake.firePlay());
+    scrollToSpy.mockClear();
+
+    fake.currentTime = 1.5; // → sentence 1, already in band
+    act(() => flushFrames(1));
+
+    expect(scrollToSpy).not.toHaveBeenCalled();
+  });
+
+  it('cadence: at most one scroll per sentence change, not per frame', () => {
+    const { fake } = startPlaying();
+
+    applyLayout({
+      clientHeight: 1000,
+      scrollTop: 0,
+      scrollHeight: 10000,
+      spanTops: [200, 800, 1600],
+    });
+
+    fake.currentTime = 0.5;
+    act(() => fake.firePlay());
+    scrollToSpy.mockClear();
+
+    // Several frames all WITHIN sentence 1 — one sentence change, one scroll.
+    fake.currentTime = 1.2;
+    act(() => flushFrames(1));
+    fake.currentTime = 1.5;
+    act(() => flushFrames(1));
+    fake.currentTime = 1.9;
+    act(() => flushFrames(3));
+
+    expect(scrollToSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('reduced-motion: behavior:auto and threshold-only (no scroll while within the wider band)', () => {
+    vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+      matches: query === '(prefers-reduced-motion: reduce)',
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+
+    const { fake } = startPlaying();
+
+    // Under reduce the "leave alone" zone widens to [0, BAND_BOTTOM*h]=[0,550].
+    // Sentence 1's top (500) is within it → no correction (motion avoided).
+    applyLayout({
+      clientHeight: 1000,
+      scrollTop: 0,
+      scrollHeight: 10000,
+      spanTops: [50, 500, 1400],
+    });
+
+    fake.currentTime = 0.5;
+    act(() => fake.firePlay());
+    // scroll-to-start used behavior:auto under reduce.
+    expect(scrollToSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ behavior: 'auto' }),
+    );
+    scrollToSpy.mockClear();
+
+    fake.currentTime = 1.5; // sentence 1 within the widened band → no scroll
+    act(() => flushFrames(1));
+    expect(scrollToSpy).not.toHaveBeenCalled();
+
+    // Sentence 2 (top 1400) is fully past the band → correct, instantly.
+    fake.currentTime = 2.5;
+    act(() => flushFrames(1));
+    expect(scrollToSpy).toHaveBeenCalledTimes(1);
+    expect(scrollToSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ behavior: 'auto' }),
+    );
+  });
+
+  it('end-of-thread: desiredScrollTop is clamped so we never over-scroll past content', () => {
+    const { fake } = startPlaying();
+
+    // Thread is barely taller than the viewport: maxScrollTop = 1200-1000 = 200.
+    applyLayout({
+      clientHeight: 1000,
+      scrollTop: 0,
+      scrollHeight: 1200,
+      spanTops: [100, 600, 950],
+    });
+
+    fake.currentTime = 0.5;
+    act(() => fake.firePlay());
+    scrollToSpy.mockClear();
+
+    // Sentence 2 top=950 → raw desired = 0 + 950 - 300 = 650, but clamped to 200.
+    fake.currentTime = 2.5;
+    act(() => flushFrames(1));
+
+    expect(lastScrollTop()).toBe(200);
+  });
+});
+
+describe('useReadAlong — isAutoScrolling flag (for Spec 06)', () => {
+  it('is set during a controller scroll and cleared on scrollend', () => {
+    const autoRef = { current: false } as React.MutableRefObject<boolean>;
+    const audio = new FakeAudio() as unknown as HTMLAudioElement;
+    const fake = audio as unknown as FakeAudio;
+    render(<Harness audio={audio} autoRef={autoRef} />);
+
+    applyLayout({
+      clientHeight: 1000,
+      scrollTop: 0,
+      scrollHeight: 10000,
+      spanTops: [200, 800, 1600],
+    });
+
+    fake.currentTime = 0.5;
+    act(() => fake.firePlay()); // scroll-to-start raises the flag
+    expect(autoRef.current).toBe(true);
+
+    // The container's scrollend marks the controller scroll as finished.
+    const scrollEl = document.querySelector('.scroll') as HTMLElement;
+    act(() => {
+      scrollEl.dispatchEvent(new Event('scrollend'));
+    });
+    expect(autoRef.current).toBe(false);
+  });
+
+  it('is cleared by the timeout fallback when scrollend never fires', () => {
+    vi.useFakeTimers();
+    try {
+      const autoRef = { current: false } as React.MutableRefObject<boolean>;
+      const audio = new FakeAudio() as unknown as HTMLAudioElement;
+      const fake = audio as unknown as FakeAudio;
+      render(<Harness audio={audio} autoRef={autoRef} />);
+
+      applyLayout({
+        clientHeight: 1000,
+        scrollTop: 0,
+        scrollHeight: 10000,
+        spanTops: [200, 800, 1600],
+      });
+
+      fake.currentTime = 0.5;
+      act(() => fake.firePlay());
+      expect(autoRef.current).toBe(true);
+
+      // No scrollend; the fallback timeout clears the flag.
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+      expect(autoRef.current).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('is cleared on pause/cleanup', () => {
+    const autoRef = { current: false } as React.MutableRefObject<boolean>;
+    const audio = new FakeAudio() as unknown as HTMLAudioElement;
+    const fake = audio as unknown as FakeAudio;
+    render(<Harness audio={audio} autoRef={autoRef} />);
+
+    applyLayout({
+      clientHeight: 1000,
+      scrollTop: 0,
+      scrollHeight: 10000,
+      spanTops: [200, 800, 1600],
+    });
+
+    fake.currentTime = 0.5;
+    act(() => fake.firePlay());
+    expect(autoRef.current).toBe(true);
+
+    act(() => fake.firePause());
+    expect(autoRef.current).toBe(false);
   });
 });
