@@ -1,4 +1,5 @@
 import { parse, type HTMLElement } from 'node-html-parser';
+import { summarizeAll } from './summarize';
 
 export interface Article {
   title: string;
@@ -6,7 +7,14 @@ export interface Article {
   pubDate: string; // ISO 8601, or '' if unparseable
   description: string; // short excerpt for the sidebar/drawer (<= EXCERPT_CAP)
   body: string; // full article text (<= BODY_CAP), '' if unavailable
+  summary: string; // compact grounding text for chat context (<= SUMMARY_CHAR_CAP)
 }
+
+// Hard ceiling for the assembled chat grounding context (P0-5). ~24 summaries
+// of <=700 chars plus block headers fit comfortably under 20k chars (~5k tokens);
+// the budget stays flat as the article count grows because blocks are summaries.
+const CONTEXT_CHAR_CEILING = 20_000;
+const CONTEXT_SEPARATOR = '\n\n---\n\n';
 
 const CLAUDE_BLOG = 'https://claude.com/blog';
 const CLAUDE_ORIGIN = 'https://claude.com';
@@ -346,6 +354,7 @@ async function fetchArticleBody(card: IndexCard): Promise<Article> {
       pubDate: toIsoDate(parsed.pubDate || card.pubDate),
       description: parsed.description,
       body: parsed.body,
+      summary: '', // filled by summarizeAll after sorting (see getClaudeArticles)
     };
   } catch (err) {
     // Degrade only this article — keep its index title/url, leave body/description empty.
@@ -356,6 +365,7 @@ async function fetchArticleBody(card: IndexCard): Promise<Article> {
       pubDate: toIsoDate(card.pubDate),
       description: '',
       body: '',
+      summary: '',
     };
   }
 }
@@ -385,6 +395,14 @@ export async function getClaudeArticles(): Promise<Article[]> {
       (a, b) => dateValue(b.pubDate) - dateValue(a.pubDate)
     );
 
+    // Summarize on ingest (P0-3). Runs behind the cache, so it's never per-user;
+    // unchanged content is reused from the summary cache (0 API calls). Failures
+    // degrade to a body excerpt — articles are never dropped.
+    const summaries = await summarizeAll(articles);
+    articles.forEach((a, i) => {
+      a.summary = summaries[i];
+    });
+
     cachedArticles = articles;
     cacheTime = Date.now();
     return cachedArticles;
@@ -398,10 +416,20 @@ export function buildArticleContext(articles: Article[]): string {
   if (articles.length === 0) {
     return 'No articles currently available. The Claude blog may be temporarily unavailable.';
   }
-  return articles
-    .map(
-      (a, i) =>
-        `## [Article ${i + 1}] ${a.title}\nPublished: ${a.pubDate}\nURL: ${a.url}\n\n${a.description}`
-    )
-    .join('\n\n---\n\n');
+
+  // Build grounding from SUMMARIES (P0-5), not full bodies, and enforce a hard
+  // char ceiling so the system prompt stays bounded regardless of article count.
+  // Articles are newest-first, so the freshest posts are always included.
+  const blocks: string[] = [];
+  let total = 0;
+  for (let i = 0; i < articles.length; i++) {
+    const a = articles[i];
+    const grounding = a.summary || a.description; // fall back if a summary is empty
+    const block = `## [Article ${i + 1}] ${a.title}\nPublished: ${a.pubDate}\nURL: ${a.url}\n\n${grounding}`;
+    const added = block.length + (blocks.length > 0 ? CONTEXT_SEPARATOR.length : 0);
+    if (blocks.length > 0 && total + added > CONTEXT_CHAR_CEILING) break;
+    blocks.push(block);
+    total += added;
+  }
+  return blocks.join(CONTEXT_SEPARATOR);
 }

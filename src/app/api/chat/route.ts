@@ -56,7 +56,7 @@ Teams that adopt agentic workflows ship faster and reduce manual review overhead
 
 Never write run-on paragraphs that string items together with " - " separators.
 
-KNOWLEDGE BASE — the Claude blog's 10 most recent articles:
+KNOWLEDGE BASE — recent Claude blog posts:
 
 ${articleContext}`;
 

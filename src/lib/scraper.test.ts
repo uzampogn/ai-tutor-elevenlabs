@@ -1,5 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+// Mock the Anthropic SDK so ingest summarization (dev-spec-02) returns a canned
+// summary instead of making a live API call. No network in CI.
+const { createMock } = vi.hoisted(() => ({ createMock: vi.fn() }));
+vi.mock('@anthropic-ai/sdk', () => ({
+  default: vi.fn(() => ({ messages: { create: createMock } })),
+}));
+const CANNED_SUMMARY = 'Canned summary for testing.';
+
 /**
  * Fixture-based unit tests for the Claude blog scraper.
  *
@@ -107,6 +115,8 @@ async function freshScraper() {
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  createMock.mockReset();
+  createMock.mockResolvedValue({ content: [{ type: 'text', text: CANNED_SUMMARY }] });
 });
 
 afterEach(() => {
@@ -212,13 +222,14 @@ describe('getClaudeArticles — parsing', () => {
     }
   });
 
-  it('gives every happy-path article a non-empty description and body', async () => {
+  it('gives every happy-path article a non-empty description, body, and summary', async () => {
     vi.stubGlobal('fetch', makeFetchMock());
     const { getClaudeArticles } = await freshScraper();
     const articles = await getClaudeArticles();
     for (const a of articles) {
       expect(a.description.length).toBeGreaterThan(0);
       expect(a.body.length).toBeGreaterThan(0);
+      expect(a.summary).toBe(CANNED_SUMMARY); // summarized on ingest (P0-3)
     }
   });
 
@@ -450,9 +461,12 @@ describe('getClaudeArticles — caching', () => {
     const callsAfterFirst = fetchMock.mock.calls.length;
     const validCandidateCount = SLUGS.length;
     expect(callsAfterFirst).toBe(1 + validCandidateCount); // 1 index + N candidate bodies
+    const summaryCallsAfterFirst = createMock.mock.calls.length;
+    expect(summaryCallsAfterFirst).toBe(validCandidateCount); // one summary per article
 
     const second = await getClaudeArticles();
     expect(fetchMock.mock.calls.length).toBe(callsAfterFirst); // unchanged
+    expect(createMock.mock.calls.length).toBe(summaryCallsAfterFirst); // 0 new summary calls
     expect(second).toBe(first); // same cached reference
   });
 });
@@ -521,9 +535,45 @@ describe('buildArticleContext', () => {
     expect(ctx).toContain(`## [Article ${articles.length}] `);
     expect(ctx).toContain(`URL: ${articles[0].url}`);
     expect(ctx).toContain(`Published: ${articles[0].pubDate}`);
-    expect(ctx).toContain(articles[0].description);
+    expect(ctx).toContain(articles[0].summary); // grounding is the SUMMARY (P0-5), not body
     // One block per article, joined by the --- separator.
     expect(ctx.split('\n\n---\n\n')).toHaveLength(articles.length);
+  });
+
+  it('builds grounding from summaries (not bodies), newest-first', async () => {
+    const { buildArticleContext } = await freshScraper();
+    const articles = Array.from({ length: 24 }, (_, i) => ({
+      title: `Post ${i}`,
+      url: `https://claude.com/blog/post-${i}`,
+      pubDate: `2026-06-${String(24 - i).padStart(2, '0')}T00:00:00.000Z`,
+      description: `desc ${i}`,
+      body: `FULLBODY-${i} `.repeat(200), // large; must NOT leak into context
+      summary: `SUMMARY-${i}`,
+    }));
+    const ctx = buildArticleContext(articles);
+    expect(ctx).toContain('SUMMARY-0');
+    expect(ctx).not.toContain('FULLBODY');
+    // Newest-first ordering preserved.
+    expect(ctx.indexOf('## [Article 1] ')).toBeLessThan(ctx.indexOf('## [Article 2] '));
+  });
+
+  it('never exceeds the CONTEXT_CHAR_CEILING, keeping the freshest blocks', async () => {
+    const { buildArticleContext } = await freshScraper();
+    const big = 'x'.repeat(700); // a maxed-out summary
+    const articles = Array.from({ length: 40 }, (_, i) => ({
+      title: `Post ${i}`,
+      url: `https://claude.com/blog/post-${i}`,
+      pubDate: '2026-06-01T00:00:00.000Z',
+      description: 'd',
+      body: 'BODY'.repeat(500),
+      summary: `S${i}-${big}`,
+    }));
+    const ctx = buildArticleContext(articles);
+    expect(ctx.length).toBeLessThanOrEqual(20_000); // hard ceiling enforced
+    const blocks = ctx.split('\n\n---\n\n');
+    expect(blocks.length).toBeLessThan(40); // clipped — not every article fits
+    expect(ctx).toContain('## [Article 1] '); // newest block always kept
+    expect(ctx).not.toContain('BODY'); // summaries only
   });
 
   it('returns the unavailable message for an empty list', async () => {
