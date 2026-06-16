@@ -581,3 +581,98 @@ describe('buildArticleContext', () => {
     expect(buildArticleContext([])).toMatch(/No articles currently available/);
   });
 });
+
+// --- Freshness & observable staleness (P0-4) ------------------------------
+
+describe('getClaudeArticles — freshness, force, observable staleness', () => {
+  /** Index/article fetch mock with a toggle to make the index fetch fail. */
+  function makeToggleableFetch(state: { failIndex: boolean }) {
+    return vi.fn((input: string | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url === `${ORIGIN}/blog`) {
+        return state.failIndex
+          ? Promise.resolve(htmlResponse('boom', false, 500))
+          : Promise.resolve(htmlResponse(indexHtml()));
+      }
+      const m = url.match(/\/blog\/([^/?#]+)/);
+      const slug = m ? m[1] : 'x';
+      return Promise.resolve(htmlResponse(articleHtml(slug, SLUGS.indexOf(slug))));
+    });
+  }
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('cold start: before any success, lastSuccessfulFetch is null and stale is true', async () => {
+    const { getIngestionStatus } = await freshScraper();
+    const s = getIngestionStatus();
+    expect(s.lastSuccessfulFetch).toBeNull();
+    expect(s.ageMs).toBeNull();
+    expect(s.stale).toBe(true);
+    expect(s.count).toBe(0);
+  });
+
+  it('after a success: ageMs ~0, not stale, count tracks the feed', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-06-10T00:00:00.000Z'));
+    vi.stubGlobal('fetch', makeFetchMock());
+    const { getClaudeArticles, getIngestionStatus } = await freshScraper();
+
+    await getClaudeArticles();
+    const s = getIngestionStatus();
+    expect(s.ageMs).toBe(0);
+    expect(s.stale).toBe(false);
+    expect(s.count).toBe(SLUGS.length);
+    expect(s.lastError).toBeNull();
+    expect(s.lastSuccessfulFetch).toBe('2026-06-10T00:00:00.000Z');
+  });
+
+  it('force bypasses the TTL and re-scrapes within the cache window', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-06-10T00:00:00.000Z'));
+    const fetchMock = makeFetchMock();
+    vi.stubGlobal('fetch', fetchMock);
+    const { getClaudeArticles } = await freshScraper();
+
+    const indexCalls = () =>
+      fetchMock.mock.calls.filter((c) => String(c[0]) === `${ORIGIN}/blog`).length;
+
+    await getClaudeArticles();
+    expect(indexCalls()).toBe(1);
+
+    // Still well within the 1h TTL — a normal call would be a cache hit, but force re-scrapes.
+    await getClaudeArticles({ force: true });
+    expect(indexCalls()).toBe(2);
+  });
+
+  it('June 10→15 regression: a later failed scrape serves last-good, flags stale, and does NOT reset the freshness clock', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-06-10T00:00:00.000Z'));
+    const state = { failIndex: false };
+    vi.stubGlobal('fetch', makeToggleableFetch(state));
+    const { getClaudeArticles, getIngestionStatus } = await freshScraper();
+
+    // 1st call succeeds and sets the freshness clock.
+    const good = await getClaudeArticles();
+    expect(good).toHaveLength(SLUGS.length);
+    expect(getIngestionStatus().lastSuccessfulFetch).toBe('2026-06-10T00:00:00.000Z');
+    expect(getIngestionStatus().stale).toBe(false);
+
+    // Advance past the TTL (and past the 26h stale threshold), then fail the index fetch.
+    state.failIndex = true;
+    vi.setSystemTime(new Date('2026-06-11T03:00:00.000Z')); // 27h after the success
+    const served = await getClaudeArticles();
+
+    // Serves the last good articles (not []), and exposes the failure + real age.
+    expect(served).toBe(good);
+    const status = getIngestionStatus();
+    expect(status.lastError).toBeTruthy();
+    expect(status.stale).toBe(true); // 27h old > 26h threshold
+    expect(status.count).toBe(SLUGS.length);
+    // The clock is NOT reset to "now" on failure — staleness reflects reality.
+    expect(status.lastSuccessfulFetch).toBe('2026-06-10T00:00:00.000Z');
+    expect(status.ageMs).toBe(27 * 60 * 60 * 1000);
+  });
+});

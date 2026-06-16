@@ -18,7 +18,7 @@ Founders, curious product managers or engineers — anyone interested in AI. Ste
 
 AI moves faster than most people can keep up with, and primary sources are written for builders. AI News Tutor closes that gap:
 
-- **Always current** — answers are grounded in the Claude blog's 10 most recent posts, not a stale training cutoff.
+- **Always current** — answers are grounded in every recent post the Claude blog surfaces, auto-refreshed daily, not a stale training cutoff.
 - **Speaks at your level** — it makes complex AI topics approachable for anyone, and because the chat is fully interactive it explains them in whatever register you ask for: business impact one moment, technical detail the next. Every answer still ends with a **Business Impact** takeaway.
 - **Listen, don't just read** — full text-to-speech with synchronized read-along, so you can learn hands-free.
 - **Trustworthy** — answers cite the exact articles they draw from, linked to the real posts.
@@ -29,7 +29,7 @@ AI moves faster than most people can keep up with, and primary sources are writt
 
 | | |
 |---|---|
-| 🗞️ **Live knowledge base** | Pulls the 10 most recent Claude blog posts on demand — title, date, and excerpt — into a browsable sidebar. |
+| 🗞️ **Live knowledge base** | Pulls every recent Claude blog post the index surfaces — title, date, and excerpt — into a browsable sidebar, refreshed automatically. |
 | 💬 **Grounded answers** | Claude answers your question using those articles as context, streamed token-by-token, structured to scan. |
 | 💼 **Business Impact takeaway** | Every answer closes with a one-line "so what does this mean" callout. |
 | 🔗 **Source citations** | Articles referenced in an answer appear as chips linking to the real posts. |
@@ -94,6 +94,7 @@ Fill `.env.local`:
 ANTHROPIC_API_KEY=sk-ant-...
 ELEVENLABS_API_KEY=...
 ELEVENLABS_VOICE_ID=21m00Tcm4TlvDq8ikWAM   # optional; defaults to "Rachel"
+CRON_SECRET=...                            # required in prod for the scheduled refresh
 ```
 
 | Variable | Required | Where to get it |
@@ -101,6 +102,7 @@ ELEVENLABS_VOICE_ID=21m00Tcm4TlvDq8ikWAM   # optional; defaults to "Rachel"
 | `ANTHROPIC_API_KEY` | yes | [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) |
 | `ELEVENLABS_API_KEY` | yes | [elevenlabs.io/app/settings/api-keys](https://elevenlabs.io/app/settings/api-keys) |
 | `ELEVENLABS_VOICE_ID` | no | Browse [elevenlabs.io/voice-library](https://elevenlabs.io/voice-library); defaults to Rachel |
+| `CRON_SECRET` | prod | Any strong random string. Set in Vercel project settings; the cron sends it as `Authorization: Bearer $CRON_SECRET` to `/api/scrape/refresh`. Without it the refresh route fails closed (401). |
 
 Voice **input** uses the browser-native Web Speech API — works in Chrome/Edge, no key needed.
 
@@ -125,9 +127,12 @@ All routes run server-side, so API keys never reach the browser.
 
 | Route | Method | Purpose |
 |---|---|---|
-| `/api/scrape` | `GET` | Returns the 10 most recent Claude blog posts (1-hour in-memory cache). |
+| `/api/scrape` | `GET` | Returns all recent Claude blog posts plus an ingestion `status` (freshness/staleness). Lazy 1-hour in-memory cache. |
+| `/api/scrape/refresh` | `GET` | Cron-only forced re-scrape. Requires `Authorization: Bearer $CRON_SECRET` (401 otherwise). |
 | `/api/chat` | `POST` | Injects the articles as context and **streams** Claude's answer. |
 | `/api/speak` | `POST` | Strips markdown, chunks, calls ElevenLabs `/with-timestamps`, returns `{ audioBase64, alignment }` (`alignment.chars.join('') === text`). Fail-soft. |
+
+**Auto-refresh & freshness.** The knowledge base refreshes on its own — a [Vercel Cron](https://vercel.com/docs/cron-jobs) (`vercel.json` → `crons`) hits `/api/scrape/refresh` **daily** (`0 6 * * *`) and forces a re-scrape, so the KB stays current without a redeploy or organic traffic. (Daily is the floor: the Vercel Hobby plan caps crons at once per day, and it comfortably meets the ≤24h freshness goal; on Pro you can tune `vercel.json` to a tighter cadence.) The lazy 1-hour in-memory cache refreshes far more often under organic traffic. On a scrape failure the app keeps serving the last good cache **but does not reset its freshness clock** — `/api/scrape` exposes `status.stale` (age > 26h, i.e. a missed daily run) and `status.ageMs` so a stuck/old scrape is observable rather than silent. Set `CRON_SECRET` in the Vercel project (the cron authenticates with it).
 
 ```
 src/

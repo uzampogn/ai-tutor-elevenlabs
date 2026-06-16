@@ -66,6 +66,39 @@ let cachedArticles: Article[] | null = null;
 let cacheTime = 0;
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
+// --- Observable freshness state (P0-4) ---
+// Tracks the last fully-successful scrape so staleness is detectable, not silent.
+let lastSuccessfulFetch = 0; // epoch ms of last successful index+body scrape (0 = never)
+let lastError: string | null = null;
+// Beyond this age the data is considered stale. Derived signal only — never gates
+// serving (we still return the last good cache). Set above the scheduled-refresh
+// cadence so `stale` means "the refresh didn't happen", not "we're between runs":
+// the cron runs daily (Vercel Hobby caps crons at once/day), so 26h = one missed
+// daily run plus buffer. Organic traffic refreshes far more often via the 1h cache.
+const STALE_THRESHOLD_MS = 26 * 60 * 60 * 1000;
+
+export interface IngestionStatus {
+  count: number;
+  lastSuccessfulFetch: string | null; // ISO, or null if never succeeded
+  ageMs: number | null; // now - lastSuccessfulFetch, or null if never succeeded
+  stale: boolean; // ageMs > STALE_THRESHOLD_MS (true before the first success)
+  lastError: string | null;
+}
+
+/** Snapshot of ingestion freshness for observability (exposed via /api/scrape). */
+export function getIngestionStatus(): IngestionStatus {
+  const ageMs = lastSuccessfulFetch ? Date.now() - lastSuccessfulFetch : null;
+  return {
+    count: cachedArticles?.length ?? 0,
+    lastSuccessfulFetch: lastSuccessfulFetch
+      ? new Date(lastSuccessfulFetch).toISOString()
+      : null,
+    ageMs,
+    stale: ageMs === null || ageMs > STALE_THRESHOLD_MS,
+    lastError,
+  };
+}
+
 function stripHtml(html: string): string {
   return html
     .replace(/<[^>]+>/g, ' ')
@@ -370,8 +403,11 @@ async function fetchArticleBody(card: IndexCard): Promise<Article> {
   }
 }
 
-export async function getClaudeArticles(): Promise<Article[]> {
-  if (cachedArticles && Date.now() - cacheTime < CACHE_TTL_MS) {
+export async function getClaudeArticles(
+  opts: { force?: boolean } = {}
+): Promise<Article[]> {
+  // Lazy cache. `force` (used by the scheduled refresh) bypasses the TTL check.
+  if (!opts.force && cachedArticles && Date.now() - cacheTime < CACHE_TTL_MS) {
     return cachedArticles;
   }
 
@@ -403,11 +439,24 @@ export async function getClaudeArticles(): Promise<Article[]> {
       a.summary = summaries[i];
     });
 
+    // Successful scrape — advance the freshness clock and clear any prior error.
     cachedArticles = articles;
     cacheTime = Date.now();
+    lastSuccessfulFetch = cacheTime;
+    lastError = null;
     return cachedArticles;
   } catch (err) {
-    console.error('[scraper] Failed to fetch Claude blog:', err);
+    // Failure: keep serving the last good cache, but DO NOT advance the freshness
+    // clock or fake cacheTime to "fresh" — so staleness reflects reality and the
+    // next call retries. Record the error and the data's current age.
+    lastError = err instanceof Error ? err.message : String(err);
+    const ageMs = lastSuccessfulFetch ? Date.now() - lastSuccessfulFetch : null;
+    console.error(
+      `[scraper] Failed to fetch Claude blog (serving cache; data age ${
+        ageMs === null ? 'never fetched' : `${Math.round(ageMs / 1000)}s`
+      }):`,
+      err
+    );
     return cachedArticles ?? [];
   }
 }
