@@ -610,19 +610,19 @@ describe('getClaudeArticles — freshness, force, observable staleness', () => {
     expect(getIngestionStatus().lastSuccessfulFetch).toBe('2026-06-10T00:00:00.000Z');
     expect(getIngestionStatus().stale).toBe(false);
 
-    // Advance past the TTL (and past the 6h stale threshold), then fail the index fetch.
+    // Advance past the TTL (and past the 26h stale threshold), then fail the index fetch.
     state.failIndex = true;
-    vi.setSystemTime(new Date('2026-06-10T07:00:00.000Z'));
+    vi.setSystemTime(new Date('2026-06-11T03:00:00.000Z')); // 27h after the success
     const served = await getClaudeArticles();
 
     // Serves the last good articles (not []), and exposes the failure + real age.
     expect(served).toBe(good);
     const status = getIngestionStatus();
     expect(status.lastError).toBeTruthy();
-    expect(status.stale).toBe(true); // 7h old > 6h threshold
+    expect(status.stale).toBe(true); // 27h old > 26h threshold
     expect(status.count).toBe(SLUGS.length);
     // The clock is NOT reset to "now" on failure — staleness reflects reality.
     expect(status.lastSuccessfulFetch).toBe('2026-06-10T00:00:00.000Z');
-    expect(status.ageMs).toBe(7 * 60 * 60 * 1000);
+    expect(status.ageMs).toBe(27 * 60 * 60 * 1000);
   });
 });

@@ -18,7 +18,7 @@ Founders, curious product managers or engineers — anyone interested in AI. Ste
 
 AI moves faster than most people can keep up with, and primary sources are written for builders. AI News Tutor closes that gap:
 
-- **Always current** — answers are grounded in every recent post the Claude blog surfaces, auto-refreshed hourly, not a stale training cutoff.
+- **Always current** — answers are grounded in every recent post the Claude blog surfaces, auto-refreshed daily, not a stale training cutoff.
 - **Speaks at your level** — it makes complex AI topics approachable for anyone, and because the chat is fully interactive it explains them in whatever register you ask for: business impact one moment, technical detail the next. Every answer still ends with a **Business Impact** takeaway.
 - **Listen, don't just read** — full text-to-speech with synchronized read-along, so you can learn hands-free.
 - **Trustworthy** — answers cite the exact articles they draw from, linked to the real posts.
@@ -132,7 +132,7 @@ All routes run server-side, so API keys never reach the browser.
 | `/api/chat` | `POST` | Injects the articles as context and **streams** Claude's answer. |
 | `/api/speak` | `POST` | Strips markdown, chunks, calls ElevenLabs `/with-timestamps`, returns `{ audioBase64, alignment }` (`alignment.chars.join('') === text`). Fail-soft. |
 
-**Auto-refresh & freshness.** The knowledge base refreshes on its own — a [Vercel Cron](https://vercel.com/docs/cron-jobs) (`vercel.json` → `crons`) hits `/api/scrape/refresh` **hourly** (`0 * * * *`) and forces a re-scrape, so the KB stays current without a redeploy or organic traffic. The lazy 1-hour in-memory cache still serves reads in between. On a scrape failure the app keeps serving the last good cache **but does not reset its freshness clock** — `/api/scrape` exposes `status.stale` and `status.ageMs` so a stuck/old scrape is observable rather than silent. Tune the cadence in `vercel.json`; set `CRON_SECRET` in the Vercel project (the cron authenticates with it).
+**Auto-refresh & freshness.** The knowledge base refreshes on its own — a [Vercel Cron](https://vercel.com/docs/cron-jobs) (`vercel.json` → `crons`) hits `/api/scrape/refresh` **daily** (`0 6 * * *`) and forces a re-scrape, so the KB stays current without a redeploy or organic traffic. (Daily is the floor: the Vercel Hobby plan caps crons at once per day, and it comfortably meets the ≤24h freshness goal; on Pro you can tune `vercel.json` to a tighter cadence.) The lazy 1-hour in-memory cache refreshes far more often under organic traffic. On a scrape failure the app keeps serving the last good cache **but does not reset its freshness clock** — `/api/scrape` exposes `status.stale` (age > 26h, i.e. a missed daily run) and `status.ageMs` so a stuck/old scrape is observable rather than silent. Set `CRON_SECRET` in the Vercel project (the cron authenticates with it).
 
 ```
 src/

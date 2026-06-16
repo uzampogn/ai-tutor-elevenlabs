@@ -63,8 +63,11 @@ const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 let lastSuccessfulFetch = 0; // epoch ms of last successful index+body scrape (0 = never)
 let lastError: string | null = null;
 // Beyond this age the data is considered stale. Derived signal only — never gates
-// serving (we still return the last good cache). 6h gives the hourly cron headroom.
-const STALE_THRESHOLD_MS = 6 * 60 * 60 * 1000;
+// serving (we still return the last good cache). Set above the scheduled-refresh
+// cadence so `stale` means "the refresh didn't happen", not "we're between runs":
+// the cron runs daily (Vercel Hobby caps crons at once/day), so 26h = one missed
+// daily run plus buffer. Organic traffic refreshes far more often via the 1h cache.
+const STALE_THRESHOLD_MS = 26 * 60 * 60 * 1000;
 
 export interface IngestionStatus {
   count: number;
