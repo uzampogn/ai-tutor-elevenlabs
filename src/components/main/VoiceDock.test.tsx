@@ -1,5 +1,5 @@
 import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import VoiceDock from './VoiceDock';
@@ -80,54 +80,64 @@ describe('VoiceDock — orb interaction', () => {
   });
 });
 
-describe('VoiceDock — final transcript path', () => {
-  it('calls onSend with the final transcript when recognition fires a final result', () => {
-    const setInput = vi.fn();
-    const onSend = vi.fn();
+describe('VoiceDock — send paths', () => {
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.clearAllTimers(); vi.useRealTimers(); });
 
-    let capturedInstance: SpeechRecognition | undefined;
-
+  function renderWithInstance(props: React.ComponentProps<typeof VoiceDock>) {
+    let captured: SpeechRecognition | undefined;
     const OrigCtor = window.SpeechRecognition!;
     const MockCtor = vi.fn().mockImplementation(() => {
-      const instance = new OrigCtor();
-      capturedInstance = instance;
-      return instance;
+      const inst = new OrigCtor();
+      captured = inst;
+      return inst;
     }) as unknown as SpeechRecognitionStatic;
     window.SpeechRecognition = MockCtor;
+    render(<VoiceDock {...props} />);
+    return { instance: () => captured!, restore: () => { window.SpeechRecognition = OrigCtor; } };
+  }
 
-    render(
-      <VoiceDock
-        input=""
-        setInput={setInput}
-        isLoading={false}
-        listening={false}
-        setListening={vi.fn()}
-        onSend={onSend}
-        speaking={false}
-      />,
-    );
+  function finalResult(transcript: string): SpeechRecognitionEvent {
+    return {
+      resultIndex: 0,
+      results: Object.assign(
+        [
+          Object.assign([{ transcript, confidence: 1 }], {
+            isFinal: true,
+            length: 1,
+            item: () => ({ transcript, confidence: 1 }),
+          }),
+        ],
+        { length: 1, item: (i: number) => ([] as SpeechRecognitionResult[])[i] },
+      ) as SpeechRecognitionResultList,
+    } as unknown as SpeechRecognitionEvent;
+  }
 
-    act(() => {
-      const evt = {
-        resultIndex: 0,
-        results: Object.assign(
-          [
-            Object.assign([{ transcript: 'test question', confidence: 1 }], {
-              isFinal: true,
-              length: 1,
-              item: () => ({ transcript: 'test question', confidence: 1 }),
-            }),
-          ],
-          { length: 1, item: (i: number) => ([] as SpeechRecognitionResult[])[i] },
-        ) as SpeechRecognitionResultList,
-      } as unknown as SpeechRecognitionEvent;
-      capturedInstance?.onresult?.(evt);
+  it('calls onSend after the silence window, not immediately', () => {
+    const onSend = vi.fn();
+    const { instance, restore } = renderWithInstance({
+      input: '', setInput: vi.fn(), isLoading: false, listening: true,
+      setListening: vi.fn(), onSend, speaking: false,
     });
 
-    expect(setInput).toHaveBeenCalledWith('test question');
+    act(() => { instance().onresult?.(finalResult('test question')); });
+    expect(onSend).not.toHaveBeenCalled();
+    act(() => { vi.advanceTimersByTime(2600); });
     expect(onSend).toHaveBeenCalledWith('test question');
+    restore();
+  });
 
-    window.SpeechRecognition = OrigCtor;
+  it('tapping the orb while listening sends immediately', () => {
+    const onSend = vi.fn();
+    const { instance, restore } = renderWithInstance({
+      input: '', setInput: vi.fn(), isLoading: false, listening: true,
+      setListening: vi.fn(), onSend, speaking: false,
+    });
+
+    act(() => { instance().onresult?.(finalResult('hello')); });
+    act(() => { screen.getByRole('button', { name: 'Stop listening' }).click(); });
+    expect(onSend).toHaveBeenCalledWith('hello');
+    restore();
   });
 });
 

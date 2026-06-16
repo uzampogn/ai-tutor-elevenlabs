@@ -24,7 +24,7 @@ export default function VoiceDock({
   speaking,
   controls,
 }: VoiceDockProps) {
-  const { supported, toggle } = useSpeechRecognition({
+  const { supported, toggle, sendNow } = useSpeechRecognition({
     listening,
     setListening,
     onInterim: (t) => setInput(t),
@@ -48,7 +48,12 @@ export default function VoiceDock({
 
   return (
     <div className="voice-dock">
-      <Orb state={orbState} onClick={toggle} disabled={isLoading || !supported} />
+      {/* Tap while listening = send now; tap while idle = start listening. */}
+      <Orb
+        state={orbState}
+        onClick={listening ? sendNow : toggle}
+        disabled={isLoading || !supported}
+      />
 
       {controls}
 
