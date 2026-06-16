@@ -1,4 +1,5 @@
 import { parse, type HTMLElement } from 'node-html-parser';
+import { summarizeAll } from './summarize';
 
 export interface Article {
   title: string;
@@ -6,7 +7,14 @@ export interface Article {
   pubDate: string; // ISO 8601, or '' if unparseable
   description: string; // short excerpt for the sidebar/drawer (<= EXCERPT_CAP)
   body: string; // full article text (<= BODY_CAP), '' if unavailable
+  summary: string; // compact grounding text for chat context (<= SUMMARY_CHAR_CAP)
 }
+
+// Hard ceiling for the assembled chat grounding context (P0-5). ~24 summaries
+// of <=700 chars plus block headers fit comfortably under 20k chars (~5k tokens);
+// the budget stays flat as the article count grows because blocks are summaries.
+const CONTEXT_CHAR_CEILING = 20_000;
+const CONTEXT_SEPARATOR = '\n\n---\n\n';
 
 const CLAUDE_BLOG = 'https://claude.com/blog';
 const CLAUDE_ORIGIN = 'https://claude.com';
@@ -57,6 +65,39 @@ const GENERIC_LINK_TEXT = new Set([
 let cachedArticles: Article[] | null = null;
 let cacheTime = 0;
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+// --- Observable freshness state (P0-4) ---
+// Tracks the last fully-successful scrape so staleness is detectable, not silent.
+let lastSuccessfulFetch = 0; // epoch ms of last successful index+body scrape (0 = never)
+let lastError: string | null = null;
+// Beyond this age the data is considered stale. Derived signal only — never gates
+// serving (we still return the last good cache). Set above the scheduled-refresh
+// cadence so `stale` means "the refresh didn't happen", not "we're between runs":
+// the cron runs daily (Vercel Hobby caps crons at once/day), so 26h = one missed
+// daily run plus buffer. Organic traffic refreshes far more often via the 1h cache.
+const STALE_THRESHOLD_MS = 26 * 60 * 60 * 1000;
+
+export interface IngestionStatus {
+  count: number;
+  lastSuccessfulFetch: string | null; // ISO, or null if never succeeded
+  ageMs: number | null; // now - lastSuccessfulFetch, or null if never succeeded
+  stale: boolean; // ageMs > STALE_THRESHOLD_MS (true before the first success)
+  lastError: string | null;
+}
+
+/** Snapshot of ingestion freshness for observability (exposed via /api/scrape). */
+export function getIngestionStatus(): IngestionStatus {
+  const ageMs = lastSuccessfulFetch ? Date.now() - lastSuccessfulFetch : null;
+  return {
+    count: cachedArticles?.length ?? 0,
+    lastSuccessfulFetch: lastSuccessfulFetch
+      ? new Date(lastSuccessfulFetch).toISOString()
+      : null,
+    ageMs,
+    stale: ageMs === null || ageMs > STALE_THRESHOLD_MS,
+    lastError,
+  };
+}
 
 function stripHtml(html: string): string {
   return html
@@ -346,6 +387,7 @@ async function fetchArticleBody(card: IndexCard): Promise<Article> {
       pubDate: toIsoDate(parsed.pubDate || card.pubDate),
       description: parsed.description,
       body: parsed.body,
+      summary: '', // filled by summarizeAll after sorting (see getClaudeArticles)
     };
   } catch (err) {
     // Degrade only this article — keep its index title/url, leave body/description empty.
@@ -356,12 +398,16 @@ async function fetchArticleBody(card: IndexCard): Promise<Article> {
       pubDate: toIsoDate(card.pubDate),
       description: '',
       body: '',
+      summary: '',
     };
   }
 }
 
-export async function getClaudeArticles(): Promise<Article[]> {
-  if (cachedArticles && Date.now() - cacheTime < CACHE_TTL_MS) {
+export async function getClaudeArticles(
+  opts: { force?: boolean } = {}
+): Promise<Article[]> {
+  // Lazy cache. `force` (used by the scheduled refresh) bypasses the TTL check.
+  if (!opts.force && cachedArticles && Date.now() - cacheTime < CACHE_TTL_MS) {
     return cachedArticles;
   }
 
@@ -385,11 +431,32 @@ export async function getClaudeArticles(): Promise<Article[]> {
       (a, b) => dateValue(b.pubDate) - dateValue(a.pubDate)
     );
 
+    // Summarize on ingest (P0-3). Runs behind the cache, so it's never per-user;
+    // unchanged content is reused from the summary cache (0 API calls). Failures
+    // degrade to a body excerpt — articles are never dropped.
+    const summaries = await summarizeAll(articles);
+    articles.forEach((a, i) => {
+      a.summary = summaries[i];
+    });
+
+    // Successful scrape — advance the freshness clock and clear any prior error.
     cachedArticles = articles;
     cacheTime = Date.now();
+    lastSuccessfulFetch = cacheTime;
+    lastError = null;
     return cachedArticles;
   } catch (err) {
-    console.error('[scraper] Failed to fetch Claude blog:', err);
+    // Failure: keep serving the last good cache, but DO NOT advance the freshness
+    // clock or fake cacheTime to "fresh" — so staleness reflects reality and the
+    // next call retries. Record the error and the data's current age.
+    lastError = err instanceof Error ? err.message : String(err);
+    const ageMs = lastSuccessfulFetch ? Date.now() - lastSuccessfulFetch : null;
+    console.error(
+      `[scraper] Failed to fetch Claude blog (serving cache; data age ${
+        ageMs === null ? 'never fetched' : `${Math.round(ageMs / 1000)}s`
+      }):`,
+      err
+    );
     return cachedArticles ?? [];
   }
 }
@@ -398,10 +465,20 @@ export function buildArticleContext(articles: Article[]): string {
   if (articles.length === 0) {
     return 'No articles currently available. The Claude blog may be temporarily unavailable.';
   }
-  return articles
-    .map(
-      (a, i) =>
-        `## [Article ${i + 1}] ${a.title}\nPublished: ${a.pubDate}\nURL: ${a.url}\n\n${a.description}`
-    )
-    .join('\n\n---\n\n');
+
+  // Build grounding from SUMMARIES (P0-5), not full bodies, and enforce a hard
+  // char ceiling so the system prompt stays bounded regardless of article count.
+  // Articles are newest-first, so the freshest posts are always included.
+  const blocks: string[] = [];
+  let total = 0;
+  for (let i = 0; i < articles.length; i++) {
+    const a = articles[i];
+    const grounding = a.summary || a.description; // fall back if a summary is empty
+    const block = `## [Article ${i + 1}] ${a.title}\nPublished: ${a.pubDate}\nURL: ${a.url}\n\n${grounding}`;
+    const added = block.length + (blocks.length > 0 ? CONTEXT_SEPARATOR.length : 0);
+    if (blocks.length > 0 && total + added > CONTEXT_CHAR_CEILING) break;
+    blocks.push(block);
+    total += added;
+  }
+  return blocks.join(CONTEXT_SEPARATOR);
 }
