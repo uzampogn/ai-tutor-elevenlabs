@@ -254,5 +254,34 @@ describe('useSpeechRecognition', () => {
       expect(after).toBe(before + 1);
       restore();
     });
+
+    it('sendNow() sends the transcript immediately, cancelling the countdown', () => {
+      const onFinal = vi.fn();
+      const { instance, hook, restore } = renderWithInstance({
+        listening: true, setListening: vi.fn(), onInterim: vi.fn(), onFinal,
+      });
+
+      act(() => { instance().onresult?.(makeResultEvent('send me now', true)); });
+      act(() => { hook().sendNow!(); });
+      expect(onFinal).toHaveBeenCalledWith('send me now');
+
+      onFinal.mockClear();
+      act(() => { vi.advanceTimersByTime(3000); }); // timer must not fire a second send
+      expect(onFinal).not.toHaveBeenCalled();
+      restore();
+    });
+
+    it('sendNow() with no transcript cancels: stops listening, sends nothing', () => {
+      const onFinal = vi.fn();
+      const setListening = vi.fn();
+      const { hook, restore } = renderWithInstance({
+        listening: true, setListening, onInterim: vi.fn(), onFinal,
+      });
+
+      act(() => { hook().sendNow!(); });
+      expect(onFinal).not.toHaveBeenCalled();
+      expect(setListening).toHaveBeenCalledWith(false);
+      restore();
+    });
   });
 });

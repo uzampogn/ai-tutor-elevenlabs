@@ -16,6 +16,7 @@ export interface UseSpeechRecognitionOptions {
 export interface UseSpeechRecognitionResult {
   supported: boolean;
   toggle: () => void;
+  sendNow: () => void;
 }
 
 export function useSpeechRecognition({
@@ -38,7 +39,7 @@ export function useSpeechRecognition({
   const shouldListenRef = useRef(false);
 
   // Imperative API built once inside the mount effect; toggle() calls through it.
-  const apiRef = useRef<{ start: () => void; stop: () => void } | null>(null);
+  const apiRef = useRef<{ start: () => void; stop: () => void; sendNow: () => void } | null>(null);
 
   // Latest callbacks held in a ref so the recognition instance is built once
   // but its handlers always call current props.
@@ -72,10 +73,15 @@ export function useSpeechRecognition({
       cb.current.setListening(false);
     }
 
-    function commit() {
+    function commit(cancelIfEmpty: boolean) {
       clearSilenceTimer();
       const text = (committedRef.current + interimRef.current).trim();
-      if (!text) return; // nothing said yet — keep listening; next result re-arms
+      if (!text) {
+        // Timer fire with nothing said: keep listening (next result re-arms).
+        // Explicit tap (cancelIfEmpty): treat as cancel — stop listening.
+        if (cancelIfEmpty) stop();
+        return;
+      }
       committedRef.current = '';
       interimRef.current = '';
       stop();
@@ -84,7 +90,7 @@ export function useSpeechRecognition({
 
     function armSilenceTimer() {
       clearSilenceTimer();
-      silenceTimerRef.current = setTimeout(commit, SILENCE_TIMEOUT_MS);
+      silenceTimerRef.current = setTimeout(() => commit(false), SILENCE_TIMEOUT_MS);
     }
 
     function start() {
@@ -134,7 +140,7 @@ export function useSpeechRecognition({
     };
 
     recognitionRef.current = recognition;
-    apiRef.current = { start, stop };
+    apiRef.current = { start, stop, sendNow: () => commit(true) };
 
     return () => {
       clearSilenceTimer();
@@ -167,5 +173,9 @@ export function useSpeechRecognition({
     else apiRef.current.start();
   }
 
-  return { supported, toggle };
+  function sendNow() {
+    apiRef.current?.sendNow();
+  }
+
+  return { supported, toggle, sendNow };
 }
