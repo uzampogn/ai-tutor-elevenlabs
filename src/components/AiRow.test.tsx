@@ -10,6 +10,7 @@ const article = (over: Partial<Article> = {}): Article => ({
   url: 'https://www.anthropic.com/news/claude-opus-4',
   pubDate: 'Tue, 03 Jun 2025 00:00:00 GMT',
   description: 'desc',
+  body: 'full body',
   ...over,
 });
 

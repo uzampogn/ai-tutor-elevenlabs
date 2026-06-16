@@ -10,6 +10,7 @@ const article: Article = {
   url: 'https://www.anthropic.com/research/safety',
   pubDate: 'Tue, 03 Jun 2025 00:00:00 GMT',
   description: 'desc',
+  body: 'full body',
 };
 
 describe('KbCard', () => {

@@ -14,6 +14,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
  */
 
 const ORIGIN = 'https://claude.com';
+const EXCERPT_CAP = 320; // keep in sync with scraper.ts
+const BODY_CAP = 60_000; // keep in sync with scraper.ts
 
 // --- Fixtures -------------------------------------------------------------
 
@@ -28,7 +30,7 @@ const SLUGS = [
   'voice-mode-launch',
   'enterprise-controls',
   'research-preview-notes',
-  'oldest-eleventh-article', // i=10 → oldest, dropped when we take the latest 10
+  'oldest-eleventh-article', // i=10 → oldest; kept now (no top-10 cap)
 ];
 
 /** Deterministic date per slug: lower index = more recent (day 11 down to day 01). */
@@ -114,20 +116,80 @@ afterEach(() => {
 // --- Parsing --------------------------------------------------------------
 
 describe('getClaudeArticles — parsing', () => {
-  it('returns the 10 most recent articles, sorted newest-first (drops the oldest of 11)', async () => {
+  it('returns ALL valid articles, sorted newest-first (no top-10 cap; oldest is kept)', async () => {
     vi.stubGlobal('fetch', makeFetchMock());
     const { getClaudeArticles } = await freshScraper();
     const articles = await getClaudeArticles();
 
-    expect(articles).toHaveLength(10);
+    // Every valid candidate is returned — not capped at 10.
+    expect(articles).toHaveLength(SLUGS.length);
 
     const slugs = articles.map((a) => a.url.replace(`${ORIGIN}/blog/`, ''));
-    // The oldest candidate must be dropped, the newest must be present...
-    expect(slugs).not.toContain('oldest-eleventh-article');
+    // The oldest candidate must be PRESENT (previously dropped), and the newest present...
+    expect(slugs).toContain('oldest-eleventh-article');
     expect(slugs).toContain(SLUGS[0]);
     // ...and despite the index listing cards oldest-first, results are newest-first.
     const times = articles.map((a) => new Date(a.pubDate).getTime());
     expect(times).toEqual([...times].sort((a, b) => b - a));
+  });
+
+  it('tracks the index count automatically (12 valid cards → 12 returned)', async () => {
+    const slugs = Array.from({ length: 12 }, (_, i) => `post-${i}`);
+    const idx = `<!doctype html><html><body><main>${slugs
+      .map(
+        (s, i) =>
+          `<a href="/blog/${s}">Post ${i}</a><time datetime="${isoFor(i)}"></time>`
+      )
+      .join('\n')}</main></body></html>`;
+    const fetchMock = vi.fn((input: string | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url === `${ORIGIN}/blog`) return Promise.resolve(htmlResponse(idx));
+      const m = url.match(/\/blog\/([^/?#]+)/);
+      const slug = m ? m[1] : 'x';
+      return Promise.resolve(htmlResponse(articleHtml(slug, slugs.indexOf(slug))));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const { getClaudeArticles } = await freshScraper();
+    expect(await getClaudeArticles()).toHaveLength(12);
+  });
+
+  it('keeps a dateless article, sorted last, with pubDate === ""', async () => {
+    const idx = `<!doctype html><html><body><main>
+      <section class="grid">
+        <article><a href="/blog/dated-post">Dated Post</a><time datetime="${isoFor(0)}"></time></article>
+      </section>
+      <section class="list">
+        <div><div><a href="/blog/dateless-post">Dateless Post</a></div></div>
+      </section>
+    </main></body></html>`;
+    const datelessLd = {
+      '@type': 'BlogPosting',
+      headline: 'Dateless Post',
+      description: 'A real article that happens to have no datePublished anywhere.',
+    };
+    const fetchMock = vi.fn((input: string | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url === `${ORIGIN}/blog`) return Promise.resolve(htmlResponse(idx));
+      if (url.includes('dateless-post')) {
+        return Promise.resolve(
+          htmlResponse(
+            `<html><head><script type="application/ld+json">${JSON.stringify(
+              datelessLd
+            )}</script></head><body><main><p>Body for the dateless post.</p></main></body></html>`
+          )
+        );
+      }
+      return Promise.resolve(htmlResponse(articleHtml('dated-post', 0)));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const { getClaudeArticles } = await freshScraper();
+    const articles = await getClaudeArticles();
+
+    expect(articles).toHaveLength(2);
+    const dateless = articles.find((a) => a.url.endsWith('dateless-post'))!;
+    expect(dateless).toBeDefined();
+    expect(dateless.pubDate).toBe(''); // never dropped for a missing date
+    expect(articles[articles.length - 1].url).toContain('dateless-post'); // sorts last
   });
 
   it('absolutizes every url to https://claude.com/blog/...', async () => {
@@ -150,12 +212,13 @@ describe('getClaudeArticles — parsing', () => {
     }
   });
 
-  it('gives every happy-path article a non-empty description', async () => {
+  it('gives every happy-path article a non-empty description and body', async () => {
     vi.stubGlobal('fetch', makeFetchMock());
     const { getClaudeArticles } = await freshScraper();
     const articles = await getClaudeArticles();
     for (const a of articles) {
       expect(a.description.length).toBeGreaterThan(0);
+      expect(a.body.length).toBeGreaterThan(0);
     }
   });
 
@@ -211,6 +274,170 @@ describe('getClaudeArticles — parsing', () => {
   });
 });
 
+// --- Full body (P0-2) -----------------------------------------------------
+
+describe('getClaudeArticles — full body extraction', () => {
+  function singleArticleScraper(articlePage: string) {
+    const fetchMock = vi.fn((input: string | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url === `${ORIGIN}/blog`) {
+        return Promise.resolve(
+          htmlResponse(
+            `<main><a href="/blog/the-post">The Post</a><time datetime="${isoFor(0)}"></time></main>`
+          )
+        );
+      }
+      return Promise.resolve(htmlResponse(articlePage));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    return freshScraper();
+  }
+
+  it('keeps a long JSON-LD articleBody intact in body; description stays a short excerpt', async () => {
+    const longBody =
+      'Anthropic shipped a major update. '.repeat(120); // ~4000 chars, > old 2500 cap
+    const ld = {
+      '@type': 'BlogPosting',
+      headline: 'Long Post',
+      datePublished: isoFor(0),
+      description: 'A concise structured description that should become the excerpt.',
+      articleBody: longBody,
+    };
+    const page = `<html><head><script type="application/ld+json">${JSON.stringify(
+      ld
+    )}</script></head><body></body></html>`;
+    const { getClaudeArticles } = await singleArticleScraper(page);
+    const [article] = await getClaudeArticles();
+
+    expect(article.body.length).toBeGreaterThan(2500); // NOT truncated to an excerpt
+    expect(article.body).toContain('Anthropic shipped a major update.');
+    expect(article.description.length).toBeLessThanOrEqual(EXCERPT_CAP);
+  });
+
+  it('builds body from <p> text when there is no JSON-LD', async () => {
+    const page = `<html><head></head><body><main>
+      <p>First substantive paragraph about the launch.</p>
+      <p>x</p>
+      <p>Second substantive paragraph with the technical details.</p>
+    </main></body></html>`;
+    const { getClaudeArticles } = await singleArticleScraper(page);
+    const [article] = await getClaudeArticles();
+
+    expect(article.body.length).toBeGreaterThan(0);
+    expect(article.body).toContain('First substantive paragraph');
+    expect(article.body).toContain('Second substantive paragraph');
+    expect(article.body).not.toContain('\n\nx'); // < 2 char paragraph skipped
+  });
+
+  it('caps a pathological body at BODY_CAP', async () => {
+    const huge = 'A'.repeat(200_000);
+    const ld = {
+      '@type': 'BlogPosting',
+      headline: 'Huge Post',
+      datePublished: isoFor(0),
+      articleBody: huge,
+    };
+    const page = `<html><head><script type="application/ld+json">${JSON.stringify(
+      ld
+    )}</script></head><body></body></html>`;
+    const { getClaudeArticles } = await singleArticleScraper(page);
+    const [article] = await getClaudeArticles();
+
+    expect(article.body.length).toBeLessThanOrEqual(BODY_CAP);
+  });
+});
+
+// --- Junk filtering (P0-6) ------------------------------------------------
+
+describe('getClaudeArticles — junk filtering', () => {
+  it('uses the real title (not "Read more") and never emits a generic-text article', async () => {
+    const idx = `<!doctype html><html><body><main>
+      <article>
+        <h2>Claude Ships Something Big</h2>
+        <a href="/blog/big-ship">Claude Ships Something Big</a>
+        <a href="/blog/big-ship">Read more</a>
+        <time datetime="${isoFor(0)}"></time>
+      </article>
+    </main></body></html>`;
+    const fetchMock = vi.fn((input: string | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url === `${ORIGIN}/blog`) return Promise.resolve(htmlResponse(idx));
+      return Promise.resolve(htmlResponse(articleHtml('big-ship', 0)));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const { getClaudeArticles } = await freshScraper();
+    const articles = await getClaudeArticles();
+
+    expect(articles).toHaveLength(1);
+    expect(articles[0].title).toBe('Claude Ships Something Big');
+    expect(articles.some((a) => /^read more$/i.test(a.title))).toBe(false);
+  });
+
+  it('falls back to a nearby heading when every anchor for a slug is generic', async () => {
+    const idx = `<!doctype html><html><body><main>
+      <article>
+        <h3>Heading-Derived Title</h3>
+        <a href="/blog/heading-only">Read more</a>
+        <time datetime="${isoFor(0)}"></time>
+      </article>
+    </main></body></html>`;
+    const fetchMock = vi.fn((input: string | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url === `${ORIGIN}/blog`) return Promise.resolve(htmlResponse(idx));
+      return Promise.resolve(htmlResponse(articleHtml('heading-only', 0)));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const { getClaudeArticles } = await freshScraper();
+    const articles = await getClaudeArticles();
+
+    expect(articles).toHaveLength(1);
+    expect(articles[0].title).toBe('Heading-Derived Title');
+  });
+
+  it('excludes /blog/category/* and /blog/tag/* listing links', async () => {
+    const idx = `<!doctype html><html><body><main>
+      <a href="/blog/real-post">Real Post</a><time datetime="${isoFor(0)}"></time>
+      <a href="/blog/category/announcements">Announcements</a>
+      <a href="/blog/tag/research">Research</a>
+      <a href="/blog/author/team">Team</a>
+    </main></body></html>`;
+    const fetchMock = vi.fn((input: string | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url === `${ORIGIN}/blog`) return Promise.resolve(htmlResponse(idx));
+      return Promise.resolve(htmlResponse(articleHtml('real-post', 0)));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const { getClaudeArticles } = await freshScraper();
+    const articles = await getClaudeArticles();
+
+    expect(articles).toHaveLength(1);
+    expect(articles[0].url).toBe(`${ORIGIN}/blog/real-post`);
+    const slugs = articles.map((a) => a.url);
+    expect(slugs.some((u) => u.includes('/category/'))).toBe(false);
+    expect(slugs.some((u) => u.includes('/tag/'))).toBe(false);
+    expect(slugs.some((u) => u.includes('/author/'))).toBe(false);
+  });
+
+  it('dedupes two anchors to the same slug, keeping the non-generic title', async () => {
+    const idx = `<!doctype html><html><body><main>
+      <a href="/blog/dup-slug">Learn more</a>
+      <a href="/blog/dup-slug">The Authoritative Title</a>
+      <time datetime="${isoFor(0)}"></time>
+    </main></body></html>`;
+    const fetchMock = vi.fn((input: string | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url === `${ORIGIN}/blog`) return Promise.resolve(htmlResponse(idx));
+      return Promise.resolve(htmlResponse(articleHtml('dup-slug', 0)));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const { getClaudeArticles } = await freshScraper();
+    const articles = await getClaudeArticles();
+
+    expect(articles).toHaveLength(1);
+    expect(articles[0].title).toBe('The Authoritative Title');
+  });
+});
+
 // --- Caching --------------------------------------------------------------
 
 describe('getClaudeArticles — caching', () => {
@@ -221,7 +448,8 @@ describe('getClaudeArticles — caching', () => {
 
     const first = await getClaudeArticles();
     const callsAfterFirst = fetchMock.mock.calls.length;
-    expect(callsAfterFirst).toBe(12); // 1 index + 11 candidate article pages (all fetched, then sorted)
+    const validCandidateCount = SLUGS.length;
+    expect(callsAfterFirst).toBe(1 + validCandidateCount); // 1 index + N candidate bodies
 
     const second = await getClaudeArticles();
     expect(fetchMock.mock.calls.length).toBe(callsAfterFirst); // unchanged
@@ -267,34 +495,35 @@ describe('getClaudeArticles — resilience', () => {
     const { getClaudeArticles } = await freshScraper();
     const articles = await getClaudeArticles();
 
-    expect(articles).toHaveLength(10); // whole feed survives
+    expect(articles).toHaveLength(SLUGS.length); // whole feed survives
     const degraded = articles.find((a) => a.url.endsWith(badSlug))!;
     expect(degraded).toBeDefined();
     expect(degraded.url).toBe(`${ORIGIN}/blog/${badSlug}`); // index title/url kept
     expect(degraded.description).toBe(''); // body left empty
+    expect(degraded.body).toBe('');
     // The others still have descriptions.
     expect(
       articles.filter((a) => a.description.length > 0).length
-    ).toBe(9);
+    ).toBe(SLUGS.length - 1);
   });
 });
 
 // --- Context --------------------------------------------------------------
 
 describe('buildArticleContext', () => {
-  it('produces the expected ## [Article n] markdown blocks', async () => {
+  it('produces one ## [Article n] markdown block per article', async () => {
     vi.stubGlobal('fetch', makeFetchMock());
     const { getClaudeArticles, buildArticleContext } = await freshScraper();
     const articles = await getClaudeArticles();
     const ctx = buildArticleContext(articles);
 
     expect(ctx).toContain('## [Article 1] ');
-    expect(ctx).toContain('## [Article 10] ');
+    expect(ctx).toContain(`## [Article ${articles.length}] `);
     expect(ctx).toContain(`URL: ${articles[0].url}`);
     expect(ctx).toContain(`Published: ${articles[0].pubDate}`);
     expect(ctx).toContain(articles[0].description);
-    // Blocks are joined by the --- separator.
-    expect(ctx.split('\n\n---\n\n')).toHaveLength(10);
+    // One block per article, joined by the --- separator.
+    expect(ctx.split('\n\n---\n\n')).toHaveLength(articles.length);
   });
 
   it('returns the unavailable message for an empty list', async () => {
