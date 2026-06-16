@@ -11,6 +11,7 @@ const article = (over: Partial<Article> = {}): Article => ({
   pubDate: 'Tue, 03 Jun 2025 00:00:00 GMT',
   description: 'desc',
   body: 'full body',
+  summary: 'summary',
   ...over,
 });
 
