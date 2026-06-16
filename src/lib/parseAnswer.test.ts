@@ -8,6 +8,7 @@ const article = (over: Partial<Article> = {}): Article => ({
   pubDate: 'Mon, 02 Jun 2026 00:00:00 GMT',
   description: 'A new model.',
   body: 'A new model. Full body text.',
+  summary: 'A new model summary.',
   ...over,
 });
 
