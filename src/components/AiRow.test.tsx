@@ -12,6 +12,7 @@ const article = (over: Partial<Article> = {}): Article => ({
   description: 'desc',
   body: 'full body',
   summary: 'summary',
+  heroImage: '',
   ...over,
 });
 

@@ -12,6 +12,7 @@ const article: Article = {
   description: 'desc',
   body: 'full body',
   summary: 'summary',
+  heroImage: '',
 };
 
 describe('KbCard', () => {

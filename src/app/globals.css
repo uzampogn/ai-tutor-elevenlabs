@@ -729,12 +729,19 @@ button { font-family: inherit; cursor: pointer; }
   line-height: 1.22; letter-spacing: -0.015em; margin: 0 0 18px; color: var(--ink);
 }
 .drawer-hero {
-  height: 150px; border-radius: var(--r); margin-bottom: 18px;
-  background-color: var(--panel-2);
-  background-image: repeating-linear-gradient(
-    -45deg, var(--line-2) 0 12px, transparent 12px 24px);
-  border: 1px solid var(--line);
-  display: grid; place-items: center;
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  aspect-ratio: 16 / 9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 18px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklch, var(--hero-accent, var(--faint)) 22%, transparent),
+    color-mix(in oklch, var(--hero-accent, var(--faint)) 6%, transparent)
+  );
 }
 .ph-label {
   font-family: var(--mono); font-size: 11px; color: var(--muted);
@@ -751,6 +758,86 @@ button { font-family: inherit; cursor: pointer; }
   font-size: 12.5px; line-height: 1.55; color: var(--muted);
   padding: 13px 15px; border-radius: var(--r);
   background: var(--panel-2); border: 1px dashed var(--line);
+}
+
+/* ── article score card ─────────────────────────────────────────────── */
+.drawer-hero-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.score-card { display: flex; flex-direction: column; gap: 16px; }
+
+.score-tldr {
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--ink);
+  margin: 0;
+  text-wrap: pretty;
+}
+
+.score-takeaways {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.score-takeaways li {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.score-asks { display: flex; flex-direction: column; gap: 8px; }
+.score-asks-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.score-ask {
+  text-align: left;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--ink);
+  padding: 10px 12px;
+  border: 1px solid var(--faint);
+  border-radius: 12px;
+  background: var(--surface, rgba(255, 255, 255, 0.5));
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.score-ask:hover {
+  border-color: var(--ink-soft);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.score-original { align-self: flex-start; }
+
+/* skeleton while digests prefetch */
+.score-card-loading { gap: 14px; }
+.score-skel {
+  border-radius: 8px;
+  background: linear-gradient(90deg, var(--faint) 25%, rgba(255, 255, 255, 0.6) 50%, var(--faint) 75%);
+  background-size: 200% 100%;
+  animation: score-shimmer 1.3s ease-in-out infinite;
+}
+.score-skel-line { height: 14px; }
+.score-skel-line.short { width: 60%; }
+.score-skel-block { height: 64px; }
+.score-skel-tags { height: 22px; width: 50%; }
+
+@keyframes score-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .score-skel { animation: none; }
 }
 
 /* ── scrollbars ─────────────────────────────────────────────────────── */

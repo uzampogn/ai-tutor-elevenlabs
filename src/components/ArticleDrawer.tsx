@@ -1,20 +1,31 @@
 'use client';
 
 import { useEffect } from 'react';
-import type { Article } from '@/lib/types';
+import type { Article, ArticleDigest } from '@/lib/types';
 import { formatShortDate } from './sidebar/kb';
 import { CloseIcon } from './icons';
+import ArticleHero from './ArticleHero';
+import ScoreCard from './ScoreCard';
 
 interface ArticleDrawerProps {
   article: Article | null;
+  digest: ArticleDigest | null;
+  digestsLoaded: boolean;
+  accentColor: string;
   open: boolean;
   onClose: () => void;
+  onAsk: (question: string) => void;
 }
 
-// A few static presentational tags for the reader (Article has no tag field).
-const TAGS = ['Claude', 'AI', 'Analysis'];
-
-export default function ArticleDrawer({ article, open, onClose }: ArticleDrawerProps) {
+export default function ArticleDrawer({
+  article,
+  digest,
+  digestsLoaded,
+  accentColor,
+  open,
+  onClose,
+  onAsk,
+}: ArticleDrawerProps) {
   // Esc closes the drawer (focus return is handled by the shell).
   useEffect(() => {
     if (!open) return;
@@ -41,20 +52,14 @@ export default function ArticleDrawer({ article, open, onClose }: ArticleDrawerP
             </button>
           </div>
           <h2 className="drawer-title">{article.title}</h2>
-          <div className="drawer-hero">
-            <span className="ph-label">Article preview</span>
-          </div>
-          <p className="drawer-summary">{article.description}</p>
-          <div className="drawer-tags">
-            {TAGS.map((t) => (
-              <span key={t} className="tag">
-                {t}
-              </span>
-            ))}
-          </div>
-          <div className="drawer-note">
-            This is a summary from the Claude blog. Open the original article for the full text.
-          </div>
+          <ArticleHero src={article.heroImage} alt={article.title} accentColor={accentColor} />
+          <ScoreCard
+            digest={digest}
+            digestsLoaded={digestsLoaded}
+            description={article.description}
+            url={article.url}
+            onAsk={onAsk}
+          />
         </div>
       )}
     </aside>

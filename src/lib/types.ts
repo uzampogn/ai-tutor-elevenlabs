@@ -10,6 +10,15 @@ export interface Message {
   content: string;
 }
 
+/** AI-generated score-card digest for one article (see lib/digest.ts). */
+export interface ArticleDigest {
+  tldr: string; // 1–2 sentences
+  takeaways: string[]; // 3–4 bullets
+  whyItMatters: string; // one business-impact line
+  tags: string[]; // exactly 3 topic tags
+  questions: string[]; // 2–3 self-contained tutor questions
+}
+
 /** The 4 suggested questions surfaced in the Welcome empty-state and composer quick chips. */
 export const SUGGESTED: string[] = [
   'What are the latest AI developments this month?',

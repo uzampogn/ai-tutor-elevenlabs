@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Message, Article } from '@/lib/types';
+import type { Message, Article, ArticleDigest } from '@/lib/types';
 import { buildSpokenDoc } from '@/lib/readAlong/spokenDoc';
 import { buildTimings, type ReadAlongTimings } from '@/lib/readAlong/timingMap';
 import Sidebar from './sidebar/Sidebar';
@@ -9,6 +9,7 @@ import SidebarToggle from './sidebar/SidebarToggle';
 import Thread from './main/Thread';
 import InputDock from './main/InputDock';
 import ArticleDrawer from './ArticleDrawer';
+import { categoryFor } from './sidebar/kb';
 
 type Density = 'compact' | 'normal' | 'comfy';
 
@@ -65,6 +66,9 @@ export default function AppShell() {
   const [activeArticle, setActiveArticle] = useState<Article | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  const [digests, setDigests] = useState<Record<string, ArticleDigest | null>>({});
+  const [digestsLoaded, setDigestsLoaded] = useState(false);
+
   // density default 'normal' = no class on .app.
   const [density] = useState<Density>('normal');
 
@@ -75,6 +79,14 @@ export default function AppShell() {
     if (!speakingContent || !speakingAlignment) return null;
     return buildTimings(buildSpokenDoc(speakingContent), speakingAlignment);
   }, [speakingContent, speakingAlignment]);
+
+  // Category color of the active article, for the hero gradient fallback. Keeps
+  // the palette logic in one place (sidebar/kb), matching the KB card dots.
+  const activeAccent = useMemo(() => {
+    if (!activeArticle) return categoryFor(0).color;
+    const i = articles.findIndex((a) => a.url === activeArticle.url);
+    return categoryFor(i >= 0 ? i : 0).color;
+  }, [activeArticle, articles]);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const speakAbortRef = useRef<AbortController | null>(null);
@@ -93,6 +105,16 @@ export default function AppShell() {
   useEffect(() => {
     loadArticles();
   }, [loadArticles]);
+
+  // Prefetch the per-article digests once, in the background. The sidebar list
+  // never waits on this; the drawer reads from `digests` when an article opens.
+  useEffect(() => {
+    fetch('/api/digest')
+      .then((r) => r.json())
+      .then((d: { digests?: Record<string, ArticleDigest | null> }) => setDigests(d.digests ?? {}))
+      .catch(console.error)
+      .finally(() => setDigestsLoaded(true));
+  }, []);
 
   function stopAudio() {
     speakAbortRef.current?.abort();
@@ -308,7 +330,18 @@ export default function AppShell() {
         />
       </main>
 
-      <ArticleDrawer article={activeArticle} open={drawerOpen} onClose={closeDrawer} />
+      <ArticleDrawer
+        article={activeArticle}
+        digest={activeArticle ? digests[activeArticle.url] ?? null : null}
+        digestsLoaded={digestsLoaded}
+        accentColor={activeAccent}
+        open={drawerOpen}
+        onClose={closeDrawer}
+        onAsk={(q) => {
+          closeDrawer();
+          void sendMessage(q);
+        }}
+      />
     </div>
   );
 }

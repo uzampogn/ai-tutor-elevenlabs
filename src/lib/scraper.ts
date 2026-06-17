@@ -8,6 +8,7 @@ export interface Article {
   description: string; // short excerpt for the sidebar/drawer (<= EXCERPT_CAP)
   body: string; // full article text (<= BODY_CAP), '' if unavailable
   summary: string; // compact grounding text for chat context (<= SUMMARY_CHAR_CAP)
+  heroImage: string; // og:image URL for the drawer hero, '' if absent/unresolvable
 }
 
 // Hard ceiling for the assembled chat grounding context (P0-5). ~24 summaries
@@ -23,6 +24,7 @@ const CLAUDE_ORIGIN = 'https://claude.com';
 const SEL_ARTICLE_LINK = 'a[href^="/blog/"]'; // index article cards
 const SEL_JSON_LD = 'script[type="application/ld+json"]'; // per-article structured data
 const SEL_OG_DESCRIPTION = 'meta[property="og:description"]';
+const SEL_OG_IMAGE = 'meta[property="og:image"]';
 const SEL_META_DESCRIPTION = 'meta[name="description"]';
 const SEL_ARTICLE_PUBLISHED = 'meta[property="article:published_time"]';
 const SEL_BODY_PARAGRAPH = 'main p, article p, p'; // body / fallback excerpt source
@@ -298,6 +300,7 @@ interface BodyData {
   body: string;
   description: string;
   pubDate: string;
+  heroImage: string;
 }
 
 /** Stage 2: extract full body + short description + ISO pubDate from a fetched article page. */
@@ -365,10 +368,23 @@ function parseArticleBody(html: string): BodyData {
     if (published) pubDate = published;
   }
 
+  // Hero image: og:image, resolved to an absolute URL. Missing/malformed → ''
+  // (the drawer falls back to a tinted gradient).
+  let heroImage = '';
+  const ogImage = root.querySelector(SEL_OG_IMAGE)?.getAttribute('content');
+  if (ogImage) {
+    try {
+      heroImage = new URL(ogImage, CLAUDE_ORIGIN).toString();
+    } catch {
+      heroImage = '';
+    }
+  }
+
   return {
     body,
     description: excerptFrom(stripHtml(description), EXCERPT_CAP),
     pubDate,
+    heroImage,
   };
 }
 
@@ -388,6 +404,7 @@ async function fetchArticleBody(card: IndexCard): Promise<Article> {
       description: parsed.description,
       body: parsed.body,
       summary: '', // filled by summarizeAll after sorting (see getClaudeArticles)
+      heroImage: parsed.heroImage,
     };
   } catch (err) {
     // Degrade only this article — keep its index title/url, leave body/description empty.
@@ -399,6 +416,7 @@ async function fetchArticleBody(card: IndexCard): Promise<Article> {
       description: '',
       body: '',
       summary: '',
+      heroImage: '',
     };
   }
 }
