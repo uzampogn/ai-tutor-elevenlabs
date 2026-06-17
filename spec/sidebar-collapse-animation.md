@@ -30,7 +30,7 @@ with a smooth animation, giving the conversation more room when the user wants i
 
 ## Non-goals (YAGNI)
 
-- **No persistence.** State always starts **open** on every load; collapsing is a
+- **No persistence.** State always starts **closed** on every load; opening is a
   within-session action that resets on reload. No localStorage, no hydration concerns.
 - **No mobile change.** Below 880px the sidebar already `display:none`s
   (`globals.css:806-808`); this feature is **desktop-only** (≥880px). The toggle is
@@ -42,8 +42,8 @@ with a smooth animation, giving the conversation more room when the user wants i
 
 | State | Sidebar | `.main` | Toggle |
 |---|---|---|---|
-| Open (default) | 320px column, content visible | fills remaining `1fr` | top-left, over sidebar header; `aria-expanded=true` |
-| Closed | column → 0, content clipped (not reflowed) | widens to fill | top-left, over empty top-left of `.main`; `aria-expanded=false` |
+| Closed (default) | column → 0, content clipped (not reflowed) | fills the full width | top-left, over empty top-left of `.main`; `aria-expanded=false` |
+| Open | 320px column, content visible | fills remaining `1fr` | top-left, over sidebar header; `aria-expanded=true` |
 
 - The toggle is the **same single element** in both states — it stays in the same
   fixed top-left spot; only the surrounding layout moves.
@@ -61,6 +61,10 @@ existing grid):
 - `.sidebar` gains `overflow: hidden` and `min-width: 0` so the column can shrink to 0.
 - Sidebar content sits in a **fixed-width (320px) inner wrapper** (`flex: none`) so it is
   clipped as the column narrows rather than re-wrapping — producing a clean slide-away.
+- **No animation on first load:** the initial render paints the resolved column widths
+  directly (there is no prior value to transition from), so a default-closed sidebar
+  appears already-collapsed without a slide-in flash. The transition only fires on
+  subsequent toggles.
 
 Rejected alternatives:
 - `transform: translateX(-100%)` on the sidebar — a transform alone does not reclaim the
@@ -71,8 +75,9 @@ Rejected alternatives:
 
 ## Components & state
 
-- **`src/components/AppShell.tsx`** — add `const [sidebarOpen, setSidebarOpen] = useState(true)`.
-  Apply `sidebar-collapsed` to the `.app` wrapper when `!sidebarOpen`. Render
+- **`src/components/AppShell.tsx`** — add `const [sidebarOpen, setSidebarOpen] = useState(false)`.
+  Apply `sidebar-collapsed` to the `.app` wrapper when `!sidebarOpen` (so it is present on
+  first render). Render
   `<SidebarToggle>` as a sibling of `<Sidebar>`. Pass `open`/`onToggle` down.
 - **`src/components/sidebar/SidebarToggle.tsx`** *(new)* — a `<button>` with props
   `{ open: boolean; onToggle: () => void }`. Absolutely positioned top-left, `z-index`
@@ -99,17 +104,19 @@ Rejected alternatives:
 
 - **`SidebarToggle`**: renders; `aria-expanded` tracks the `open` prop; clicking fires
   `onToggle`; `aria-label` reflects state.
-- **Integration (`AppShell` or a focused harness)**: default state is open (no
-  `sidebar-collapsed` class); clicking the toggle adds `sidebar-collapsed` to `.app`, sets
-  `aria-expanded=false`, and marks the aside `inert`; clicking again reverses all three.
+- **Integration (`AppShell` or a focused harness)**: default state is closed — `.app` has
+  `sidebar-collapsed`, the aside is `inert`, and `aria-expanded=false`; clicking the toggle
+  removes `sidebar-collapsed`, clears `inert`, and sets `aria-expanded=true`; clicking again
+  reverses all three.
 - Existing `globals.tokens.test.ts` / other suites must stay green.
 
 ## Acceptance criteria
 
 1. On desktop, a toggle icon is visible in the top-left corner at all times.
-2. Clicking it collapses the sidebar to 0 width with a smooth ~0.28s slide; `.main`
-   widens to fill. Clicking again restores it.
-3. Sidebar starts open on every load (no persisted state).
+2. Clicking the toggle animates the sidebar open/closed with a smooth ~0.28s slide;
+   `.main` width adjusts to match. The interaction is symmetric in both directions.
+3. Sidebar starts **closed** on every load (no persisted state), with no slide-in flash on
+   first paint.
 4. With `prefers-reduced-motion: reduce`, the toggle snaps open/closed instantly with no
    animation but otherwise behaves identically.
 5. When collapsed, no sidebar control is keyboard-reachable; `aria-expanded` and
