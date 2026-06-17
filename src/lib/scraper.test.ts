@@ -549,6 +549,7 @@ describe('buildArticleContext', () => {
       description: `desc ${i}`,
       body: `FULLBODY-${i} `.repeat(200), // large; must NOT leak into context
       summary: `SUMMARY-${i}`,
+      heroImage: '',
     }));
     const ctx = buildArticleContext(articles);
     expect(ctx).toContain('SUMMARY-0');
@@ -567,6 +568,7 @@ describe('buildArticleContext', () => {
       description: 'd',
       body: 'BODY'.repeat(500),
       summary: `S${i}-${big}`,
+      heroImage: '',
     }));
     const ctx = buildArticleContext(articles);
     expect(ctx.length).toBeLessThanOrEqual(20_000); // hard ceiling enforced
