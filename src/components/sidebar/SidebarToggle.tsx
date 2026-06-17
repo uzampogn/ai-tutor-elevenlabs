@@ -1,7 +1,7 @@
 // Top-left toggle that collapses/expands the knowledge-base sidebar.
 // Rendered by AppShell; absolutely positioned, present in both states.
-
-import { PanelLeftIcon } from '../icons';
+// Visually it is the brand mark (gradient square + pulsing dot); the corner
+// radius morphs square (open) ⇄ circle (closed), driven by aria-expanded in CSS.
 
 interface SidebarToggleProps {
   open: boolean;
@@ -18,7 +18,7 @@ export default function SidebarToggle({ open, onToggle }: SidebarToggleProps) {
       aria-expanded={open}
       aria-controls="kb-sidebar"
     >
-      <PanelLeftIcon />
+      <span className="brand-pulse" aria-hidden="true" />
     </button>
   );
 }

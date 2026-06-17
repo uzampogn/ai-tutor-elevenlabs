@@ -25,4 +25,11 @@ describe('SidebarToggle', () => {
     await user.click(screen.getByRole('button'));
     expect(onToggle).toHaveBeenCalledTimes(1);
   });
+
+  it('renders the pulsing brand-mark dot, not a panel icon', () => {
+    const { container } = render(<SidebarToggle open={false} onToggle={() => {}} />);
+    const btn = screen.getByRole('button');
+    expect(btn.querySelector('.brand-pulse')).not.toBeNull();
+    expect(btn.querySelector('svg')).toBeNull();
+  });
 });

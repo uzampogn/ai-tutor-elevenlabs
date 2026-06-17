@@ -99,12 +99,3 @@ export function ArrowIcon({ size = 16, ...rest }: IconProps & { size?: number })
     </svg>
   );
 }
-
-export function PanelLeftIcon({ size = 16, ...rest }: IconProps & { size?: number }) {
-  return (
-    <svg {...base(size)} {...rest}>
-      <rect x="3" y="4" width="18" height="16" rx="2" />
-      <path d="M9 4v16" />
-    </svg>
-  );
-}
