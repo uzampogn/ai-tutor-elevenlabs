@@ -22,6 +22,11 @@ if (!window.matchMedia) {
   }));
 }
 
+// auto-scroll (Thread pins to the latest message on mount/update)
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = vi.fn();
+}
+
 // TTS audio playback
 if (typeof HTMLMediaElement !== 'undefined') {
   HTMLMediaElement.prototype.play = vi.fn().mockResolvedValue(undefined);
