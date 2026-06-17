@@ -66,11 +66,19 @@ ${articleContext}`;
         const messageStream = client.messages.stream({
           model: 'claude-sonnet-4-6',
           max_tokens: 1024,
-          system: systemPrompt,
+          system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
           messages,
         });
 
         for await (const chunk of messageStream) {
+          if (chunk.type === 'message_start' && process.env.NODE_ENV !== 'production') {
+            const u = chunk.message.usage;
+            console.log('[chat] cache usage', {
+              cache_read: u.cache_read_input_tokens,
+              cache_creation: u.cache_creation_input_tokens,
+              input: u.input_tokens,
+            });
+          }
           if (
             chunk.type === 'content_block_delta' &&
             chunk.delta.type === 'text_delta'

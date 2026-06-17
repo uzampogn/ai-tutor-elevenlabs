@@ -79,4 +79,15 @@ describe('POST /api/chat — grounding from the cached context', () => {
     const res = await post([{ role: 'user', content: 'hi' }]);
     expect(await readAll(res)).toBe('Hello world');
   });
+
+  it('sends the system prompt as an ephemeral cache_control block (prompt caching)', async () => {
+    await post([{ role: 'user', content: 'hi' }]);
+    const sysArg = streamMock.mock.calls[0][0].system;
+    expect(Array.isArray(sysArg)).toBe(true);
+    expect(sysArg[0]).toMatchObject({
+      type: 'text',
+      cache_control: { type: 'ephemeral' },
+    });
+    expect(sysArg[0].text).toContain('GROUNDING_MARKER');
+  });
 });
