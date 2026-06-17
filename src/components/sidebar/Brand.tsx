@@ -1,11 +1,9 @@
-// Logo mark with a pulsing accent dot, plus the product name and subtitle.
+// Product name and subtitle. The pulsing brand mark now lives in the top-left
+// SidebarToggle (which doubles as the collapse control), so it is not repeated here.
 
 export default function Brand() {
   return (
     <div className="brand">
-      <div className="brand-mark">
-        <span className="brand-pulse" />
-      </div>
       <div>
         <div className="brand-name">AI News Tutor</div>
         <div className="brand-sub">Claude blog × voice</div>

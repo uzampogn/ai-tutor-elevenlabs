@@ -5,6 +5,7 @@ import type { Message, Article } from '@/lib/types';
 import { buildSpokenDoc } from '@/lib/readAlong/spokenDoc';
 import { buildTimings, type ReadAlongTimings } from '@/lib/readAlong/timingMap';
 import Sidebar from './sidebar/Sidebar';
+import SidebarToggle from './sidebar/SidebarToggle';
 import Thread from './main/Thread';
 import InputDock from './main/InputDock';
 import ArticleDrawer from './ArticleDrawer';
@@ -54,6 +55,9 @@ export default function AppShell() {
   // can drive its rAF loop. Set on `onplay`, cleared on `ended`/`pause`.
   const [audioEl, setAudioEl] = useState<HTMLAudioElement | null>(null);
   const [inputMode, setInputMode] = useState<'voice' | 'text'>('voice');
+
+  // KB sidebar collapse. Starts closed every load (no persistence).
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [articles, setArticles] = useState<Article[]>([]);
   const [articlesLoading, setArticlesLoading] = useState(true);
@@ -266,11 +270,13 @@ export default function AppShell() {
     density === 'compact' ? ' density-compact' : density === 'comfy' ? ' density-comfy' : '';
 
   return (
-    <div className={`app${densityClass}`}>
+    <div className={`app${densityClass}${sidebarOpen ? '' : ' sidebar-collapsed'}`}>
+      <SidebarToggle open={sidebarOpen} onToggle={() => setSidebarOpen((v) => !v)} />
       <Sidebar
         articles={articles}
         articlesLoading={articlesLoading}
         activeUrl={drawerOpen ? activeArticle?.url ?? null : null}
+        collapsed={!sidebarOpen}
         onRefresh={loadArticles}
         onOpenArticle={openArticle}
       />
