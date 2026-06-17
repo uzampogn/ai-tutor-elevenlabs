@@ -133,33 +133,32 @@ button { font-family: inherit; cursor: pointer; }
 
 /* Top-left toggle — present in both states; over the header when open, over
    the empty top-left of .main when closed. */
+/* Top-left toggle = the brand mark (gradient square + pulsing dot). Present in
+   both states; over the header when open, over the empty top-left of .main when
+   closed. Corner radius carries the state: squircle (open) ⇄ circle (closed). */
 .sidebar-toggle {
   position: absolute;
-  top: 14px;
-  left: 14px;
+  top: 20px;
+  left: 22px;
   z-index: 20;
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
+  width: 38px;
+  height: 38px;
   display: grid;
   place-items: center;
-  border: 1px solid var(--line);
-  background: var(--panel);
-  color: var(--muted);
-  box-shadow: var(--shadow-sm);
-  transition: color .18s, border-color .18s, background .18s;
+  border: none;
+  background: linear-gradient(150deg, var(--accent), var(--accent-2));
+  box-shadow: 0 4px 12px color-mix(in oklab, var(--accent) 32%, transparent);
 }
-.sidebar-toggle:hover { color: var(--ink); border-color: var(--faint); }
+.sidebar-toggle[aria-expanded="true"]  { border-radius: 11px; }
+.sidebar-toggle[aria-expanded="false"] { border-radius: 50%; }
+.sidebar-toggle:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px color-mix(in oklab, var(--accent) 40%, transparent);
+}
+.sidebar-toggle:active { transform: scale(.92); }
 .brand {
   display: flex; align-items: center; gap: 12px;
-  padding: 22px 22px 18px 56px;
-}
-.brand-mark {
-  width: 38px; height: 38px; border-radius: 11px;
-  background: linear-gradient(150deg, var(--accent), var(--accent-2));
-  display: grid; place-items: center; flex: none;
-  position: relative; overflow: hidden;
-  box-shadow: 0 4px 12px color-mix(in oklab, var(--accent) 32%, transparent);
+  padding: 22px 22px 18px 72px;
 }
 .brand-pulse {
   width: 13px; height: 13px; border-radius: 50%;
@@ -777,6 +776,12 @@ button { font-family: inherit; cursor: pointer; }
      instant snap. First load paints the resolved width directly (no prior
      value), so a default-closed sidebar does not animate in. */
   .app { transition: grid-template-columns .28s ease; }
+
+  /* Mark morph (squircle ⇄ circle) + press/hover — gated so reduced-motion
+     users get an instant snap. */
+  .sidebar-toggle {
+    transition: border-radius .28s ease, transform .12s ease, box-shadow .18s ease;
+  }
 
   .brand-pulse { animation: pulse 2.6s ease-out infinite; }
   .kb-refresh.spinning svg { animation: spin .9s linear infinite; }
