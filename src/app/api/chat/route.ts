@@ -1,14 +1,13 @@
 import { NextRequest } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
-import { getClaudeArticles, buildArticleContext } from '@/lib/scraper';
+import { getGroundingContext } from '@/lib/scraper';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 export async function POST(req: NextRequest) {
   const { messages } = await req.json();
 
-  const articles = await getClaudeArticles();
-  const articleContext = buildArticleContext(articles);
+  const articleContext = await getGroundingContext();
 
   const systemPrompt = `You are an engaging, knowledgeable AI news tutor. You teach people the latest developments from Anthropic, grounded in the Claude blog's most recent posts (provided below). You sound like a sharp, friendly expert — natural and conversational, never templated.
 
