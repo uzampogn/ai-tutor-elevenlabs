@@ -92,31 +92,44 @@ its own endpoint, so `KbList`/`KbCard`/`SourceChips`/`parseAnswer` are untouched
 
 Keeps the LLM out of the pure HTML scraper.
 
+**Mirror the established `src/lib/summarize.ts` pattern** — same module shape, same
+fail-soft/caching/concurrency discipline. This codebase already does LLM-at-ingest there, so
+the digest module is its sibling, not a new approach.
+
+Constraints discovered in the codebase:
+
+- The pinned SDK is `@anthropic-ai/sdk@^0.40.0`, which predates `output_config.format` /
+  `messages.parse()`. **Do NOT use structured outputs.** Instead instruct the model to return
+  a single JSON object and `JSON.parse` the text block — the same plain `messages.create()`
+  call `summarize.ts` uses, extracting `content.filter(b => b.type === 'text')`.
+- Use a module-scoped, **guarded** `Anthropic` client (try/catch at construction → `null` on
+  missing key → fall back, never crash ingest), exactly like `summarize.ts`.
+
+API:
+
+- `digestArticle(a): Promise<ArticleDigest | null>` — one article:
+  - `client.messages.create({ model: DIGEST_MODEL, max_tokens: DIGEST_MAX_TOKENS, system:
+    DIGEST_SYSTEM_PROMPT, messages: [{ role: 'user', content: `${title}\n\n${body.slice(0,
+    BODY_INPUT_CAP)}` }] })`.
+  - Extract the text, `JSON.parse` it, and **validate the shape** (all five fields present;
+    `takeaways`/`tags`/`questions` are arrays). On parse failure, missing client, empty body,
+    or bad shape → log like `summarize.ts` and return `null`.
+  - **Model:** `DIGEST_MODEL = process.env.DIGEST_MODEL ?? 'claude-haiku-4-5'` — matches the
+    Haiku tier `summarize.ts` already uses (bounds cost across ~10 calls per cold refresh),
+    env-overridable. (`claude-sonnet-4-6` / `claude-opus-4-8` are swap-in via the env var for
+    higher quality later.)
+  - `DIGEST_MAX_TOKENS ≈ 600`; `BODY_INPUT_CAP = 12_000` (reuse the summarizer's bound).
+  - `DIGEST_SYSTEM_PROMPT`: tutor voice; "Return ONLY a JSON object with keys tldr, takeaways
+    (3–4 strings), whyItMatters, tags (exactly 3 strings), questions (2–3 strings). No
+    markdown, no preamble." Questions self-contained about *this* article; `whyItMatters`
+    echoes the chat prompt's Business-Impact tone.
 - `getArticleDigests(): Promise<Record<string, ArticleDigest | null>>`
-  - In-memory cache keyed by URL, with a TTL aligned to the scrape cache (1h). Same
-    cache-or-fetch shape as `getClaudeArticles`.
-  - On a cold call: `getClaudeArticles()`, then generate all digests **in parallel**
-    (`Promise.all` over the articles). Each article is one small structured-output call over
-    its `body` (or `description` when `body` is empty).
-  - **Fail-soft per article** (matches the scraper's "degrade only this one" ethos and the
-    fail-soft `/api/speak`): a failed or malformed digest resolves to `null` for that URL.
-    One bad article never fails the batch.
-- `buildDigest(article: Article): Promise<ArticleDigest | null>` — one article:
-  - Anthropic SDK (`@anthropic-ai/sdk`), same client construction as `api/chat/route.ts`.
-  - **Structured outputs**: `client.messages.create({ ..., output_config: { format: { type:
-    'json_schema', schema: ARTICLE_DIGEST_SCHEMA } } })`, then `JSON.parse` the returned text
-    block into `ArticleDigest`. Hand-written JSON schema (no zod dependency — the project
-    doesn't use zod). Schema requires all five fields, `additionalProperties: false`.
-  - **Model:** `claude-sonnet-4-6` — matches the existing chat route and README, and digest
-    generation is a lightweight extraction/summarization task run for all 10 articles hourly.
-    (`claude-opus-4-8` is the higher-quality option if we later want it; structured outputs
-    are supported on both. Flagged as an explicit, swappable choice.)
-  - `max_tokens` ~1024 (non-streaming; the digest is small). System prompt instructs the
-    tutor voice, the exact shape, "exactly 3 tags", "2–3 self-contained questions a learner
-    would ask about *this* article", and the on-brand business-impact line. Reuse the tone of
-    the chat system prompt's Business Impact section for `whyItMatters`.
-  - On any error (network, refusal, JSON parse, schema mismatch): log like the scraper and
-    return `null`.
+  - Mirror `summarizeAll`: a module-level `digestCache` keyed by `slug + contentHash` (reuse
+    the djb2 hash + `slugFromUrl` approach), so unchanged content costs 0 calls.
+  - Call `getClaudeArticles()`, generate misses with **bounded concurrency** (`CONCURRENCY =
+    5`, same as the summarizer), and return a `{ [url]: digest | null }` map.
+  - Behind the article cache, so it's never per-user. **Fail-soft per article**: one bad
+    article is `null`, never fails the batch.
 
 ### 3. Endpoint — `src/app/api/digest/route.ts` (new)
 
@@ -209,8 +222,8 @@ tap question chip → onAsk(q) → closeDrawer() + sendMessage(q) → grounded t
 
 ## Testing
 
-- `digest.ts`: prompt/schema construction; JSON-parse success; fail-soft on malformed JSON
-  and on a thrown SDK error → `null` (mock the Anthropic client).
+- `digest.ts`: happy-path JSON parse → valid `ArticleDigest`; shape validation; fail-soft on
+  malformed JSON and on a thrown SDK error → `null` (mock the Anthropic client).
 - `scraper`: `og:image` extraction (present, absent, relative-URL resolution).
 - `ScoreCard`: renders each of the three states correctly (loading skeleton; ready renders
   tldr/takeaways/whyItMatters/tags/chips; fallback renders description + link, no chips).
