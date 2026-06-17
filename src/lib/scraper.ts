@@ -1,5 +1,6 @@
 import { parse, type HTMLElement } from 'node-html-parser';
 import { summarizeAll } from './summarize';
+import { unstable_cache } from 'next/cache';
 
 export interface Article {
   title: string;
@@ -500,3 +501,35 @@ export function buildArticleContext(articles: Article[]): string {
   }
   return blocks.join(CONTEXT_SEPARATOR);
 }
+
+// --- Cross-instance grounding cache (chat hot-path; see spec/chat-latency) ---
+// /api/chat must never scrape or summarize on the request path. The module-level
+// caches above are per-instance and empty on cold starts, so the assembled context
+// is wrapped in Vercel's Data Cache (shared across function instances). Even a cold
+// /api/chat instance then gets a cache hit instead of re-summarizing every article.
+
+/** Cache tag for the assembled grounding context; the cron invalidates it via revalidateTag. */
+export const GROUNDING_TAG = 'grounding';
+
+// Daily time-based backstop. The /api/scrape/refresh cron is the primary refresh
+// (it calls revalidateTag(GROUNDING_TAG)); this only bounds staleness if the cron is
+// missed. Stale-while-revalidate means a read never blocks on the recompute.
+const GROUNDING_REVALIDATE_SECONDS = 60 * 60 * 24;
+
+/** Uncached assembly: scrape (cached fetches) + summaries + context build. Exported for testing. */
+export async function buildGroundingContext(): Promise<string> {
+  const articles = await getClaudeArticles();
+  return buildArticleContext(articles);
+}
+
+/**
+ * Cross-instance grounding context for the chat route. Backed by Vercel's Data Cache,
+ * so every instance — including cold /api/chat starts — reads the assembled context
+ * without re-scraping or re-summarizing. Refreshed daily (backstop) and on demand by
+ * the cron via revalidateTag(GROUNDING_TAG).
+ */
+export const getGroundingContext = unstable_cache(
+  buildGroundingContext,
+  ['grounding-context'],
+  { revalidate: GROUNDING_REVALIDATE_SECONDS, tags: [GROUNDING_TAG] },
+);
