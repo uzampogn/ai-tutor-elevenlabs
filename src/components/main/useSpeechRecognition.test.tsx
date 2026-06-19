@@ -297,6 +297,58 @@ describe('useSpeechRecognition', () => {
       restore();
     });
 
+    it('does not duplicate when Android Chrome appends growing cumulative final results (issue #30, real device data)', () => {
+      // Captured on Android Chrome (issue #30): each onresult APPENDS a new
+      // isFinal result, so event.results is a cumulative list whose entries are
+      // *growing prefixes* of the whole phrase (with empty + repeated snapshots,
+      // resultIndex advancing). Blindly concatenating every final yields
+      // "telltell metell me…"; the assembled transcript must be the latest phrase.
+      const onFinal = vi.fn();
+      const { instance, restore } = renderWithInstance({
+        listening: true, setListening: vi.fn(), onInterim: vi.fn(), onFinal,
+      });
+
+      const PHRASE =
+        'tell me everything about self-service Analytics I want to know how to apply it for my product area';
+      // [snapshot, repeatCount] — the exact per-event newest entry from the log.
+      const steps: [string, number][] = [
+        ['', 3],
+        ['tell', 1],
+        ['tell me', 2],
+        ['tell me everything', 1],
+        ['tell me everything about', 8],
+        ['tell me everything about self-service', 1],
+        ['tell me everything about self-service Analytics', 5],
+        ['tell me everything about self-service Analytics I', 2],
+        ['tell me everything about self-service Analytics I want', 1],
+        ['tell me everything about self-service Analytics I want to', 1],
+        ['tell me everything about self-service Analytics I want to know', 2],
+        ['tell me everything about self-service Analytics I want to know how', 1],
+        ['tell me everything about self-service Analytics I want to know how to', 2],
+        ['tell me everything about self-service Analytics I want to know how to apply', 1],
+        ['tell me everything about self-service Analytics I want to know how to apply it', 2],
+        ['tell me everything about self-service Analytics I want to know how to apply it for', 1],
+        ['tell me everything about self-service Analytics I want to know how to apply it for my', 2],
+        ['tell me everything about self-service Analytics I want to know how to apply it for my product', 1],
+        [PHRASE, 1],
+      ];
+      const snapshots = steps.flatMap(([text, n]) => Array.from({ length: n }, () => text));
+
+      act(() => {
+        snapshots.forEach((_snap, i) => {
+          const segments = snapshots.slice(0, i + 1).map((t) => ({ transcript: t, isFinal: true }));
+          instance().onresult?.(makeCumulativeEvent(segments, i));
+        });
+      });
+      // Device shows END shouldListen=true: the session ends, hook folds + restarts.
+      act(() => { instance().onend?.(new Event('end') as unknown as Event); });
+      // 2.5s of silence in the restarted (empty) session → auto-send.
+      act(() => { vi.advanceTimersByTime(2500); });
+
+      expect(onFinal).toHaveBeenCalledWith(PHRASE);
+      restore();
+    });
+
     it('does not send an empty transcript when the timer fires', () => {
       const onFinal = vi.fn();
       const setListening = vi.fn();

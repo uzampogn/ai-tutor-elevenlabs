@@ -5,6 +5,27 @@ import { useEffect, useRef, useState } from 'react';
 /** Silence (no new speech result) after which we auto-send. Tunable. */
 const SILENCE_TIMEOUT_MS = 2500;
 
+/**
+ * Merge a freshly-emitted transcript chunk into the running text for one stream
+ * (final or interim). The Web Speech API is not consistent across engines:
+ *   - Desktop Chrome emits each result as a *distinct* segment → append.
+ *   - Android Chrome (issue #30) appends many final results in one cumulative
+ *     `event.results`, each a *growing prefix* of the whole phrase
+ *     ("tell" → "tell me" → "tell me everything" …). Blind concatenation stacks
+ *     these into "telltell metell me…".
+ * Collapsing on the prefix relationship handles both: when one string is a
+ * prefix of the other we keep the longer (the latest snapshot); otherwise the
+ * chunk is genuinely new and is appended — byte-identical to the old
+ * concatenation for a well-behaved desktop engine.
+ */
+function mergeTranscript(acc: string, next: string): string {
+  if (!next) return acc;
+  if (!acc) return next;
+  if (next.startsWith(acc)) return next; // cumulative snapshot grew (covers next === acc)
+  if (acc.startsWith(next)) return acc; // a shorter/older snapshot re-emitted
+  return acc + next; // distinct segment → append
+}
+
 export interface UseSpeechRecognitionOptions {
   listening: boolean;
   setListening: (v: boolean) => void;
@@ -116,17 +137,18 @@ export function useSpeechRecognition({
 
     recognition.onresult = (event) => {
       // event.results is the cumulative list for THIS session. Rebuild the final
-      // and interim text from index 0 every event (do not accumulate): some
-      // engines (mobile) re-emit a growing final result[0] at index 0, which a
-      // running `+=` would stack into "good itgood it first…". Rebuilding makes
-      // the result idempotent — the new text replaces the old.
+      // and interim text from index 0 every event (do not accumulate across
+      // events), merging each result with mergeTranscript instead of blind
+      // concatenation. Android Chrome (issue #30) appends many final results
+      // that are growing prefixes of the same phrase; concatenating them stacks
+      // into "telltell metell me…", whereas the merge keeps only the latest.
       let sessionFinal = '';
       let interim = '';
       for (let i = 0; i < event.results.length; i++) {
         const result = event.results[i];
         const transcript = result[0].transcript;
-        if (result.isFinal) sessionFinal += transcript;
-        else interim += transcript;
+        if (result.isFinal) sessionFinal = mergeTranscript(sessionFinal, transcript);
+        else interim = mergeTranscript(interim, transcript);
       }
       sessionFinalRef.current = sessionFinal;
       interimRef.current = interim;
