@@ -29,8 +29,15 @@ export function useSpeechRecognition({
   const [supported, setSupported] = useState(true);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
-  // Accumulated transcript + silence-timer state for the current turn.
-  const committedRef = useRef('');
+  // Transcript assembly for the current turn. The live transcript is always
+  // priorSessionsRef + sessionFinalRef + interimRef.
+  //   priorSessionsRef — final text from engine sessions that already ended and
+  //     were auto-restarted (continuous mode can end on mobile mid-turn).
+  //   sessionFinalRef  — the CURRENT session's final text, rebuilt from the
+  //     cumulative event.results each onresult (never accumulated with +=, so a
+  //     re-emitted growing result[0] replaces instead of stacking).
+  const priorSessionsRef = useRef('');
+  const sessionFinalRef = useRef('');
   const interimRef = useRef('');
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Whether we *intend* to be listening — lets onend tell a deliberate stop
@@ -75,14 +82,15 @@ export function useSpeechRecognition({
 
     function commit(cancelIfEmpty: boolean) {
       clearSilenceTimer();
-      const text = (committedRef.current + interimRef.current).trim();
+      const text = (priorSessionsRef.current + sessionFinalRef.current + interimRef.current).trim();
       if (!text) {
         // Timer fire with nothing said: keep listening (next result re-arms).
         // Explicit tap (cancelIfEmpty): treat as cancel — stop listening.
         if (cancelIfEmpty) stop();
         return;
       }
-      committedRef.current = '';
+      priorSessionsRef.current = '';
+      sessionFinalRef.current = '';
       interimRef.current = '';
       stop();
       cb.current.onFinal(text);
@@ -94,7 +102,8 @@ export function useSpeechRecognition({
     }
 
     function start() {
-      committedRef.current = '';
+      priorSessionsRef.current = '';
+      sessionFinalRef.current = '';
       interimRef.current = '';
       shouldListenRef.current = true;
       try {
@@ -106,23 +115,35 @@ export function useSpeechRecognition({
     }
 
     recognition.onresult = (event) => {
+      // event.results is the cumulative list for THIS session. Rebuild the final
+      // and interim text from index 0 every event (do not accumulate): some
+      // engines (mobile) re-emit a growing final result[0] at index 0, which a
+      // running `+=` would stack into "good itgood it first…". Rebuilding makes
+      // the result idempotent — the new text replaces the old.
+      let sessionFinal = '';
       let interim = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
+      for (let i = 0; i < event.results.length; i++) {
         const result = event.results[i];
         const transcript = result[0].transcript;
-        if (result.isFinal) committedRef.current += transcript;
+        if (result.isFinal) sessionFinal += transcript;
         else interim += transcript;
       }
+      sessionFinalRef.current = sessionFinal;
       interimRef.current = interim;
-      const running = (committedRef.current + interim).trim();
+      const running = (priorSessionsRef.current + sessionFinal + interim).trim();
       if (running) cb.current.onInterim(running);
       armSilenceTimer();
     };
 
     recognition.onend = () => {
       // Continuous mode can still end (network / browser timeout). If we still
-      // intend to listen, restart so the user isn't silently cut off.
+      // intend to listen, fold the just-ended session's final text into the
+      // carry-over accumulator — so the restarted session (whose event.results
+      // resets to empty and is rebuilt from index 0) neither drops it nor
+      // double-counts it — then restart so the user isn't silently cut off.
       if (shouldListenRef.current) {
+        priorSessionsRef.current += sessionFinalRef.current;
+        sessionFinalRef.current = '';
         try {
           recognition.start();
         } catch {
