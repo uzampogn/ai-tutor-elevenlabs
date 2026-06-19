@@ -2,5 +2,5 @@
   "framework": "nextjs",
   "buildCommand": "npm run build",
   "installCommand": "npm install",
-  "crons": [{ "path": "/api/scrape/refresh", "schedule": "0 * * * *" }]
+  "crons": [{ "path": "/api/scrape/refresh", "schedule": "0 6 * * *" }]
 }

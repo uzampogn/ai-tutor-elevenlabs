@@ -78,12 +78,12 @@ describe('getClaudeArticles — DB-first', () => {
 
   it('self-heals when the DB is stale (older than the threshold)', async () => {
     db.getArticles.mockResolvedValue([articleRow('post-a')]);
-    db.readMeta.mockResolvedValue({ lastSuccessfulFetch: Date.now() - 4 * 60 * 60 * 1000, lastError: null });
+    db.readMeta.mockResolvedValue({ lastSuccessfulFetch: Date.now() - 27 * 60 * 60 * 1000, lastError: null });
     const fetchMock = makeFetchMock();
     vi.stubGlobal('fetch', fetchMock);
     const { getClaudeArticles } = await freshScraper();
     await getClaudeArticles();
-    expect(fetchMock).toHaveBeenCalled(); // 4h > 3h threshold → scraped
+    expect(fetchMock).toHaveBeenCalled(); // 27h > 26h threshold → scraped
   });
 
   it('collapses two concurrent cold reads into a single scrape (single-flight)', async () => {
@@ -109,7 +109,7 @@ describe('getClaudeArticles — DB-first', () => {
   });
 
   it('getIngestionStatus reflects kb_meta after a DB-hit read', async () => {
-    // 30 min ago: within the 3h stale threshold, so this is a fresh DB hit (no
+    // 30 min ago: within the 26h stale threshold, so this is a fresh DB hit (no
     // self-heal). Anchored to Date.now() so the test is clock-independent.
     const ts = Date.now() - 30 * 60 * 1000;
     db.getArticles.mockResolvedValue([articleRow('post-a')]);

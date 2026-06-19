@@ -69,9 +69,10 @@ const GENERIC_LINK_TEXT = new Set([
 // --- Read-through cache + freshness snapshot (DB is the source of truth) ---
 const READ_CACHE_TTL_MS = 60 * 1000; // short in-mem cache over Postgres reads
 // Age beyond which a read self-heals. Derived signal only — never gates serving
-// (we still return last-good DB rows). Tuned to the hourly cron: a few missed runs
-// are tolerated before a read scrapes inline and writes back.
-const STALE_THRESHOLD_MS = 3 * 60 * 60 * 1000;
+// (we still return last-good DB rows). Tuned to the daily cron — Vercel Hobby caps
+// cron jobs at once/day — so 26h = one missed daily run plus buffer; steady-state
+// reads hit the DB and the scrape+summarize path stays off the request path.
+const STALE_THRESHOLD_MS = 26 * 60 * 60 * 1000;
 
 let readCache: Article[] | null = null;
 let readCacheTime = 0;
@@ -427,7 +428,7 @@ async function fetchArticleBody(card: IndexCard): Promise<Article> {
 }
 
 /**
- * DB-first read with a live self-heal fallback. Steady state (hourly cron keeps
+ * DB-first read with a live self-heal fallback. Steady state (daily cron keeps
  * Postgres fresh) returns precomputed rows with no scrape/summarize on the request
  * path. `force` (the cron) and an empty/stale table drive an inline scrape that
  * summarizes only new/changed articles and writes the result back.
