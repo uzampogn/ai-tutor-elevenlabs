@@ -264,6 +264,39 @@ describe('useSpeechRecognition', () => {
       restore();
     });
 
+    it('does not duplicate when the engine re-emits a growing final result[0] (mobile)', () => {
+      // Android / in-app webviews re-finalize result[0] repeatedly with growing
+      // text, all at resultIndex 0. The transcript must REPLACE, not stack.
+      const onFinal = vi.fn();
+      const { instance, restore } = renderWithInstance({
+        listening: true, setListening: vi.fn(), onInterim: vi.fn(), onFinal,
+      });
+
+      act(() => { instance().onresult?.(makeCumulativeEvent([{ transcript: 'good it', isFinal: true }], 0)); });
+      act(() => { instance().onresult?.(makeCumulativeEvent([{ transcript: 'good it first', isFinal: true }], 0)); });
+      act(() => { instance().onresult?.(makeCumulativeEvent([{ transcript: 'good it first on the skill', isFinal: true }], 0)); });
+      act(() => { vi.advanceTimersByTime(2500); });
+
+      expect(onFinal).toHaveBeenCalledWith('good it first on the skill');
+      restore();
+    });
+
+    it('preserves text across an onend auto-restart without duplicating', () => {
+      const onFinal = vi.fn();
+      const { instance, hook, restore } = renderWithInstance({
+        listening: false, setListening: vi.fn(), onInterim: vi.fn(), onFinal,
+      });
+
+      act(() => { hook().toggle(); }); // user start → shouldListen = true
+      act(() => { instance().onresult?.(makeCumulativeEvent([{ transcript: 'hello ', isFinal: true }], 0)); });
+      act(() => { instance().onend?.(new Event('end') as unknown as Event); }); // browser ends; hook folds + restarts
+      act(() => { instance().onresult?.(makeCumulativeEvent([{ transcript: 'world', isFinal: true }], 0)); });
+      act(() => { vi.advanceTimersByTime(2500); });
+
+      expect(onFinal).toHaveBeenCalledWith('hello world');
+      restore();
+    });
+
     it('does not send an empty transcript when the timer fires', () => {
       const onFinal = vi.fn();
       const setListening = vi.fn();
