@@ -1,6 +1,7 @@
 import { parse, type HTMLElement } from 'node-html-parser';
 import { summarizeAll } from './summarize';
 import { unstable_cache } from 'next/cache';
+import * as db from './db';
 
 export interface Article {
   title: string;
@@ -65,20 +66,21 @@ const GENERIC_LINK_TEXT = new Set([
   'read',
 ]);
 
-let cachedArticles: Article[] | null = null;
-let cacheTime = 0;
-const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+// --- Read-through cache + freshness snapshot (DB is the source of truth) ---
+const READ_CACHE_TTL_MS = 60 * 1000; // short in-mem cache over Postgres reads
+// Age beyond which a read self-heals. Derived signal only — never gates serving
+// (we still return last-good DB rows). Tuned to the hourly cron: a few missed runs
+// are tolerated before a read scrapes inline and writes back.
+const STALE_THRESHOLD_MS = 3 * 60 * 60 * 1000;
 
-// --- Observable freshness state (P0-4) ---
-// Tracks the last fully-successful scrape so staleness is detectable, not silent.
-let lastSuccessfulFetch = 0; // epoch ms of last successful index+body scrape (0 = never)
-let lastError: string | null = null;
-// Beyond this age the data is considered stale. Derived signal only — never gates
-// serving (we still return the last good cache). Set above the scheduled-refresh
-// cadence so `stale` means "the refresh didn't happen", not "we're between runs":
-// the cron runs daily (Vercel Hobby caps crons at once/day), so 26h = one missed
-// daily run plus buffer. Organic traffic refreshes far more often via the 1h cache.
-const STALE_THRESHOLD_MS = 26 * 60 * 60 * 1000;
+let readCache: Article[] | null = null;
+let readCacheTime = 0;
+let inflight: Promise<Article[]> | null = null;
+
+// Synchronous status snapshot, refreshed from kb_meta on every getClaudeArticles call.
+let snapCount = 0;
+let snapLastSuccess = 0; // epoch ms, 0 = never
+let snapError: string | null = null;
 
 export interface IngestionStatus {
   count: number;
@@ -88,17 +90,19 @@ export interface IngestionStatus {
   lastError: string | null;
 }
 
-/** Snapshot of ingestion freshness for observability (exposed via /api/scrape). */
+/**
+ * Snapshot of ingestion freshness for observability (exposed via /api/scrape).
+ * Synchronous: reads a module snapshot refreshed from kb_meta on each
+ * getClaudeArticles call, so the route contract stays unchanged.
+ */
 export function getIngestionStatus(): IngestionStatus {
-  const ageMs = lastSuccessfulFetch ? Date.now() - lastSuccessfulFetch : null;
+  const ageMs = snapLastSuccess ? Date.now() - snapLastSuccess : null;
   return {
-    count: cachedArticles?.length ?? 0,
-    lastSuccessfulFetch: lastSuccessfulFetch
-      ? new Date(lastSuccessfulFetch).toISOString()
-      : null,
+    count: snapCount,
+    lastSuccessfulFetch: snapLastSuccess ? new Date(snapLastSuccess).toISOString() : null,
     ageMs,
     stale: ageMs === null || ageMs > STALE_THRESHOLD_MS,
-    lastError,
+    lastError: snapError,
   };
 }
 
@@ -422,22 +426,48 @@ async function fetchArticleBody(card: IndexCard): Promise<Article> {
   }
 }
 
+/**
+ * DB-first read with a live self-heal fallback. Steady state (hourly cron keeps
+ * Postgres fresh) returns precomputed rows with no scrape/summarize on the request
+ * path. `force` (the cron) and an empty/stale table drive an inline scrape that
+ * summarizes only new/changed articles and writes the result back.
+ */
 export async function getClaudeArticles(
   opts: { force?: boolean } = {}
 ): Promise<Article[]> {
-  // Lazy cache. `force` (used by the scheduled refresh) bypasses the TTL check.
-  if (!opts.force && cachedArticles && Date.now() - cacheTime < CACHE_TTL_MS) {
-    return cachedArticles;
+  if (!opts.force) {
+    if (readCache && Date.now() - readCacheTime < READ_CACHE_TTL_MS) return readCache;
+    const [rows, meta] = await Promise.all([db.getArticles(), db.readMeta()]);
+    snapCount = rows.length;
+    snapLastSuccess = meta.lastSuccessfulFetch ?? 0;
+    snapError = meta.lastError;
+    const fresh =
+      meta.lastSuccessfulFetch != null &&
+      Date.now() - meta.lastSuccessfulFetch <= STALE_THRESHOLD_MS;
+    if (rows.length > 0 && fresh) {
+      readCache = rows;
+      readCacheTime = Date.now();
+      return rows;
+    }
+    // empty or stale → fall through to a self-heal scrape
   }
+  // Per-instance single-flight: concurrent cold reads collapse to one scrape.
+  if (!inflight) {
+    inflight = scrapeAndPersist().finally(() => {
+      inflight = null;
+    });
+  }
+  return inflight;
+}
 
+/** Scrape + summarize misses + persist. On failure, serve last-good DB rows. */
+async function scrapeAndPersist(): Promise<Article[]> {
   try {
     const res = await fetch(CLAUDE_BLOG, {
       headers: FETCH_HEADERS,
       next: { revalidate: 3600 },
     });
-
     if (!res.ok) throw new Error(`Blog index fetch failed: HTTP ${res.status}`);
-
     const html = await res.text();
     const cards = parseIndex(html);
 
@@ -450,33 +480,43 @@ export async function getClaudeArticles(
       (a, b) => dateValue(b.pubDate) - dateValue(a.pubDate)
     );
 
-    // Summarize on ingest (P0-3). Runs behind the cache, so it's never per-user;
-    // unchanged content is reused from the summary cache (0 API calls). Failures
-    // degrade to a body excerpt — articles are never dropped.
-    const summaries = await summarizeAll(articles);
+    // Summarize misses only — the durable known-summaries map skips unchanged
+    // content (0 API calls). Failures degrade to a body excerpt (hash === '')
+    // so the next run retries them; articles are never dropped.
+    const known = await db.getKnownSummaries();
+    const results = await summarizeAll(articles, known);
     articles.forEach((a, i) => {
-      a.summary = summaries[i];
+      a.summary = results[i].summary;
     });
 
-    // Successful scrape — advance the freshness clock and clear any prior error.
-    cachedArticles = articles;
-    cacheTime = Date.now();
-    lastSuccessfulFetch = cacheTime;
-    lastError = null;
-    return cachedArticles;
+    const rows = articles.map((a, i) => ({ ...a, hash: results[i].hash }));
+    await db.upsertArticles(rows);
+    // Guard: only prune when the scrape returned articles, so a garbage/empty
+    // scrape can never wipe the table.
+    if (rows.length > 0) await db.deleteMissing(rows.map((r) => db.slugFromUrl(r.url)));
+    const now = Date.now();
+    await db.writeMeta({ lastSuccessfulFetch: now, lastError: null });
+
+    snapCount = articles.length;
+    snapLastSuccess = now;
+    snapError = null;
+    readCache = articles;
+    readCacheTime = now;
+    return articles;
   } catch (err) {
-    // Failure: keep serving the last good cache, but DO NOT advance the freshness
-    // clock or fake cacheTime to "fresh" — so staleness reflects reality and the
-    // next call retries. Record the error and the data's current age.
-    lastError = err instanceof Error ? err.message : String(err);
-    const ageMs = lastSuccessfulFetch ? Date.now() - lastSuccessfulFetch : null;
-    console.error(
-      `[scraper] Failed to fetch Claude blog (serving cache; data age ${
-        ageMs === null ? 'never fetched' : `${Math.round(ageMs / 1000)}s`
-      }):`,
-      err
-    );
-    return cachedArticles ?? [];
+    // Failure: serve last-good DB rows and record the error, but DO NOT advance the
+    // freshness clock — so staleness reflects reality and the next call retries.
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[scraper] scrape failed; serving last-good DB rows:', err);
+    const meta = await db.readMeta();
+    await db.writeMeta({ lastError: msg });
+    const rows = await db.getArticles();
+    snapCount = rows.length;
+    snapLastSuccess = meta.lastSuccessfulFetch ?? 0;
+    snapError = msg;
+    readCache = rows;
+    readCacheTime = Date.now();
+    return rows;
   }
 }
 

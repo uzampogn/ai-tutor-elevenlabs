@@ -587,21 +587,6 @@ describe('buildArticleContext', () => {
 // --- Freshness & observable staleness (P0-4) ------------------------------
 
 describe('getClaudeArticles — freshness, force, observable staleness', () => {
-  /** Index/article fetch mock with a toggle to make the index fetch fail. */
-  function makeToggleableFetch(state: { failIndex: boolean }) {
-    return vi.fn((input: string | URL) => {
-      const url = typeof input === 'string' ? input : input.toString();
-      if (url === `${ORIGIN}/blog`) {
-        return state.failIndex
-          ? Promise.resolve(htmlResponse('boom', false, 500))
-          : Promise.resolve(htmlResponse(indexHtml()));
-      }
-      const m = url.match(/\/blog\/([^/?#]+)/);
-      const slug = m ? m[1] : 'x';
-      return Promise.resolve(htmlResponse(articleHtml(slug, SLUGS.indexOf(slug))));
-    });
-  }
-
   afterEach(() => {
     vi.useRealTimers();
   });
@@ -648,33 +633,8 @@ describe('getClaudeArticles — freshness, force, observable staleness', () => {
     expect(indexCalls()).toBe(2);
   });
 
-  it('June 10→15 regression: a later failed scrape serves last-good, flags stale, and does NOT reset the freshness clock', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-06-10T00:00:00.000Z'));
-    const state = { failIndex: false };
-    vi.stubGlobal('fetch', makeToggleableFetch(state));
-    const { getClaudeArticles, getIngestionStatus } = await freshScraper();
-
-    // 1st call succeeds and sets the freshness clock.
-    const good = await getClaudeArticles();
-    expect(good).toHaveLength(SLUGS.length);
-    expect(getIngestionStatus().lastSuccessfulFetch).toBe('2026-06-10T00:00:00.000Z');
-    expect(getIngestionStatus().stale).toBe(false);
-
-    // Advance past the TTL (and past the 26h stale threshold), then fail the index fetch.
-    state.failIndex = true;
-    vi.setSystemTime(new Date('2026-06-11T03:00:00.000Z')); // 27h after the success
-    const served = await getClaudeArticles();
-
-    // Serves the last good articles (not []), and exposes the failure + real age.
-    expect(served).toBe(good);
-    const status = getIngestionStatus();
-    expect(status.lastError).toBeTruthy();
-    expect(status.stale).toBe(true); // 27h old > 26h threshold
-    expect(status.count).toBe(SLUGS.length);
-    // The clock is NOT reset to "now" on failure — staleness reflects reality.
-    expect(status.lastSuccessfulFetch).toBe('2026-06-10T00:00:00.000Z');
-    expect(status.ageMs).toBe(27 * 60 * 60 * 1000);
-  });
+  // NOTE: the former "June 10→15 regression" test (module-memory last-good on a
+  // failed scrape) is superseded by the DB-backed equivalent in scraper.db.test.ts
+  // ('on scrape failure serves last-good DB rows…'), since last-good now lives in
+  // Postgres rather than module memory.
 });
