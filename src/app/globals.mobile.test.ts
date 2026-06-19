@@ -41,3 +41,13 @@ describe('Mobile sidebar overlay', () => {
     expect(mobile880).toContain('.scrim');
   });
 });
+
+describe('Mobile touch targets & drawer', () => {
+  it('bumps mic/send buttons to a 44px target', () => {
+    expect(mobile880).toContain('.mic-btn, .send-btn { width: 44px; height: 44px');
+  });
+  it('insets the drawer for the safe area', () => {
+    expect(mobile880).toContain('.drawer-inner');
+    expect(mobile880).toContain('env(safe-area-inset-bottom)');
+  });
+});

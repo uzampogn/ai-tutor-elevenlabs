@@ -978,6 +978,15 @@ button { font-family: inherit; cursor: pointer; }
   .welcome-grid { grid-template-columns: 1fr; }
   .welcome-title { font-size: 30px; }
   .drawer { width: 100%; }
+  /* Comfortable touch targets. */
+  .mic-btn, .send-btn { width: 44px; height: 44px; }
+  .quick-chip { padding: 9px 16px; }
+  .kb-card { padding: 13px 14px; }
+  .drawer-close { width: 40px; height: 40px; }
+
+  /* Drawer respects notch + home bar. */
+  .drawer-inner { padding: calc(20px + env(safe-area-inset-top)) 20px calc(40px + env(safe-area-inset-bottom)); }
+
   /* Keep the voice dock centered; scale the orb down to fit. */
   .voice-dock { gap: 16px; }
   .orb { --orb-size: calc(min(200px, 25vh) * var(--orb-scale)); }
