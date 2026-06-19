@@ -38,6 +38,31 @@ function makeResultEvent(transcript: string, isFinal: boolean, resultIndex = 0):
   } as unknown as SpeechRecognitionEvent;
 }
 
+/**
+ * Build a SpeechRecognitionEvent whose `results` is the full *cumulative* list
+ * for the session (the real API contract), unlike `makeResultEvent` which is a
+ * single result. `resultIndex` is the first changed index for this event.
+ */
+function makeCumulativeEvent(
+  segments: { transcript: string; isFinal: boolean }[],
+  resultIndex = 0,
+): SpeechRecognitionEvent {
+  const results = segments.map((s) =>
+    Object.assign([{ transcript: s.transcript, confidence: 1 }], {
+      isFinal: s.isFinal,
+      length: 1,
+      item: () => ({ transcript: s.transcript, confidence: 1 }),
+    }),
+  );
+  return {
+    resultIndex,
+    results: Object.assign(results, {
+      length: results.length,
+      item: (i: number) => results[i] as unknown as SpeechRecognitionResult,
+    }) as unknown as SpeechRecognitionResultList,
+  } as unknown as SpeechRecognitionEvent;
+}
+
 function renderWithInstance(
   args: Omit<HarnessProps, 'onResult'>,
 ): {
@@ -219,9 +244,18 @@ describe('useSpeechRecognition', () => {
         listening: true, setListening: vi.fn(), onInterim: vi.fn(), onFinal,
       });
 
-      act(() => { instance().onresult?.(makeResultEvent('part one ', true)); });
+      act(() => {
+        instance().onresult?.(makeCumulativeEvent([{ transcript: 'part one ', isFinal: true }], 0));
+      });
       act(() => { vi.advanceTimersByTime(2000); });
-      act(() => { instance().onresult?.(makeResultEvent('part two', true)); });
+      act(() => {
+        instance().onresult?.(
+          makeCumulativeEvent(
+            [{ transcript: 'part one ', isFinal: true }, { transcript: 'part two', isFinal: true }],
+            1,
+          ),
+        );
+      });
       act(() => { vi.advanceTimersByTime(2000); }); // 4000ms total, but only 2000 since last result
       expect(onFinal).not.toHaveBeenCalled();
 
