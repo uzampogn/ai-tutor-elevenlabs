@@ -40,6 +40,12 @@ describe('Mobile sidebar overlay', () => {
   it('defines the scrim', () => {
     expect(mobile880).toContain('.scrim');
   });
+  it('keeps the main column full-width when the KB overlay is collapsed', () => {
+    // The sidebar is a fixed overlay on mobile (out of grid flow), so the desktop
+    // `.app.sidebar-collapsed { grid-template-columns: 0 1fr }` must be overridden
+    // here or .main lands in the collapsed 0-width column.
+    expect(mobile880).toContain('.app.sidebar-collapsed { grid-template-columns: 1fr');
+  });
 });
 
 describe('Mobile touch targets & drawer', () => {

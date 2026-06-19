@@ -56,4 +56,47 @@ describe('AppShell — mobile sidebar overlay', () => {
     await user.keyboard('{Escape}');
     expect(app.classList.contains('sidebar-collapsed')).toBe(true);
   });
+
+  // The KB overlay (z above the drawer) would hide the article drawer on mobile,
+  // so opening an article must dismiss the overlay (master→detail). Desktop keeps
+  // the sidebar + drawer side by side, so it must NOT close.
+  const article = {
+    title: 'Test Article', url: 'https://example.com/a', pubDate: '2026-06-18',
+    description: 'd', body: 'b', summary: 's', heroImage: '',
+  };
+  function mockArticlesFetch() {
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((url: unknown) =>
+      Promise.resolve({
+        ok: true,
+        json: async () =>
+          String(url).includes('/api/scrape') ? { articles: [article] } : { digests: {} },
+      }),
+    ));
+  }
+
+  it('mobile: opening an article dismisses the KB overlay (master→detail)', async () => {
+    mockMatchMedia(true);
+    mockArticlesFetch();
+    const user = userEvent.setup();
+    const { container } = render(<AppShell />);
+    const app = container.querySelector('.app') as HTMLElement;
+
+    await user.click(screen.getByRole('button', { name: 'Expand knowledge base' }));
+    expect(app.classList.contains('sidebar-collapsed')).toBe(false);
+    await user.click(await screen.findByText('Test Article'));
+    expect(app.classList.contains('sidebar-collapsed')).toBe(true);
+  });
+
+  it('desktop: opening an article keeps the sidebar open (side-by-side)', async () => {
+    mockMatchMedia(false);
+    mockArticlesFetch();
+    const user = userEvent.setup();
+    const { container } = render(<AppShell />);
+    const app = container.querySelector('.app') as HTMLElement;
+
+    await user.click(screen.getByRole('button', { name: 'Expand knowledge base' }));
+    expect(app.classList.contains('sidebar-collapsed')).toBe(false);
+    await user.click(await screen.findByText('Test Article'));
+    expect(app.classList.contains('sidebar-collapsed')).toBe(false);
+  });
 });

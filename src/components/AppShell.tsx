@@ -253,6 +253,10 @@ export default function AppShell() {
     drawerTriggerRef.current = trigger;
     setActiveArticle(article);
     setDrawerOpen(true);
+    // Mobile master→detail: the KB sidebar is a full-width overlay (z above the
+    // drawer), so dismiss it when an article opens or the drawer would be hidden
+    // behind it. No-op on desktop, where the sidebar + drawer sit side by side.
+    if (isMobile) setSidebarOpen(false);
   }
 
   function closeDrawer() {

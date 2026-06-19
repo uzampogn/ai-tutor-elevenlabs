@@ -939,7 +939,13 @@ button { font-family: inherit; cursor: pointer; }
 
 /* ── responsive ─────────────────────────────────────────────────────── */
 @media (max-width: 880px) {
-  .app { grid-template-columns: 1fr; }
+  /* Single full-width column in BOTH states: the sidebar is a position:fixed
+     overlay (out of grid flow) on mobile, so .main is the only in-flow grid
+     child. The desktop `.app.sidebar-collapsed { grid-template-columns: 0 1fr }`
+     rule (higher specificity, media queries add none) must be overridden here,
+     or .main lands in the collapsed 0-width column. */
+  .app,
+  .app.sidebar-collapsed { grid-template-columns: 1fr; }
 
   /* Mobile viewport fit: 100% resolves to the layout viewport on mobile, so the
      bottom-docked orb / composer fall under the URL bar. dvh tracks the visual
@@ -982,7 +988,7 @@ button { font-family: inherit; cursor: pointer; }
   .mic-btn, .send-btn { width: 44px; height: 44px; }
   .quick-chip { padding: 9px 16px; }
   .kb-card { padding: 13px 14px; }
-  .drawer-close { width: 40px; height: 40px; }
+  .drawer-close { width: 44px; height: 44px; }
 
   /* Drawer respects notch + home bar. */
   .drawer-inner { padding: calc(20px + env(safe-area-inset-top)) 20px calc(40px + env(safe-area-inset-bottom)); }
