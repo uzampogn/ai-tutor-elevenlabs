@@ -951,7 +951,7 @@ button { font-family: inherit; cursor: pointer; }
      bottom-docked orb / composer fall under the URL bar. dvh tracks the visual
      viewport. Mobile-scoped only — desktop keeps height: 100%. */
   html, body, .app, .main { height: 100dvh; min-height: 100dvh; }
-  .composer-wrap { padding-bottom: calc(18px + env(safe-area-inset-bottom)); }
+  .composer-wrap { padding-bottom: calc(18px + env(safe-area-inset-bottom) + var(--kb-inset, 0px)); }
   .main > .composer-foot { margin-bottom: calc(clamp(16px, 3vh, 32px) + env(safe-area-inset-bottom)); }
 
   /* KB as a slide-in overlay (peek + scrim) instead of a grid column. */

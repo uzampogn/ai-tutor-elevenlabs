@@ -99,4 +99,23 @@ describe('AppShell — mobile sidebar overlay', () => {
     await user.click(await screen.findByText('Test Article'));
     expect(app.classList.contains('sidebar-collapsed')).toBe(false);
   });
+
+  it('tracks visualViewport on mobile and sets --kb-inset', () => {
+    mockMatchMedia(true);
+    const prevInner = window.innerHeight;
+    window.innerHeight = 844; // layout viewport (jsdom defaults to 768)
+    const listeners: Record<string, () => void> = {};
+    const vv = {
+      height: 844, width: 390, offsetTop: 0,
+      addEventListener: (e: string, cb: () => void) => { listeners[e] = cb; },
+      removeEventListener: vi.fn(),
+    };
+    vi.stubGlobal('visualViewport', vv);
+    // window.innerHeight stays 844; shrink the visual viewport => keyboard open.
+    render(<AppShell />);
+    vv.height = 544;
+    listeners['resize']?.();
+    expect(document.documentElement.style.getPropertyValue('--kb-inset')).toBe('300px');
+    window.innerHeight = prevInner;
+  });
 });

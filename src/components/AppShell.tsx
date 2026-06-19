@@ -82,6 +82,28 @@ export default function AppShell() {
     return () => { document.body.style.overflow = prev; };
   }, [isMobile, sidebarOpen]);
 
+  // Keyboard-aware dock (mobile only): lift the dock by the slice of viewport
+  // the on-screen keyboard covers. No-op on desktop and where visualViewport is
+  // unsupported. The CSS var defaults to 0px via globals.css.
+  useEffect(() => {
+    if (!isMobile) return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const root = document.documentElement;
+    const update = () => {
+      const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      root.style.setProperty('--kb-inset', `${inset}px`);
+    };
+    update();
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+      root.style.removeProperty('--kb-inset');
+    };
+  }, [isMobile]);
+
   const [articles, setArticles] = useState<Article[]>([]);
   const [articlesLoading, setArticlesLoading] = useState(true);
 
