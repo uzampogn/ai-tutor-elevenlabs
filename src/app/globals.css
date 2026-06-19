@@ -940,6 +940,14 @@ button { font-family: inherit; cursor: pointer; }
 /* ── responsive ─────────────────────────────────────────────────────── */
 @media (max-width: 880px) {
   .app { grid-template-columns: 1fr; }
+
+  /* Mobile viewport fit: 100% resolves to the layout viewport on mobile, so the
+     bottom-docked orb / composer fall under the URL bar. dvh tracks the visual
+     viewport. Mobile-scoped only — desktop keeps height: 100%. */
+  html, body, .app, .main { height: 100dvh; min-height: 100dvh; }
+  .composer-wrap { padding-bottom: calc(18px + env(safe-area-inset-bottom)); }
+  .main > .composer-foot { margin-bottom: calc(clamp(16px, 3vh, 32px) + env(safe-area-inset-bottom)); }
+
   .sidebar { display: none; }
   .sidebar-toggle { display: none; }
   .thread, .composer, .quick-row, .composer-foot, .voice-dock { max-width: 100%; }
