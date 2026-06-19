@@ -948,8 +948,32 @@ button { font-family: inherit; cursor: pointer; }
   .composer-wrap { padding-bottom: calc(18px + env(safe-area-inset-bottom)); }
   .main > .composer-foot { margin-bottom: calc(clamp(16px, 3vh, 32px) + env(safe-area-inset-bottom)); }
 
-  .sidebar { display: none; }
-  .sidebar-toggle { display: none; }
+  /* KB as a slide-in overlay (peek + scrim) instead of a grid column. */
+  .sidebar {
+    position: fixed; top: 0; left: 0; bottom: 0;
+    width: min(86vw, 360px);
+    transform: translateX(-100%);
+    z-index: 45;
+  }
+  .app:not(.sidebar-collapsed) .sidebar { transform: translateX(0); }
+  .sidebar-inner { width: 100%; }
+
+  /* Trigger: un-hidden, ≥44px touch target, clear of the notch. */
+  .sidebar-toggle {
+    top: calc(14px + env(safe-area-inset-top));
+    left: 14px;
+    width: 44px; height: 44px;
+  }
+
+  /* Keep the welcome/thread clear of the floating trigger. */
+  .scroll { padding-top: 56px; }
+
+  /* Dimming scrim behind the overlay. */
+  .scrim {
+    position: fixed; inset: 0;
+    background: rgba(27, 34, 54, 0.34);
+    z-index: 44;
+  }
   .thread, .composer, .quick-row, .composer-foot, .voice-dock { max-width: 100%; }
   .welcome-grid { grid-template-columns: 1fr; }
   .welcome-title { font-size: 30px; }
@@ -957,6 +981,14 @@ button { font-family: inherit; cursor: pointer; }
   /* Keep the voice dock centered; scale the orb down to fit. */
   .voice-dock { gap: 16px; }
   .orb { --orb-size: calc(min(200px, 25vh) * var(--orb-scale)); }
+}
+@media (max-width: 880px) and (prefers-reduced-motion: no-preference) {
+  /* Mobile overlay motion — combined query keeps it mobile-scoped (excluded from
+     the desktop baseline) AND gated on reduced-motion. The keyframe is nested
+     inside so nothing lands outside a max-width block. */
+  .sidebar { transition: transform .28s cubic-bezier(.4,0,.2,1); }
+  .scrim { animation: scrim-in .2s ease-out; }
+  @keyframes scrim-in { from { opacity: 0; } to { opacity: 1; } }
 }
 @media (max-width: 480px) {
   .orb { --orb-size: calc(min(168px, 25vh) * var(--orb-scale)); }

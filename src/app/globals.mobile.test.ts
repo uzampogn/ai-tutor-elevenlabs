@@ -14,3 +14,30 @@ describe('Mobile viewport fit', () => {
     expect(full).toContain('env(safe-area-inset-bottom)');
   });
 });
+
+/** Extract just the `@media (max-width: 880px) { … }` block (brace-balanced). */
+function block880(src: string): string {
+  const at = src.indexOf('@media (max-width: 880px)');
+  const open = src.indexOf('{', at);
+  let depth = 0;
+  for (let j = open; j < src.length; j++) {
+    if (src[j] === '{') depth++;
+    else if (src[j] === '}' && --depth === 0) return src.slice(open, j + 1);
+  }
+  return '';
+}
+const mobile880 = normalize(block880(css));
+
+describe('Mobile sidebar overlay', () => {
+  it('no longer hides the sidebar or its toggle', () => {
+    expect(mobile880).not.toContain('.sidebar { display: none');
+    expect(mobile880).not.toContain('.sidebar-toggle { display: none');
+  });
+  it('promotes the sidebar to a fixed slide-in overlay', () => {
+    expect(mobile880).toContain('position: fixed');
+    expect(mobile880).toContain('translateX(-100%)');
+  });
+  it('defines the scrim', () => {
+    expect(mobile880).toContain('.scrim');
+  });
+});
