@@ -1,0 +1,59 @@
+import React from 'react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import AppShell from './AppShell';
+
+function mockMatchMedia(matches: boolean) {
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn().mockImplementation((query: string) => ({
+      matches, media: query, onchange: null,
+      addEventListener: vi.fn(), removeEventListener: vi.fn(),
+      addListener: vi.fn(), removeListener: vi.fn(), dispatchEvent: vi.fn(),
+    })),
+  );
+}
+
+beforeEach(() => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ articles: [] }) }));
+});
+afterEach(() => vi.unstubAllGlobals());
+
+describe('AppShell — mobile sidebar overlay', () => {
+  it('renders no scrim on desktop even when the sidebar is open', async () => {
+    mockMatchMedia(false); // desktop
+    const user = userEvent.setup();
+    const { container } = render(<AppShell />);
+    await user.click(screen.getByRole('button', { name: 'Expand knowledge base' }));
+    expect(container.querySelector('.scrim')).toBeNull();
+  });
+
+  it('renders a scrim on mobile when open, and tapping it closes the sidebar', async () => {
+    mockMatchMedia(true); // mobile
+    const user = userEvent.setup();
+    const { container } = render(<AppShell />);
+    const app = container.querySelector('.app') as HTMLElement;
+
+    await user.click(screen.getByRole('button', { name: 'Expand knowledge base' }));
+    expect(app.classList.contains('sidebar-collapsed')).toBe(false);
+    const scrim = container.querySelector('.scrim') as HTMLElement;
+    expect(scrim).not.toBeNull();
+
+    await user.click(scrim);
+    expect(app.classList.contains('sidebar-collapsed')).toBe(true);
+    expect(container.querySelector('.scrim')).toBeNull();
+  });
+
+  it('closes the sidebar on Escape (mobile)', async () => {
+    mockMatchMedia(true);
+    const user = userEvent.setup();
+    const { container } = render(<AppShell />);
+    const app = container.querySelector('.app') as HTMLElement;
+
+    await user.click(screen.getByRole('button', { name: 'Expand knowledge base' }));
+    expect(app.classList.contains('sidebar-collapsed')).toBe(false);
+    await user.keyboard('{Escape}');
+    expect(app.classList.contains('sidebar-collapsed')).toBe(true);
+  });
+});

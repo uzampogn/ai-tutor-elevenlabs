@@ -8,6 +8,7 @@ import Sidebar from './sidebar/Sidebar';
 import SidebarToggle from './sidebar/SidebarToggle';
 import Thread from './main/Thread';
 import InputDock from './main/InputDock';
+import { useIsMobile } from './main/useIsMobile';
 import ArticleDrawer from './ArticleDrawer';
 import { categoryFor } from './sidebar/kb';
 
@@ -59,6 +60,27 @@ export default function AppShell() {
 
   // KB sidebar collapse. Starts closed every load (no persistence).
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const isMobile = useIsMobile();
+
+  // Mobile overlay only: Escape closes the sidebar and the body is scroll-locked
+  // while it's open. Both are no-ops on desktop (isMobile === false), so the
+  // desktop runtime is unchanged.
+  useEffect(() => {
+    if (!isMobile || !sidebarOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSidebarOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [isMobile, sidebarOpen]);
+
+  useEffect(() => {
+    if (!isMobile || !sidebarOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [isMobile, sidebarOpen]);
 
   const [articles, setArticles] = useState<Article[]>([]);
   const [articlesLoading, setArticlesLoading] = useState(true);
@@ -294,6 +316,9 @@ export default function AppShell() {
   return (
     <div className={`app${densityClass}${sidebarOpen ? '' : ' sidebar-collapsed'}`}>
       <SidebarToggle open={sidebarOpen} onToggle={() => setSidebarOpen((v) => !v)} />
+      {isMobile && sidebarOpen && (
+        <div className="scrim" aria-hidden="true" onClick={() => setSidebarOpen(false)} />
+      )}
       <Sidebar
         articles={articles}
         articlesLoading={articlesLoading}
