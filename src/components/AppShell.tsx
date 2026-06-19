@@ -9,6 +9,7 @@ import SidebarToggle from './sidebar/SidebarToggle';
 import Thread from './main/Thread';
 import InputDock from './main/InputDock';
 import { useIsMobile } from './main/useIsMobile';
+import { useSwipeToClose } from './main/useSwipeToClose';
 import ArticleDrawer from './ArticleDrawer';
 import { categoryFor } from './sidebar/kb';
 
@@ -63,6 +64,13 @@ export default function AppShell() {
 
   const isMobile = useIsMobile();
 
+  // Swipe the KB overlay left to dismiss it (mobile only, while open).
+  const sidebarSwipe = useSwipeToClose({
+    onClose: () => setSidebarOpen(false),
+    direction: 'left',
+    enabled: isMobile && sidebarOpen,
+  });
+
   // Mobile overlay only: Escape closes the sidebar and the body is scroll-locked
   // while it's open. Both are no-ops on desktop (isMobile === false), so the
   // desktop runtime is unchanged.
@@ -109,6 +117,14 @@ export default function AppShell() {
 
   const [activeArticle, setActiveArticle] = useState<Article | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Swipe the article drawer right to dismiss it (mobile only, while open).
+  // `closeDrawer` is a hoisted function declaration defined below.
+  const drawerSwipe = useSwipeToClose({
+    onClose: () => closeDrawer(),
+    direction: 'right',
+    enabled: isMobile && drawerOpen,
+  });
 
   const [digests, setDigests] = useState<Record<string, ArticleDigest | null>>({});
   const [digestsLoaded, setDigestsLoaded] = useState(false);
@@ -352,6 +368,7 @@ export default function AppShell() {
         collapsed={!sidebarOpen}
         onRefresh={loadArticles}
         onOpenArticle={openArticle}
+        swipeHandlers={sidebarSwipe}
       />
 
       <main className="main">
@@ -388,6 +405,7 @@ export default function AppShell() {
         accentColor={activeAccent}
         open={drawerOpen}
         onClose={closeDrawer}
+        swipeHandlers={drawerSwipe}
         onAsk={(q) => {
           closeDrawer();
           void sendMessage(q);

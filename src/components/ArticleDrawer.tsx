@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, type PointerEventHandler } from 'react';
 import type { Article, ArticleDigest } from '@/lib/types';
 import { formatShortDate } from './sidebar/kb';
 import { CloseIcon } from './icons';
@@ -15,6 +15,12 @@ interface ArticleDrawerProps {
   open: boolean;
   onClose: () => void;
   onAsk: (question: string) => void;
+  /** Mobile swipe-to-close pointer handlers, spread onto the drawer aside. */
+  swipeHandlers?: {
+    onPointerDown?: PointerEventHandler<HTMLElement>;
+    onPointerMove?: PointerEventHandler<HTMLElement>;
+    onPointerUp?: PointerEventHandler<HTMLElement>;
+  };
 }
 
 export default function ArticleDrawer({
@@ -25,6 +31,7 @@ export default function ArticleDrawer({
   open,
   onClose,
   onAsk,
+  swipeHandlers,
 }: ArticleDrawerProps) {
   // Esc closes the drawer (focus return is handled by the shell).
   useEffect(() => {
@@ -37,7 +44,7 @@ export default function ArticleDrawer({
   }, [open, onClose]);
 
   return (
-    <aside className={`drawer${open ? ' open' : ''}`} aria-hidden={!open}>
+    <aside className={`drawer${open ? ' open' : ''}`} aria-hidden={!open} {...swipeHandlers}>
       {article && (
         <div className="drawer-inner">
           <div className="drawer-head">

@@ -1,7 +1,7 @@
 // Left column: brand, KB header, and the article list. Collapsible via the
 // top-left SidebarToggle; when collapsed the aside is `inert` (out of tab order).
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type PointerEventHandler } from 'react';
 import type { Article } from '@/lib/types';
 import Brand from './Brand';
 import KbHeader from './KbHeader';
@@ -14,6 +14,12 @@ interface SidebarProps {
   collapsed: boolean;
   onRefresh: () => void;
   onOpenArticle: (article: Article, trigger: HTMLButtonElement | null) => void;
+  /** Mobile swipe-to-close pointer handlers, spread onto the aside. */
+  swipeHandlers?: {
+    onPointerDown?: PointerEventHandler<HTMLElement>;
+    onPointerMove?: PointerEventHandler<HTMLElement>;
+    onPointerUp?: PointerEventHandler<HTMLElement>;
+  };
 }
 
 export default function Sidebar({
@@ -23,6 +29,7 @@ export default function Sidebar({
   collapsed,
   onRefresh,
   onOpenArticle,
+  swipeHandlers,
 }: SidebarProps) {
   const asideRef = useRef<HTMLElement>(null);
 
@@ -37,7 +44,7 @@ export default function Sidebar({
   }, [collapsed]);
 
   return (
-    <aside ref={asideRef} id="kb-sidebar" className="sidebar" aria-hidden={collapsed}>
+    <aside ref={asideRef} id="kb-sidebar" className="sidebar" aria-hidden={collapsed} {...swipeHandlers}>
       <div className="sidebar-inner">
         <Brand />
         <KbHeader count={articles.length} loading={articlesLoading} onRefresh={onRefresh} />
