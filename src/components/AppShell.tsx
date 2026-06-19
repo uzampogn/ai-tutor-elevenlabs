@@ -8,6 +8,8 @@ import Sidebar from './sidebar/Sidebar';
 import SidebarToggle from './sidebar/SidebarToggle';
 import Thread from './main/Thread';
 import InputDock from './main/InputDock';
+import { useIsMobile } from './main/useIsMobile';
+import { useSwipeToClose } from './main/useSwipeToClose';
 import ArticleDrawer from './ArticleDrawer';
 import { categoryFor } from './sidebar/kb';
 
@@ -60,11 +62,69 @@ export default function AppShell() {
   // KB sidebar collapse. Starts closed every load (no persistence).
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  const isMobile = useIsMobile();
+
+  // Swipe the KB overlay left to dismiss it (mobile only, while open).
+  const sidebarSwipe = useSwipeToClose({
+    onClose: () => setSidebarOpen(false),
+    direction: 'left',
+    enabled: isMobile && sidebarOpen,
+  });
+
+  // Mobile overlay only: Escape closes the sidebar and the body is scroll-locked
+  // while it's open. Both are no-ops on desktop (isMobile === false), so the
+  // desktop runtime is unchanged.
+  useEffect(() => {
+    if (!isMobile || !sidebarOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSidebarOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [isMobile, sidebarOpen]);
+
+  useEffect(() => {
+    if (!isMobile || !sidebarOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [isMobile, sidebarOpen]);
+
+  // Keyboard-aware dock (mobile only): lift the dock by the slice of viewport
+  // the on-screen keyboard covers. No-op on desktop and where visualViewport is
+  // unsupported. The CSS var defaults to 0px via globals.css.
+  useEffect(() => {
+    if (!isMobile) return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const root = document.documentElement;
+    const update = () => {
+      const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      root.style.setProperty('--kb-inset', `${inset}px`);
+    };
+    update();
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+      root.style.removeProperty('--kb-inset');
+    };
+  }, [isMobile]);
+
   const [articles, setArticles] = useState<Article[]>([]);
   const [articlesLoading, setArticlesLoading] = useState(true);
 
   const [activeArticle, setActiveArticle] = useState<Article | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Swipe the article drawer right to dismiss it (mobile only, while open).
+  // `closeDrawer` is a hoisted function declaration defined below.
+  const drawerSwipe = useSwipeToClose({
+    onClose: () => closeDrawer(),
+    direction: 'right',
+    enabled: isMobile && drawerOpen,
+  });
 
   const [digests, setDigests] = useState<Record<string, ArticleDigest | null>>({});
   const [digestsLoaded, setDigestsLoaded] = useState(false);
@@ -231,6 +291,10 @@ export default function AppShell() {
     drawerTriggerRef.current = trigger;
     setActiveArticle(article);
     setDrawerOpen(true);
+    // Mobile master→detail: the KB sidebar is a full-width overlay (z above the
+    // drawer), so dismiss it when an article opens or the drawer would be hidden
+    // behind it. No-op on desktop, where the sidebar + drawer sit side by side.
+    if (isMobile) setSidebarOpen(false);
   }
 
   function closeDrawer() {
@@ -294,6 +358,9 @@ export default function AppShell() {
   return (
     <div className={`app${densityClass}${sidebarOpen ? '' : ' sidebar-collapsed'}`}>
       <SidebarToggle open={sidebarOpen} onToggle={() => setSidebarOpen((v) => !v)} />
+      {isMobile && sidebarOpen && (
+        <div className="scrim" aria-hidden="true" onClick={() => setSidebarOpen(false)} />
+      )}
       <Sidebar
         articles={articles}
         articlesLoading={articlesLoading}
@@ -301,6 +368,7 @@ export default function AppShell() {
         collapsed={!sidebarOpen}
         onRefresh={loadArticles}
         onOpenArticle={openArticle}
+        swipeHandlers={sidebarSwipe}
       />
 
       <main className="main">
@@ -337,6 +405,7 @@ export default function AppShell() {
         accentColor={activeAccent}
         open={drawerOpen}
         onClose={closeDrawer}
+        swipeHandlers={drawerSwipe}
         onAsk={(q) => {
           closeDrawer();
           void sendMessage(q);
