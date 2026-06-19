@@ -88,13 +88,12 @@ describe('summarizeAll — caching', () => {
       article({ url: 'https://claude.com/blog/b', body: 'body b' }),
       article({ url: 'https://claude.com/blog/c', body: 'body c' }),
     ];
-
     const first = await summarizeAll(articles);
     expect(createMock).toHaveBeenCalledTimes(3);
-    expect(first.every((s) => s === 'canned summary')).toBe(true);
-
-    const second = await summarizeAll(articles); // identical content
-    expect(createMock).toHaveBeenCalledTimes(3); // unchanged — all cache hits
+    expect(first.every((r) => r.summary === 'canned summary')).toBe(true);
+    expect(first.every((r) => r.hash !== '')).toBe(true); // real summaries carry a hash
+    const second = await summarizeAll(articles);
+    expect(createMock).toHaveBeenCalledTimes(3); // all L1 cache hits
     expect(second).toEqual(first);
   });
 
@@ -115,8 +114,8 @@ describe('summarizeAll — caching', () => {
   });
 
   it('summarizes aligned to input order', async () => {
-    createMock.mockImplementation(async (req: { messages: { content: string }[] }) =>
-      cannedText(`summary of: ${req.messages[0].content.split('\n')[0]}`)
+    createMock.mockImplementation(async (reqArg: { messages: { content: string }[] }) =>
+      cannedText(`summary of: ${reqArg.messages[0].content.split('\n')[0]}`)
     );
     const { summarizeAll } = await freshSummarize();
     const articles = [
@@ -124,8 +123,27 @@ describe('summarizeAll — caching', () => {
       article({ title: 'Second', url: 'https://claude.com/blog/b', body: 'body b' }),
     ];
     const out = await summarizeAll(articles);
-    expect(out[0]).toContain('First');
-    expect(out[1]).toContain('Second');
+    expect(out[0].summary).toContain('First');
+    expect(out[1].summary).toContain('Second');
+  });
+
+  it('reuses a durable summary from the known map (0 API calls) when the hash matches', async () => {
+    const { summarizeAll, contentHash } = await freshSummarize();
+    const a = article({ url: 'https://claude.com/blog/a', body: 'body a' });
+    const known = new Map([['a', { hash: contentHash(a.title, a.body), summary: 'durable summary' }]]);
+    const out = await summarizeAll([a], known);
+    expect(createMock).not.toHaveBeenCalled();
+    expect(out[0]).toEqual({ summary: 'durable summary', hash: contentHash(a.title, a.body) });
+  });
+
+  it('marks an API-error fallback with hash === "" so it is not cached', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    createMock.mockRejectedValue(new Error('API down'));
+    const { summarizeAll } = await freshSummarize();
+    const a = article({ url: 'https://claude.com/blog/a', body: 'A body to excerpt.' });
+    const out = await summarizeAll([a]);
+    expect(out[0].summary).toBe('A body to excerpt.');
+    expect(out[0].hash).toBe('');
   });
 });
 
