@@ -29,6 +29,7 @@ beforeEach(() => {
 describe('db.ts — no-op without DATABASE_URL', () => {
   it('returns safe empties and never constructs a client', async () => {
     delete process.env.DATABASE_URL;
+    delete process.env.POSTGRES_URL;
     const db = await freshDb();
     expect(await db.getArticles()).toEqual([]);
     expect(await db.getKnownSummaries()).toEqual(new Map());

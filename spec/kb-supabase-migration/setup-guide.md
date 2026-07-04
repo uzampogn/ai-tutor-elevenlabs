@@ -42,8 +42,7 @@ Pick **A** (integration, less fiddly) **or** **B** (manual).
 ### 3A — Supabase Vercel integration (recommended)
 1. **https://vercel.com/marketplace/supabase** → **Add integration** → authorize → select your **ai-tutor-elevenlabs** project.
 2. Link it to your Supabase project. It injects Supabase env vars automatically.
-3. **Check the variable name.** The integration may create `POSTGRES_URL` / `SUPABASE_*` rather than `DATABASE_URL`. Our code reads **`DATABASE_URL`**, so:
-   - Vercel → Project → **Settings → Environment Variables** → confirm a `DATABASE_URL` exists **and points at the 6543 pooler host**. If it only created `POSTGRES_URL`, add a `DATABASE_URL` with the same pooler value.
+3. **Variable name — no action needed.** The integration provisions `POSTGRES_URL` (the pooled, 6543 connection). The app reads `DATABASE_URL || POSTGRES_URL`, so it picks that up automatically. (You can still add an explicit `DATABASE_URL` if you prefer — it takes precedence.)
 
 ### 3B — Manual (full control, safest for secrets)
 1. Vercel → your project → **Settings → Environment Variables → Add New**.

@@ -105,7 +105,7 @@ DATABASE_URL=postgresql://...pooler.supabase.com:6543/postgres?sslmode=require  
 | `ELEVENLABS_API_KEY` | yes | [elevenlabs.io/app/settings/api-keys](https://elevenlabs.io/app/settings/api-keys) |
 | `ELEVENLABS_VOICE_ID` | no | Browse [elevenlabs.io/voice-library](https://elevenlabs.io/voice-library); defaults to Rachel |
 | `CRON_SECRET` | prod | Any strong random string. Set in Vercel project settings; the cron sends it as `Authorization: Bearer $CRON_SECRET` to `/api/scrape/refresh`. Without it the refresh route fails closed (401). |
-| `DATABASE_URL` | prod | Supabase Postgres connection string — use the **transaction pooler** (host `...pooler.supabase.com`, port `6543`), not the direct 5432 connection (IPv6-only, unreachable from Vercel functions). Set via the [Supabase Vercel integration](https://vercel.com/marketplace/supabase) or by hand; it's the durable KB store. Optional locally — without it the app live-scrapes every request instead of reading from the DB. |
+| `DATABASE_URL` (or `POSTGRES_URL`) | prod | Supabase Postgres connection string — the **transaction pooler** (host `...pooler.supabase.com`, port `6543`), not the direct 5432 connection (IPv6-only, unreachable from Vercel functions). The [Supabase Vercel integration](https://vercel.com/marketplace/supabase) auto-provisions `POSTGRES_URL`; the app reads `DATABASE_URL \|\| POSTGRES_URL`, so no manual alias is needed. Optional locally — without it the app live-scrapes every request. |
 
 Voice **input** uses the browser-native Web Speech API — works in Chrome/Edge, no key needed.
 

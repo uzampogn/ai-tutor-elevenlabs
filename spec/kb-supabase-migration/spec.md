@@ -26,7 +26,7 @@ Both are Postgres. Every statement in `db.ts` is portable ANSI SQL (`CREATE TABL
 | **Backend** | **Supabase Postgres** (Supabase Vercel integration or manual connection string) | Roadmap: first-class **pgvector** (#2) + **Auth/RLS** (#7) on one managed DB. |
 | **Driver** | **`postgres.js`** (`postgres` npm) | Tagged-template API mirrors Neon's `sql\`…\``, so `db.ts` diff is ~5 lines. Standard Postgres wire; no PostgREST rewrite. |
 | **Connection** | **Supavisor pooler, transaction mode** — host `…pooler.supabase.com`, port **6543**, `?pgbouncer=true`, client opt **`prepare: false`** | Serverless-safe. Direct 5432 is IPv6-only on Supabase (unreachable from Vercel functions without the IPv4 add-on); the pooler is the supported serverless path. Transaction mode forbids prepared statements → `prepare: false`. |
-| **Env var name** | **Keep `DATABASE_URL`** | Consumers and the no-op guard (`db.ts:12`) read `DATABASE_URL`; keeping the name means zero changes outside `db.ts`. Point it at the Supabase pooler string. |
+| **Env var name** | **Accept `DATABASE_URL` or `POSTGRES_URL`** | `db.ts` reads `DATABASE_URL \|\| POSTGRES_URL`. The Supabase Vercel integration auto-provisions `POSTGRES_URL` (pooled), so it works with no manual aliasing; `DATABASE_URL` still overrides. |
 | **Schema** | **Unchanged**, still created idempotently by `ensureSchema()`; `db/schema.sql` stays the canonical reference | DDL is portable and runs fine over the transaction pooler. |
 | **Cron cadence** | **Unchanged** (`0 6 * * *`, daily — Hobby cap) | Out of scope. Hourly still needs Vercel Pro; revisit separately. |
 | **Data migration** | **None** | The KB is fully derivable from the blog; the first read self-heals (scrape → summarize → persist). No dump/restore from Neon. |
