@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // A tagged-template stub: records each call's SQL fragments and returns a canned result.
-const { sqlMock, neonMock } = vi.hoisted(() => {
+const { sqlMock, postgresMock } = vi.hoisted(() => {
   const sqlMock = vi.fn();
-  return { sqlMock, neonMock: vi.fn(() => sqlMock) };
+  return { sqlMock, postgresMock: vi.fn(() => sqlMock) };
 });
-vi.mock('@neondatabase/serverless', () => ({ neon: neonMock }));
+// postgres.js default export is the factory: postgres(url, opts) → tagged-template `sql`.
+vi.mock('postgres', () => ({ default: postgresMock }));
 
 const ORIGINAL_URL = process.env.DATABASE_URL;
 
@@ -21,7 +22,7 @@ function lastSql(): string {
 
 beforeEach(() => {
   sqlMock.mockReset().mockResolvedValue([]);
-  neonMock.mockClear();
+  postgresMock.mockClear();
   process.env.DATABASE_URL = 'postgres://test';
 });
 
@@ -34,12 +35,20 @@ describe('db.ts — no-op without DATABASE_URL', () => {
     await expect(db.upsertArticles([])).resolves.toBeUndefined();
     await expect(db.deleteMissing(['x'])).resolves.toBeUndefined();
     expect(await db.readMeta()).toEqual({ lastSuccessfulFetch: null, lastError: null });
-    expect(neonMock).not.toHaveBeenCalled();
+    expect(postgresMock).not.toHaveBeenCalled();
     if (ORIGINAL_URL !== undefined) process.env.DATABASE_URL = ORIGINAL_URL;
   });
 });
 
 describe('db.ts — queries', () => {
+  it('constructs the postgres client with prepare:false (transaction-pooler safe)', async () => {
+    await freshDb();
+    expect(postgresMock).toHaveBeenCalledWith(
+      'postgres://test',
+      expect.objectContaining({ prepare: false })
+    );
+  });
+
   it('slugFromUrl extracts the /blog/<slug> segment', async () => {
     const db = await freshDb();
     expect(db.slugFromUrl('https://claude.com/blog/claude-opus-4-8?x=1')).toBe('claude-opus-4-8');

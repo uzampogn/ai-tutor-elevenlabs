@@ -1,4 +1,4 @@
-import { neon } from '@neondatabase/serverless';
+import postgres from 'postgres';
 import type { Article } from './scraper';
 
 export interface ArticleRow extends Article {
@@ -10,8 +10,12 @@ export interface KbMeta {
 }
 
 const url = process.env.DATABASE_URL;
-// HTTP driver: `sql` is a tagged-template query fn. Null when unconfigured → every export no-ops.
-const sql = url ? neon(url) : null;
+// Supabase transaction pooler (port 6543) is serverless-safe. `prepare: false` is REQUIRED there:
+// transaction-mode pooling hands each query a different backend, so prepared statements can't be
+// reused. `max: 1` keeps per-instance connections minimal; the client is module-scoped so warm
+// invocations reuse it. `sql` is a tagged-template query fn — null when unconfigured, so every
+// export no-ops (pure live-scrape fallback).
+const sql = url ? postgres(url, { prepare: false, max: 1, idle_timeout: 20 }) : null;
 
 /** Canonical slug derivation (PK). Mirrors the blog URL shape. */
 export function slugFromUrl(u: string): string {
