@@ -81,6 +81,7 @@ export default function Thread({
                 rowRef={speakingContent === msg.content ? setSpeakingRowEl : undefined}
                 onReadAloud={onReadAloud}
                 onStopAudio={onStopAudio}
+                sourceSlugs={msg.sources}
               />
             ),
           )

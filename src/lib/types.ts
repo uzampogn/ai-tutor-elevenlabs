@@ -8,6 +8,8 @@ export type { Article } from './scraper';
 export interface Message {
   role: 'user' | 'assistant';
   content: string;
+  /** Retrieved-source slugs (X-Sources header order) for assistant turns. */
+  sources?: string[];
 }
 
 /** AI-generated score-card digest for one article (see lib/digest.ts). */

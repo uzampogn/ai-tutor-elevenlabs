@@ -87,6 +87,35 @@ export function matchSources(answer: string, articles: Article[]): Article[] {
   return matched;
 }
 
+/**
+ * Client-safe slug extraction (mirrors db.slugFromUrl, which lives in a
+ * server-only module and must not be imported by components).
+ */
+export function articleSlug(url: string): string {
+  const m = url.match(/\/blog\/([^/?#]+)/);
+  return m ? m[1] : url;
+}
+
+/**
+ * Chips source-of-truth (spec/rag-retrieval-citations): when the chat response
+ * carried retrieved slugs (X-Sources), map them to articles preserving the
+ * retrieval (similarity) order; otherwise fall back to legacy title matching.
+ */
+export function resolveSources(
+  slugs: string[] | undefined,
+  answer: string,
+  articles: Article[],
+): Article[] {
+  if (slugs && slugs.length > 0 && articles.length > 0) {
+    const bySlug = new Map(articles.map((a) => [articleSlug(a.url), a]));
+    const resolved = slugs
+      .map((s) => bySlug.get(s))
+      .filter((a): a is Article => a !== undefined);
+    if (resolved.length > 0) return resolved;
+  }
+  return matchSources(answer, articles);
+}
+
 export type Block =
   | { type: 'paragraph'; text: string }
   | { type: 'ul'; items: string[] }

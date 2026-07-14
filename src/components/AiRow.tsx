@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import type { Article } from '@/lib/types';
-import { parseAnswer, matchSources, parseBlocks } from '@/lib/parseAnswer';
+import { parseAnswer, resolveSources, parseBlocks } from '@/lib/parseAnswer';
 import { buildSpokenDoc, makeWordCursor } from '@/lib/readAlong/spokenDoc';
 import InlineMarkdown from './InlineMarkdown';
 import ImpactCard from './ImpactCard';
@@ -24,14 +24,16 @@ interface AiRowProps {
   /** Speak this answer aloud via the parent's TTS pipeline. */
   onReadAloud: (text: string) => void;
   onStopAudio: () => void;
+  /** Retrieved-source slugs from the chat response (X-Sources), retrieval order. */
+  sourceSlugs?: string[];
 }
 
-export default function AiRow({ content, streaming, articles, speaking, rowRef, onReadAloud, onStopAudio }: AiRowProps) {
+export default function AiRow({ content, streaming, articles, speaking, rowRef, onReadAloud, onStopAudio, sourceSlugs }: AiRowProps) {
   const [copied, setCopied] = useState(false);
   const [liked, setLiked] = useState(false);
 
   const { body, impact } = parseAnswer(content);
-  const sources = matchSources(content, articles);
+  const sources = resolveSources(sourceSlugs, content, articles);
 
   const blocks = parseBlocks(body);
 

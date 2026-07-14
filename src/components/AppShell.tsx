@@ -255,6 +255,8 @@ export default function AppShell() {
         });
         if (!res.body) throw new Error('No response body');
 
+        const sourceSlugs = res.headers.get('X-Sources')?.split(',').filter(Boolean);
+
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let full = '';
@@ -263,7 +265,7 @@ export default function AppShell() {
           const { done, value } = await reader.read();
           if (done) break;
           full += decoder.decode(value, { stream: true });
-          setMessages([...history, { role: 'assistant', content: full }]);
+          setMessages([...history, { role: 'assistant', content: full, sources: sourceSlugs }]);
         }
 
         await playVoice(full);
