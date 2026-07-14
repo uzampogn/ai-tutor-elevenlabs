@@ -97,6 +97,28 @@ describe('db.ts — queries', () => {
     expect(sqlMock).not.toHaveBeenCalled();
   });
 
+  it('serializes queries: concurrent callers never put two queries in flight at once', async () => {
+    // Supavisor's transaction pooler (port 6543) wedges permanently when postgres.js
+    // pipelines a query onto a busy connection, which happens whenever in-flight
+    // queries exceed pool connections (max: 1). Prod hits this via
+    // Promise.all([getArticles(), readMeta()]) — reproduce that exact shape.
+    let inFlight = 0;
+    let peak = 0;
+    sqlMock.mockImplementation(() => {
+      inFlight++;
+      peak = Math.max(peak, inFlight);
+      return new Promise((resolve) =>
+        setTimeout(() => {
+          inFlight--;
+          resolve([]);
+        }, 2)
+      );
+    });
+    const db = await freshDb();
+    await Promise.all([db.getArticles(), db.readMeta()]);
+    expect(peak).toBe(1);
+  });
+
   it('writeMeta merges: an error-only patch preserves the existing fetch time', async () => {
     sqlMock.mockResolvedValueOnce([]); // schema articles
     sqlMock.mockResolvedValueOnce([]); // schema kb_meta

@@ -15,9 +15,27 @@ const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
 // Supabase transaction pooler (port 6543) is serverless-safe. `prepare: false` is REQUIRED there:
 // transaction-mode pooling hands each query a different backend, so prepared statements can't be
 // reused. `max: 1` keeps per-instance connections minimal; the client is module-scoped so warm
-// invocations reuse it. `sql` is a tagged-template query fn — null when unconfigured, so every
-// export no-ops (pure live-scrape fallback).
-const sql = url ? postgres(url, { prepare: false, max: 1, idle_timeout: 20 }) : null;
+// invocations reuse it.
+const raw = url ? postgres(url, { prepare: false, max: 1, idle_timeout: 20, connect_timeout: 10 }) : null;
+
+// The transaction pooler also cannot handle PIPELINED queries: when more queries are in
+// flight than pool connections, postgres.js pipelines the overflow onto a busy socket and
+// the connection wedges forever (observed in prod as 60s/300s FUNCTION_INVOCATION_TIMEOUT
+// on the first Promise.all([getArticles(), readMeta()]) — see fix/kb-pooler-pipelining-wedge).
+// Serialize every query through a promise chain so in-flight never exceeds `max: 1`.
+// `sql` keeps the tagged-template call shape — null when unconfigured, so every export
+// no-ops (pure live-scrape fallback).
+let queue: Promise<unknown> = Promise.resolve();
+const sql = raw
+  ? (strings: TemplateStringsArray, ...values: unknown[]): Promise<unknown> => {
+      const run = queue.then(() => raw(strings, ...(values as never[])));
+      queue = run.then(
+        () => undefined,
+        () => undefined
+      );
+      return run;
+    }
+  : null;
 
 /** Canonical slug derivation (PK). Mirrors the blog URL shape. */
 export function slugFromUrl(u: string): string {
