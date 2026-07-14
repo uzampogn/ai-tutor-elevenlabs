@@ -63,6 +63,80 @@ export async function ensureSchema(): Promise<void> {
   return schemaReady;
 }
 
+/** Render a number[] as a pgvector text literal; bind with `${...}::vector`. */
+export function toSqlVector(vec: number[]): string {
+  return `[${vec.join(',')}]`;
+}
+
+// Vector layer (spec/rag-retrieval-citations). Guarded separately from the base
+// schema: if pgvector is unavailable (extension not enabled / no permission),
+// retrieval degrades to "off" without breaking the articles table. Dims must
+// match EMBEDDING_DIMS in embeddings.ts (1024, voyage-3.5-lite).
+// No vector index on purpose: ~24 rows — revisit at ~1k rows (backlog #1).
+let vectorReady: Promise<boolean> | null = null;
+async function ensureVectorSchema(): Promise<boolean> {
+  if (!sql) return false;
+  await ensureSchema();
+  if (!vectorReady) {
+    vectorReady = (async () => {
+      try {
+        await sql`CREATE EXTENSION IF NOT EXISTS vector`;
+        await sql`ALTER TABLE articles ADD COLUMN IF NOT EXISTS embedding vector(1024)`;
+        await sql`ALTER TABLE articles ADD COLUMN IF NOT EXISTS embedded_hash TEXT NOT NULL DEFAULT ''`;
+        return true;
+      } catch (err) {
+        console.error('[db] pgvector unavailable; retrieval disabled:', err);
+        return false;
+      }
+    })();
+  }
+  return vectorReady;
+}
+
+export interface SimilarArticleRow extends Article {
+  slug: string;
+  similarity: number;
+}
+
+/** slug → embedded_hash for every row ('' = never embedded). */
+export async function getEmbeddingStates(): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  if (!sql) return map;
+  if (!(await ensureVectorSchema())) return map;
+  const rows = (await sql`SELECT slug, embedded_hash FROM articles`) as Row[];
+  for (const r of rows) map.set(String(r.slug), String(r.embedded_hash ?? ''));
+  return map;
+}
+
+export async function updateEmbeddings(
+  rows: { slug: string; embedding: number[]; embeddedHash: string }[],
+): Promise<void> {
+  if (!sql || rows.length === 0) return;
+  if (!(await ensureVectorSchema())) return;
+  for (const r of rows) {
+    await sql`UPDATE articles SET embedding = ${toSqlVector(r.embedding)}::vector,
+      embedded_hash = ${r.embeddedHash} WHERE slug = ${r.slug}`;
+  }
+}
+
+/** Top-k articles by cosine similarity to `vec` (unfiltered; caller applies the floor). */
+export async function similarArticles(vec: number[], k: number): Promise<SimilarArticleRow[]> {
+  if (!sql) return [];
+  if (!(await ensureVectorSchema())) return [];
+  const v = toSqlVector(vec);
+  const rows = (await sql`
+    SELECT slug, title, url, pub_date, description, body, summary, hero_image,
+           1 - (embedding <=> ${v}::vector) AS similarity
+    FROM articles WHERE embedding IS NOT NULL
+    ORDER BY embedding <=> ${v}::vector
+    LIMIT ${k}`) as Row[];
+  return rows.map((r) => ({
+    ...rowToArticle(r),
+    slug: String(r.slug),
+    similarity: Number(r.similarity),
+  }));
+}
+
 type Row = Record<string, unknown>;
 function rowToArticle(r: Row): Article {
   const pd = r.pub_date as string | Date | null;

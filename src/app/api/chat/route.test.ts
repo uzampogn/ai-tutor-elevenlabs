@@ -18,6 +18,9 @@ vi.mock('@/lib/scraper', () => ({
   getClaudeArticles: getClaudeArticlesMock,
 }));
 
+const { retrieveArticlesMock } = vi.hoisted(() => ({ retrieveArticlesMock: vi.fn() }));
+vi.mock('@/lib/retrieval', () => ({ retrieveArticles: retrieveArticlesMock }));
+
 import { POST } from './route';
 
 type Chunk = { type: string; delta?: { type: string; text: string } };
@@ -54,6 +57,7 @@ beforeEach(() => {
   );
   getGroundingContextMock.mockReset().mockResolvedValue('GROUNDING_MARKER');
   getClaudeArticlesMock.mockReset();
+  retrieveArticlesMock.mockReset().mockResolvedValue([]);
 });
 
 describe('POST /api/chat — grounding from the cached context', () => {
@@ -89,5 +93,53 @@ describe('POST /api/chat — grounding from the cached context', () => {
       cache_control: { type: 'ephemeral' },
     });
     expect(sysArg[0].text).toContain('GROUNDING_MARKER');
+  });
+});
+
+describe('POST /api/chat — RAG retrieved block (spec/rag-retrieval-citations)', () => {
+  const retrieved = (slug: string, body = 'FULL BODY') => ({
+    slug, title: `Title ${slug}`, url: `https://claude.com/blog/${slug}`,
+    pubDate: '', description: '', body, summary: 'sum', heroImage: '', similarity: 0.9,
+  });
+
+  it('no retrieval → single cached block and no X-Sources header (byte-identical to today)', async () => {
+    const res = await post([{ role: 'user', content: 'hi' }]);
+    const sysArg = streamMock.mock.calls[0][0].system;
+    expect(sysArg).toHaveLength(1);
+    expect(res.headers.get('X-Sources')).toBeNull();
+  });
+
+  it('retrieval hit → appends an uncached block with capped bodies; block 1 untouched', async () => {
+    retrieveArticlesMock.mockResolvedValue([
+      retrieved('post-a', 'A'.repeat(9_000)), retrieved('post-b'),
+    ]);
+    const res = await post([
+      { role: 'assistant', content: 'earlier' },
+      { role: 'user', content: 'tell me about MCP' },
+    ]);
+    expect(retrieveArticlesMock).toHaveBeenCalledWith('tell me about MCP');
+
+    const sysArg = streamMock.mock.calls[0][0].system;
+    expect(sysArg).toHaveLength(2);
+    // Block 1: cached grounding block, byte-identical to the no-retrieval case.
+    expect(sysArg[0]).toMatchObject({ type: 'text', cache_control: { type: 'ephemeral' } });
+    expect(sysArg[0].text).toContain('GROUNDING_MARKER');
+    // Block 2: uncached, titled sources with capped bodies.
+    expect(sysArg[1].cache_control).toBeUndefined();
+    expect(sysArg[1].text).toContain('[Source 1] Title post-a');
+    expect(sysArg[1].text).toContain('[Source 2] Title post-b');
+    expect(sysArg[1].text).toContain('URL: https://claude.com/blog/post-a');
+    expect(sysArg[1].text).not.toContain('A'.repeat(8_001)); // BODY_EXCERPT_CAP
+
+    expect(res.headers.get('X-Sources')).toBe('post-a,post-b');
+  });
+
+  it('embeds the LATEST user message, not the first', async () => {
+    await post([
+      { role: 'user', content: 'first question' },
+      { role: 'assistant', content: 'answer' },
+      { role: 'user', content: 'second question' },
+    ]);
+    expect(retrieveArticlesMock).toHaveBeenCalledWith('second question');
   });
 });

@@ -133,3 +133,59 @@ describe('db.ts — queries', () => {
     expect(call).toContain('2026-06-10T00:00:00.000Z'); // fetch time preserved
   });
 });
+
+describe('db.ts — vector layer', () => {
+  it('toSqlVector renders a pgvector literal', async () => {
+    const db = await freshDb();
+    expect(db.toSqlVector([0.1, -2, 3])).toBe('[0.1,-2,3]');
+  });
+
+  it('vector fns no-op without DATABASE_URL', async () => {
+    delete process.env.DATABASE_URL;
+    delete process.env.POSTGRES_URL;
+    const db = await freshDb();
+    expect(await db.getEmbeddingStates()).toEqual(new Map());
+    await expect(db.updateEmbeddings([{ slug: 'a', embedding: [1], embeddedHash: 'm:h' }])).resolves.toBeUndefined();
+    expect(await db.similarArticles([1], 3)).toEqual([]);
+    expect(postgresMock).not.toHaveBeenCalled();
+    if (ORIGINAL_URL !== undefined) process.env.DATABASE_URL = ORIGINAL_URL;
+  });
+
+  it('similarArticles orders by cosine distance and maps similarity', async () => {
+    sqlMock.mockResolvedValueOnce([]); // ensureSchema: articles
+    sqlMock.mockResolvedValueOnce([]); // ensureSchema: kb_meta
+    sqlMock.mockResolvedValueOnce([]); // vector schema: CREATE EXTENSION
+    sqlMock.mockResolvedValueOnce([]); // vector schema: ALTER embedding
+    sqlMock.mockResolvedValueOnce([]); // vector schema: ALTER embedded_hash
+    sqlMock.mockResolvedValueOnce([
+      { slug: 'a', title: 'A', url: 'https://claude.com/blog/a', pub_date: null,
+        description: '', body: 'b', summary: 's', hero_image: '', similarity: '0.82' },
+    ]);
+    const db = await freshDb();
+    const out = await db.similarArticles([1, 2], 3);
+    expect(out).toHaveLength(1);
+    expect(out[0].slug).toBe('a');
+    expect(out[0].similarity).toBeCloseTo(0.82);
+    expect(lastSql()).toContain('<=>');
+    expect(lastSql()).toContain('embedding IS NOT NULL');
+  });
+
+  it('updateEmbeddings issues one UPDATE per row with a ::vector cast', async () => {
+    sqlMock.mockResolvedValue([]);
+    const db = await freshDb();
+    await db.updateEmbeddings([{ slug: 'a', embedding: [1, 2], embeddedHash: 'voyage-3.5-lite:h1' }]);
+    expect(lastSql()).toContain('UPDATE articles SET embedding =');
+    expect(lastSql()).toContain('::vector');
+    const call = sqlMock.mock.calls.at(-1)!;
+    expect(call).toContain('[1,2]');
+    expect(call).toContain('voyage-3.5-lite:h1');
+  });
+
+  it('vector fns degrade to empty when the vector DDL fails (pgvector unavailable)', async () => {
+    sqlMock.mockResolvedValueOnce([]); // ensureSchema: articles
+    sqlMock.mockResolvedValueOnce([]); // ensureSchema: kb_meta
+    sqlMock.mockRejectedValueOnce(new Error('permission denied for extension vector'));
+    const db = await freshDb();
+    expect(await db.similarArticles([1], 3)).toEqual([]); // no throw
+  });
+});

@@ -2,6 +2,7 @@ import { parse, type HTMLElement } from 'node-html-parser';
 import { summarizeAll } from './summarize';
 import { unstable_cache } from 'next/cache';
 import * as db from './db';
+import { embedStaleArticles } from './embedArticles';
 
 export interface Article {
   title: string;
@@ -492,6 +493,9 @@ async function scrapeAndPersist(): Promise<Article[]> {
 
     const rows = articles.map((a, i) => ({ ...a, hash: results[i].hash }));
     await db.upsertArticles(rows);
+    // Embed new/changed articles for RAG retrieval. Internally guarded: no-ops
+    // without VOYAGE_API_KEY and swallows all errors — never blocks ingest.
+    await embedStaleArticles(rows);
     // Guard: only prune when the scrape returned articles, so a garbage/empty
     // scrape can never wipe the table.
     if (rows.length > 0) await db.deleteMissing(rows.map((r) => db.slugFromUrl(r.url)));

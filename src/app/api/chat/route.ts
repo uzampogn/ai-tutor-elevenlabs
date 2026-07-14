@@ -1,11 +1,31 @@
 import { NextRequest } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { getGroundingContext } from '@/lib/scraper';
+import { retrieveArticles, type RetrievedArticle } from '@/lib/retrieval';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+// Per-article body excerpt in the retrieved block. 3 × 8k chars ≈ 6k tokens —
+// comfortable headroom, and real depth vs the 700-char summaries in block 1.
+const BODY_EXCERPT_CAP = 8_000;
+
+function buildRetrievedBlock(retrieved: RetrievedArticle[]): string {
+  const blocks = retrieved.map((r, i) => {
+    const excerpt = r.body.slice(0, BODY_EXCERPT_CAP) || r.summary;
+    return `### [Source ${i + 1}] ${r.title}\nURL: ${r.url}\n\n${excerpt}`;
+  });
+  return `RETRIEVED SOURCES — full articles most relevant to the user's latest question. Prefer these for depth and specifics; the knowledge base above holds only short summaries. When you cite one, write its article title EXACTLY as given.\n\n${blocks.join('\n\n---\n\n')}`;
+}
+
 export async function POST(req: NextRequest) {
   const { messages } = await req.json();
+
+  const lastUser = Array.isArray(messages)
+    ? [...messages].reverse().find((m) => m?.role === 'user')
+    : undefined;
+  const retrieved = await retrieveArticles(
+    typeof lastUser?.content === 'string' ? lastUser.content : '',
+  );
 
   const articleContext = await getGroundingContext();
 
@@ -66,7 +86,12 @@ ${articleContext}`;
         const messageStream = client.messages.stream({
           model: 'claude-sonnet-4-6',
           max_tokens: 1024,
-          system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
+          system: [
+            { type: 'text' as const, text: systemPrompt, cache_control: { type: 'ephemeral' as const } },
+            ...(retrieved.length > 0
+              ? [{ type: 'text' as const, text: buildRetrievedBlock(retrieved) }]
+              : []),
+          ],
           messages,
         });
 
@@ -95,10 +120,10 @@ ${articleContext}`;
     },
   });
 
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/plain; charset=utf-8',
-      'Cache-Control': 'no-cache',
-    },
-  });
+  const headers: Record<string, string> = {
+    'Content-Type': 'text/plain; charset=utf-8',
+    'Cache-Control': 'no-cache',
+  };
+  if (retrieved.length > 0) headers['X-Sources'] = retrieved.map((r) => r.slug).join(',');
+  return new Response(stream, { headers });
 }

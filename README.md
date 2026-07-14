@@ -97,6 +97,7 @@ ELEVENLABS_API_KEY=...
 ELEVENLABS_VOICE_ID=21m00Tcm4TlvDq8ikWAM   # optional; defaults to "Rachel"
 CRON_SECRET=...                            # required in prod for the scheduled refresh
 DATABASE_URL=postgresql://...pooler.supabase.com:6543/postgres?sslmode=require   # Supabase transaction pooler
+VOYAGE_API_KEY=...                         # optional; enables RAG retrieval (unset ⇒ retrieval off)
 ```
 
 | Variable | Required | Where to get it |
@@ -106,6 +107,7 @@ DATABASE_URL=postgresql://...pooler.supabase.com:6543/postgres?sslmode=require  
 | `ELEVENLABS_VOICE_ID` | no | Browse [elevenlabs.io/voice-library](https://elevenlabs.io/voice-library); defaults to Rachel |
 | `CRON_SECRET` | prod | Any strong random string. Set in Vercel project settings; the cron sends it as `Authorization: Bearer $CRON_SECRET` to `/api/scrape/refresh`. Without it the refresh route fails closed (401). |
 | `DATABASE_URL` (or `POSTGRES_URL`) | prod | Supabase Postgres connection string — the **transaction pooler** (host `...pooler.supabase.com`, port `6543`), not the direct 5432 connection (IPv6-only, unreachable from Vercel functions). The [Supabase Vercel integration](https://vercel.com/marketplace/supabase) auto-provisions `POSTGRES_URL`; the app reads `DATABASE_URL \|\| POSTGRES_URL`, so no manual alias is needed. Optional locally — without it the app live-scrapes every request. |
+| `VOYAGE_API_KEY` | no | [dash.voyageai.com](https://dash.voyageai.com) — enables RAG retrieval (embeds articles with `voyage-3.5-lite` → pgvector). Unset ⇒ retrieval is off and chat behaves exactly as before (summaries-only grounding, title-match source chips). |
 
 Voice **input** uses the browser-native Web Speech API — works in Chrome/Edge, no key needed.
 
@@ -136,6 +138,8 @@ All routes run server-side, so API keys never reach the browser.
 | `/api/speak` | `POST` | Strips markdown, chunks, calls ElevenLabs `/with-timestamps`, returns `{ audioBase64, alignment }` (`alignment.chars.join('') === text`). Fail-soft. |
 
 **Auto-refresh & freshness.** **Supabase Postgres is the durable source of truth** for the knowledge base — both articles and their per-article summaries — so a fresh serverless instance reads precomputed rows instead of re-scraping the blog and re-issuing ~24 summary calls on every cold start. A daily [Vercel Cron](https://vercel.com/docs/cron-jobs) (`vercel.json` → `crons`, `0 6 * * *`) hits `/api/scrape/refresh` and is the **writer**: it scrapes, summarizes **only new/changed** posts (unchanged content is skipped via a durable content hash → 0 API calls), and upserts the result. The cadence is **daily because the Vercel Hobby plan caps cron jobs at once per day** — on Pro you can tune `vercel.json` to a tighter schedule. All read paths (`/api/scrape`, the chat grounding context) read **DB-first** and so survive cold starts without re-scraping or re-summarizing. If the table is empty or stale (e.g. first deploy, a missed cron run, or a DB hiccup), a read **self-heals**: it scrapes + summarizes inline, writes the result back, and serves it — so the KB is never permanently empty. On a scrape failure the app serves the last-good DB rows **without resetting the freshness clock** — `/api/scrape` exposes `status.stale` (age > 26h, i.e. a missed daily run) and `status.ageMs` so a stuck/old scrape is observable rather than silent. Set `CRON_SECRET` (the cron authenticates with it) and `DATABASE_URL` (the Supabase transaction-pooler string) in the Vercel project.
+
+**RAG retrieval.** When `VOYAGE_API_KEY` is set, the cron also **embeds** each new/changed article ([Voyage](https://dash.voyageai.com) `voyage-3.5-lite`, 1024 dims → `pgvector` on Supabase), gated by a `<model>:<content-hash>` so unchanged content re-embeds 0 times. At question time the chat route embeds the user's latest message and retrieves the **top-3** most similar articles (cosine distance, similarity floor `0.35` so off-topic questions retrieve nothing); their full bodies are appended to the prompt as an **uncached second system block** (the cached summaries grounding block is left byte-identical, so prompt caching is preserved). The response's `X-Sources` header (slugs, similarity order) drives the source chips, replacing title-substring matching. The whole feature degrades cleanly: **without `VOYAGE_API_KEY` retrieval is off and behavior is identical to before** — Voyage errors, timeouts, or a missing DB all fall back to the summaries-only path. pgvector is created idempotently at runtime by `ensureVectorSchema()`; if `CREATE EXTENSION vector` is refused on the pooled role, enable the **`vector`** extension once in the Supabase dashboard (Database → Extensions).
 
 ```
 src/

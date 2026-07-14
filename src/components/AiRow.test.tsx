@@ -167,6 +167,26 @@ describe('AiRow', () => {
     expect(emEl?.textContent).toBe('italic');
   });
 
+  it('renders chips from sourceSlugs in retrieval order, ignoring title matching', () => {
+    const articles = [
+      { title: 'Alpha', url: 'https://claude.com/blog/alpha', pubDate: '', description: '', body: '', summary: '', heroImage: '' },
+      { title: 'Beta', url: 'https://claude.com/blog/beta', pubDate: '', description: '', body: '', summary: '', heroImage: '' },
+    ];
+    render(
+      <AiRow
+        content="An answer that mentions Alpha by name."
+        streaming={false}
+        articles={articles}
+        sourceSlugs={['beta', 'alpha']}
+        speaking={false}
+        onReadAloud={() => {}}
+        onStopAudio={() => {}}
+      />,
+    );
+    const chips = screen.getAllByRole('link');
+    expect(chips.map((c) => c.textContent)).toEqual(['Beta', 'Alpha']);
+  });
+
   it('renders a streaming partial answer with a caret and without throwing', () => {
     const content = 'Anthropic released a partial answer that is still strea';
     const { container } = render(

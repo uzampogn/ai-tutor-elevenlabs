@@ -5,7 +5,7 @@ Conversational agent that turns the latest [Claude blog](https://claude.com/blog
 ## Stack
 
 - **Next.js 14** + **React 18** + **TypeScript 5**, **Tailwind CSS 3**
-- **@anthropic-ai/sdk** (explanations), **ElevenLabs** (TTS + timestamps)
+- **@anthropic-ai/sdk** (explanations), **ElevenLabs** (TTS + timestamps), **Voyage AI** (embeddings for RAG retrieval → pgvector on Supabase; optional, off without `VOYAGE_API_KEY`)
 - Tests: **Vitest** · Deployed on **Vercel**
 
 ## Layout

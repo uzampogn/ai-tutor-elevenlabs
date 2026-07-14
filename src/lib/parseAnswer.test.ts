@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseAnswer, matchSources, parseInline, parseBlocks } from './parseAnswer';
+import { parseAnswer, matchSources, parseInline, parseBlocks, resolveSources, articleSlug } from './parseAnswer';
 import type { Article } from './scraper';
 
 const article = (over: Partial<Article> = {}): Article => ({
@@ -166,5 +166,33 @@ describe('parseInline', () => {
     expect(parseInline('nothing special')).toEqual([
       { type: 'text', value: 'nothing special' },
     ]);
+  });
+});
+
+describe('resolveSources', () => {
+  const art = (slug: string): Article => ({
+    title: `Title ${slug}`, url: `https://claude.com/blog/${slug}`, pubDate: '',
+    description: '', body: '', summary: '', heroImage: '',
+  });
+  const articles = [art('a'), art('b'), art('c')];
+
+  it('articleSlug extracts the /blog/ segment (client-safe copy of db.slugFromUrl)', () => {
+    expect(articleSlug('https://claude.com/blog/post-a?x=1')).toBe('post-a');
+  });
+
+  it('maps slugs to articles preserving retrieval order', () => {
+    const out = resolveSources(['c', 'a'], 'irrelevant', articles);
+    expect(out.map((a) => a.title)).toEqual(['Title c', 'Title a']);
+  });
+
+  it('drops unknown slugs', () => {
+    const out = resolveSources(['ghost', 'b'], '', articles);
+    expect(out.map((a) => a.title)).toEqual(['Title b']);
+  });
+
+  it('falls back to matchSources when slugs are absent or none resolve', () => {
+    const answer = 'As covered in Title b, ...';
+    expect(resolveSources(undefined, answer, articles).map((a) => a.title)).toEqual(['Title b']);
+    expect(resolveSources(['ghost'], answer, articles).map((a) => a.title)).toEqual(['Title b']);
   });
 });
