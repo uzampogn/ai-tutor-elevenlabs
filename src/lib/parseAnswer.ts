@@ -59,6 +59,8 @@ function normalize(text: string): string {
   return text.replace(/\s+/g, ' ').trim().toLowerCase();
 }
 
+// TODO(rag-02): retire once retrieval has been on in prod for a while —
+// matchSources now only serves the retrieval-off fallback path (resolveSources).
 /**
  * Recover the source articles cited in an answer by matching article titles
  * against the answer text (case-insensitive, whitespace-normalized substring).
