@@ -21,3 +21,6 @@ next-env.d.ts
 
 # Superpowers brainstorm visual-companion scratch
 .superpowers/
+
+# Impeccable design tool (local install, not committed)
+.claude/skills/impeccable/

@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI News Tutor — Palette Proposals</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+    background: #20242b;
+    color: #e7eaf0;
+    -webkit-font-smoothing: antialiased;
+    padding: 40px 28px 80px;
+  }
+  .page-head { max-width: 1180px; margin: 0 auto 14px; }
+  .page-head h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 6px; }
+  .page-head p { margin: 0; color: #9aa3b5; font-size: 14px; max-width: 760px; line-height: 1.5; }
+
+  .proposal { max-width: 1180px; margin: 0 auto 56px; }
+  .prop-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 10px; flex-wrap: wrap; }
+  .prop-tag {
+    font-family: "JetBrains Mono", monospace; font-size: 12px; font-weight: 600;
+    background: #2e333d; color: #cfd6e4; padding: 4px 9px; border-radius: 6px; letter-spacing: 0.02em;
+  }
+  .prop-head h2 { font-size: 18px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+  .prop-head .why { color: #9aa3b5; font-size: 13.5px; }
+  .swatches { display: flex; gap: 0; margin: 8px 0 14px; border-radius: 8px; overflow: hidden; width: max-content;
+              box-shadow: 0 2px 10px rgba(0,0,0,.3); }
+  .sw { width: 64px; height: 30px; display: grid; place-items: end; padding: 3px 5px; }
+  .sw span { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 600; opacity: .9; }
+
+  /* ── App frame ─────────────────────────────────────────── */
+  .frame {
+    border-radius: 18px; overflow: hidden; height: 640px;
+    box-shadow: 0 30px 70px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.04);
+    display: grid; grid-template-columns: 300px 1fr;
+    position: relative; isolation: isolate;
+  }
+  .frame .bg { position: absolute; inset: 0; z-index: -1; }
+
+  /* sidebar */
+  .sidebar { display: flex; flex-direction: column; min-height: 0; position: relative; z-index: 1; }
+  .brand { display: flex; align-items: center; gap: 11px; padding: 20px 20px 16px; }
+  .brand-mark { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; flex: none; position: relative; overflow: hidden; }
+  .brand-pulse { width: 12px; height: 12px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 0 rgba(255,255,255,.7); animation: pulse 2.4s infinite; }
+  @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(255,255,255,.55);} 70%{box-shadow:0 0 0 8px transparent;} 100%{box-shadow:0 0 0 0 transparent;} }
+  .brand-name { font-weight: 700; font-size: 14.5px; letter-spacing: -0.01em; }
+  .brand-sub { font-size: 10.5px; margin-top: 2px; }
+  .kb-head { padding: 4px 20px 12px; }
+  .kb-title { display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+  .kb-refresh { width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center; border: 1px solid; background: transparent; }
+  .kb-list { padding: 6px 12px; overflow: hidden; display: flex; flex-direction: column; gap: 6px; }
+  .kb-card { padding: 11px 12px; border-radius: 12px; border: 1px solid transparent; cursor: default; }
+  .kb-card .cat { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; padding: 2px 6px; border-radius: 5px; display: inline-block; }
+  .kb-card .t { font-size: 12.5px; font-weight: 600; line-height: 1.35; margin: 7px 0 5px; letter-spacing: -0.005em; }
+  .kb-card .d { font-size: 10px; }
+
+  /* main / conversation */
+  .main { position: relative; z-index: 1; display: flex; flex-direction: column; min-height: 0; }
+  .topbar { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 14px 22px; }
+  .tb-btn { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; border: 1px solid; }
+  .thread { flex: 1; overflow: hidden; padding: 6px 34px 0; }
+  .user-row { display: flex; justify-content: flex-end; margin-bottom: 22px; }
+  .bubble { max-width: 74%; padding: 12px 16px; border-radius: 18px; font-size: 14px; line-height: 1.45; }
+  .ai-answer { font-family: "Newsreader", Georgia, serif; font-size: 16.5px; line-height: 1.62; max-width: 92%; }
+  .ai-answer h3 { font-family: "Plus Jakarta Sans", sans-serif; font-size: 16px; font-weight: 700; letter-spacing: -0.01em; margin: 18px 0 8px; }
+  .ai-answer p { margin: 0 0 11px; }
+  .ai-answer .meta { font-family: "Plus Jakarta Sans"; font-size: 11.5px; margin: 2px 0 14px; }
+  .impact { margin: 16px 0 14px; border-radius: 14px; padding: 14px 16px; position: relative; }
+  .impact .lbl { font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; display: flex; align-items: center; gap: 7px; margin-bottom: 7px; }
+  .impact .lbl::before { content: ""; width: 6px; height: 6px; border-radius: 50%; }
+  .impact p { font-family: "Plus Jakarta Sans"; font-size: 13px; line-height: 1.5; margin: 0; }
+  .chips { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .chip { display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 500; padding: 6px 11px 6px 8px; border-radius: 999px; border: 1px solid; }
+  .chip .dot { width: 16px; height: 16px; border-radius: 5px; flex: none; }
+  .actions { display: flex; gap: 6px; margin-top: 14px; }
+  .act { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; border: 1px solid; }
+
+  /* voice dock */
+  .dock { padding: 14px 0 22px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .orb-wrap { display: grid; place-items: center; gap: 9px; }
+  .orb { width: 84px; height: 84px; border-radius: 50%; position: relative; display: grid; place-items: center; }
+  .orb::after { content: ""; position: absolute; inset: 12px; border-radius: 50%; }
+  .orb-hint { font-size: 11.5px; }
+  .seg { display: inline-flex; padding: 3px; border-radius: 999px; border: 1px solid; gap: 2px; }
+  .seg b, .seg span { font-size: 11.5px; font-weight: 600; padding: 5px 15px; border-radius: 999px; }
+  .seg b { } /* active */
+
+  svg { display: block; }
+</style>
+</head>
+<body>
+  <div class="page-head">
+    <h1>AI News Tutor — palette proposals</h1>
+    <p>Three directions extracted from the morning-meadow reference (lemon → mint → aqua → teal over white). Same app frame each time: knowledge-base sidebar, a grounded conversation with a Business Impact card and source chips, and the voice-first orb. Pick one — or say "mix A and B".</p>
+  </div>
+
+  <!-- ════════════════ PROPOSAL A — MEADOW MIST ════════════════ -->
+  <section class="proposal" id="A">
+    <div class="prop-head">
+      <span class="prop-tag">A</span>
+      <h2>Meadow Mist</h2>
+      <span class="why">Faithful soft-pastel reskin — frosted glass floating over the lemon→aqua aurora. Calm, airy, optimistic.</span>
+    </div>
+    <div class="swatches">
+      <div class="sw" style="background:#EAF4E4;color:#2c3a30"><span>#EAF4E4</span></div>
+      <div class="sw" style="background:#FFFFFF;color:#888"><span>#FFFFFF</span></div>
+      <div class="sw" style="background:#2E9D98;color:#fff"><span>#2E9D98</span></div>
+      <div class="sw" style="background:#5CC4C0;color:#08312f"><span>#5CC4C0</span></div>
+      <div class="sw" style="background:#C7E29A;color:#36420f"><span>#C7E29A</span></div>
+      <div class="sw" style="background:#1B2A22;color:#cfe0d5"><span>#1B2A22</span></div>
+    </div>
+    <div class="frame" style="
+        --bg:#EAF4E4; --panel:#FFFFFF; --glass:rgba(255,255,255,.72); --glass-strong:rgba(255,255,255,.86);
+        --ink:#1B2A22; --ink-soft:#46584D; --muted:#7C8C80; --line:#DCEAD9; --line-2:#EAF3E6;
+        --accent:#5CC4C0; --accent-strong:#2E9D98; --accent-2:#C7E29A; --ok:#3FA98C;
+        --topbtn-bg:rgba(255,255,255,.7); --side-bg:var(--glass); ">
+      <div class="bg" style="background:
+          radial-gradient(120% 110% at 6% 0%, rgba(214,240,170,.55) 0%, rgba(214,240,170,.18) 34%, transparent 60%),
+          radial-gradient(120% 120% at 100% 100%, rgba(148,215,227,.50) 0%, rgba(148,215,227,.14) 38%, transparent 66%),
+          radial-gradient(140% 120% at 50% 120%, rgba(163,238,234,.30) 0%, transparent 55%),
+          var(--bg);"></div>
+
+      <!-- sidebar -->
+      <aside class="sidebar" style="background:var(--side-bg);backdrop-filter:blur(18px) saturate(125%);-webkit-backdrop-filter:blur(18px) saturate(125%);border-right:1px solid var(--line);">
+        <div class="brand">
+          <div class="brand-mark" style="background:linear-gradient(150deg,var(--accent),var(--accent-2));box-shadow:0 4px 12px rgba(92,196,192,.35)"><div class="brand-pulse"></div></div>
+          <div><div class="brand-name" style="color:var(--ink)">AI News Tutor</div><div class="brand-sub" style="color:var(--muted)">Grounded in the Claude blog</div></div>
+        </div>
+        <div class="kb-head" style="border-bottom:1px solid var(--line-2)">
+          <div class="kb-title" style="color:var(--ink-soft)"><span>Knowledge base</span>
+            <button class="kb-refresh" style="border-color:var(--line);color:var(--accent-strong)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 4v5h-5"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="kb-list">
+          <div class="kb-card" style="background:var(--panel);border-color:var(--accent);box-shadow:0 6px 18px rgba(92,196,192,.16)">
+            <span class="cat" style="background:rgba(92,196,192,.18);color:var(--accent-strong)">Agents</span>
+            <div class="t" style="color:var(--ink)">Introducing Agent Skills for Claude</div>
+            <div class="d" style="color:var(--muted)">Jun 9, 2026</div>
+          </div>
+          <div class="kb-card" style="background:rgba(255,255,255,.55);border-color:transparent">
+            <span class="cat" style="background:var(--line-2);color:var(--ink-soft)">Research</span>
+            <div class="t" style="color:var(--ink)">How we measure model reliability</div>
+            <div class="d" style="color:var(--muted)">Jun 6, 2026</div>
+          </div>
+          <div class="kb-card" style="background:rgba(255,255,255,.55);border-color:transparent">
+            <span class="cat" style="background:var(--line-2);color:var(--ink-soft)">Product</span>
+            <div class="t" style="color:var(--ink)">Claude in the enterprise: what changed</div>
+            <div class="d" style="color:var(--muted)">Jun 2, 2026</div>
+          </div>
+          <div class="kb-card" style="background:rgba(255,255,255,.55);border-color:transparent">
+            <span class="cat" style="background:var(--line-2);color:var(--ink-soft)">Safety</span>
+            <div class="t" style="color:var(--ink)">A new approach to prompt-injection defense</div>
+            <div class="d" style="color:var(--muted)">May 28, 2026</div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- main -->
+      <div class="main">
+        <div class="topbar">
+          <button class="tb-btn" style="background:var(--topbtn-bg);border-color:var(--line);color:var(--ink-soft)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+          <button class="tb-btn" style="background:var(--topbtn-bg);border-color:var(--line);color:var(--ink-soft)"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+        </div>
+        <div class="thread">
+          <div class="user-row"><div class="bubble" style="background:#F4F4F4;color:#222">What's new with Claude's Agent Skills?</div></div>
+          <div class="ai-answer" style="color:var(--ink)">
+            <p>Agent Skills let you package a capability — instructions, scripts, and resources — into a folder Claude loads <em>only when it's relevant</em>, so the model stays fast while gaining deep, on-demand expertise.</p>
+            <div class="meta" style="color:var(--muted)">Received from 1 article · Thought for 4s</div>
+            <h3>Why it matters</h3>
+            <p>Instead of stuffing every instruction into one giant prompt, teams ship small, composable skills that travel with the work and version cleanly.</p>
+            <div class="impact" style="background:linear-gradient(135deg,rgba(199,226,154,.22),rgba(92,196,192,.16));border:1px solid var(--line)">
+              <div class="lbl" style="color:var(--accent-strong)"><span style="--d:1"></span>Business impact</div>
+              <p style="color:var(--ink-soft)">Skills cut prompt-engineering overhead and make agent behaviour auditable — a clear path to reliable automation without ballooning token costs.</p>
+            </div>
+            <div class="chips">
+              <span class="chip" style="background:var(--panel);border-color:var(--line);color:var(--ink-soft)"><span class="dot" style="background:linear-gradient(150deg,var(--accent),var(--accent-2))"></span>Introducing Agent Skills</span>
+              <span class="chip" style="background:var(--panel);border-color:var(--line);color:var(--ink-soft)"><span class="dot" style="background:linear-gradient(150deg,var(--accent),var(--accent-2))"></span>Claude in the enterprise</span>
+            </div>
+            <div class="actions">
+              <button class="act" style="border-color:var(--line);background:var(--panel);color:var(--muted)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+              <button class="act" style="border-color:var(--line);background:var(--panel);color:var(--accent-strong)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg></button>
+              <button class="act" style="border-color:var(--line);background:var(--panel);color:var(--muted)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 10v12M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76"/></svg></button>
+            </div>
+          </div>
+        </div>
+        <!-- voice dock -->
+        <div class="dock">
+          <div class="orb-wrap">
+            <div class="orb" style="background:radial-gradient(circle at 32% 28%, #Eaffe8, var(--accent) 62%, var(--accent-strong));box-shadow:0 12px 34px rgba(46,157,152,.4), inset 0 2px 10px rgba(255,255,255,.6)">
+              <div style="position:absolute;inset:0;border-radius:50%;border:2px solid rgba(255,255,255,.4)"></div>
+            </div>
+            <div class="orb-hint" style="color:var(--ink-soft)">Tap to speak</div>
+          </div>
+          <div class="seg" style="background:var(--glass);border-color:var(--line)">
+            <b style="background:var(--accent-strong);color:#fff">Voice</b>
+            <span style="color:var(--muted)">Text</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════ PROPOSAL B — FRESH MINT EDITORIAL ════════════════ -->
+  <section class="proposal" id="B">
+    <div class="prop-head">
+      <span class="prop-tag">B</span>
+      <h2>Fresh Mint Editorial</h2>
+      <span class="why">High-contrast white + near-black (taken from the phone itself). Green-teal used only as accent. Crisp, confident, news-editorial.</span>
+    </div>
+    <div class="swatches">
+      <div class="sw" style="background:#FBFDF9;color:#888"><span>#FBFDF9</span></div>
+      <div class="sw" style="background:#FFFFFF;color:#888"><span>#FFFFFF</span></div>
+      <div class="sw" style="background:#131313;color:#eee"><span>#131313</span></div>
+      <div class="sw" style="background:#0C8C7A;color:#fff"><span>#0C8C7A</span></div>
+      <div class="sw" style="background:#13B89E;color:#053b33"><span>#13B89E</span></div>
+      <div class="sw" style="background:#F4F4F4;color:#888"><span>#F4F4F4</span></div>
+    </div>
+    <div class="frame" style="
+        --bg:#FBFDF9; --panel:#FFFFFF; --glass:rgba(255,255,255,.9); --glass-strong:#FFFFFF;
+        --ink:#131313; --ink-soft:#3A3F3C; --muted:#8A908B; --line:#ECEFEA; --line-2:#F4F6F2;
+        --accent:#13B89E; --accent-strong:#0C8C7A; --accent-2:#A8D85C; --ok:#0C8C7A;
+        --topbtn-bg:#FFFFFF; --side-bg:#FFFFFF; ">
+      <div class="bg" style="background:
+          radial-gradient(70% 60% at 0% 0%, rgba(168,216,92,.08) 0%, transparent 55%),
+          radial-gradient(80% 70% at 100% 100%, rgba(19,184,158,.07) 0%, transparent 58%),
+          var(--bg);"></div>
+
+      <aside class="sidebar" style="background:var(--side-bg);border-right:1px solid var(--line);">
+        <div class="brand">
+          <div class="brand-mark" style="background:var(--ink);box-shadow:0 3px 10px rgba(0,0,0,.18)"><div class="brand-pulse" style="background:var(--accent)"></div></div>
+          <div><div class="brand-name" style="color:var(--ink)">AI News Tutor</div><div class="brand-sub" style="color:var(--muted)">Grounded in the Claude blog</div></div>
+        </div>
+        <div class="kb-head" style="border-bottom:1px solid var(--line-2)">
+          <div class="kb-title" style="color:var(--ink)"><span>Knowledge base</span>
+            <button class="kb-refresh" style="border-color:var(--line);color:var(--accent-strong)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 4v5h-5"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="kb-list">
+          <div class="kb-card" style="background:var(--panel);border-color:var(--ink);box-shadow:0 4px 14px rgba(0,0,0,.07)">
+            <span class="cat" style="background:var(--ink);color:#fff">Agents</span>
+            <div class="t" style="color:var(--ink)">Introducing Agent Skills for Claude</div>
+            <div class="d" style="color:var(--muted)">Jun 9, 2026</div>
+          </div>
+          <div class="kb-card" style="background:var(--panel);border-color:var(--line)">
+            <span class="cat" style="background:var(--line-2);color:var(--ink-soft)">Research</span>
+            <div class="t" style="color:var(--ink)">How we measure model reliability</div>
+            <div class="d" style="color:var(--muted)">Jun 6, 2026</div>
+          </div>
+          <div class="kb-card" style="background:var(--panel);border-color:var(--line)">
+            <span class="cat" style="background:var(--line-2);color:var(--ink-soft)">Product</span>
+            <div class="t" style="color:var(--ink)">Claude in the enterprise: what changed</div>
+            <div class="d" style="color:var(--muted)">Jun 2, 2026</div>
+          </div>
+          <div class="kb-card" style="background:var(--panel);border-color:var(--line)">
+            <span class="cat" style="background:var(--line-2);color:var(--ink-soft)">Safety</span>
+            <div class="t" style="color:var(--ink)">A new approach to prompt-injection defense</div>
+            <div class="d" style="color:var(--muted)">May 28, 2026</div>
+          </div>
+        </div>
+      </aside>
+
+      <div class="main">
+        <div class="topbar">
+          <button class="tb-btn" style="background:var(--topbtn-bg);border-color:var(--line);color:var(--ink-soft)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+          <button class="tb-btn" style="background:var(--topbtn-bg);border-color:var(--line);color:var(--ink-soft)"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+        </div>
+        <div class="thread">
+          <div class="user-row"><div class="bubble" style="background:#F4F4F4;color:#131313">What's new with Claude's Agent Skills?</div></div>
+          <div class="ai-answer" style="color:var(--ink)">
+            <p>Agent Skills let you package a capability — instructions, scripts, and resources — into a folder Claude loads <em>only when it's relevant</em>, so the model stays fast while gaining deep, on-demand expertise.</p>
+            <div class="meta" style="color:var(--muted)">Received from 1 article · Thought for 4s</div>
+            <h3>Why it matters</h3>
+            <p>Instead of stuffing every instruction into one giant prompt, teams ship small, composable skills that travel with the work and version cleanly.</p>
+            <div class="impact" style="background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent)">
+              <div class="lbl" style="color:var(--accent-strong)"><span></span>Business impact</div>
+              <p style="color:var(--ink-soft)">Skills cut prompt-engineering overhead and make agent behaviour auditable — a clear path to reliable automation without ballooning token costs.</p>
+            </div>
+            <div class="chips">
+              <span class="chip" style="background:var(--panel);border-color:var(--line);color:var(--ink)"><span class="dot" style="background:var(--ink)"></span>Introducing Agent Skills</span>
+              <span class="chip" style="background:var(--panel);border-color:var(--line);color:var(--ink)"><span class="dot" style="background:var(--ink)"></span>Claude in the enterprise</span>
+            </div>
+            <div class="actions">
+              <button class="act" style="border-color:var(--line);background:var(--panel);color:var(--muted)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+              <button class="act" style="border-color:var(--accent);background:var(--accent);color:#fff"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg></button>
+              <button class="act" style="border-color:var(--line);background:var(--panel);color:var(--muted)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 10v12M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76"/></svg></button>
+            </div>
+          </div>
+        </div>
+        <div class="dock">
+          <div class="orb-wrap">
+            <div class="orb" style="background:#fff;border:2px solid var(--ink);box-shadow:0 10px 26px rgba(0,0,0,.12)">
+              <div style="position:absolute;inset:24px;border-radius:50%;background:var(--accent)"></div>
+            </div>
+            <div class="orb-hint" style="color:var(--ink-soft);font-weight:600">Tap to speak</div>
+          </div>
+          <div class="seg" style="background:var(--panel);border-color:var(--line)">
+            <b style="background:var(--ink);color:#fff">Voice</b>
+            <span style="color:var(--muted)">Text</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════ PROPOSAL C — AURORA DEEP ════════════════ -->
+  <section class="proposal" id="C">
+    <div class="prop-head">
+      <span class="prop-tag">C</span>
+      <h2>Aurora Deep</h2>
+      <span class="why">Deep teal-pine dark mode; the lemon &amp; aqua become luminous glows. The voice orb becomes the hero light source. Immersive, premium, focus-friendly.</span>
+    </div>
+    <div class="swatches">
+      <div class="sw" style="background:#0C1A18;color:#bcd"><span>#0C1A18</span></div>
+      <div class="sw" style="background:#142A26;color:#bcd"><span>#142A26</span></div>
+      <div class="sw" style="background:#5FE3DA;color:#053b33"><span>#5FE3DA</span></div>
+      <div class="sw" style="background:#36C7BC;color:#04302b"><span>#36C7BC</span></div>
+      <div class="sw" style="background:#C2F09A;color:#2c3a0f"><span>#C2F09A</span></div>
+      <div class="sw" style="background:#ECF6EE;color:#888"><span>#ECF6EE</span></div>
+    </div>
+    <div class="frame" style="
+        --bg:#0C1A18; --panel:rgba(22,42,38,.66); --glass:rgba(22,42,38,.55); --glass-strong:rgba(26,48,44,.8);
+        --ink:#ECF6EE; --ink-soft:#A7C2B8; --muted:#6E8A80; --line:rgba(255,255,255,.09); --line-2:rgba(255,255,255,.05);
+        --accent:#5FE3DA; --accent-strong:#36C7BC; --accent-2:#C2F09A; --ok:#4ED9A6;
+        --topbtn-bg:rgba(255,255,255,.06); --side-bg:rgba(16,32,29,.6); ">
+      <div class="bg" style="background:
+          radial-gradient(110% 100% at 4% 0%, rgba(95,227,218,.20) 0%, rgba(95,227,218,.05) 36%, transparent 62%),
+          radial-gradient(110% 110% at 100% 100%, rgba(194,240,154,.16) 0%, rgba(194,240,154,.04) 40%, transparent 66%),
+          radial-gradient(120% 110% at 60% 50%, rgba(54,199,188,.10) 0%, transparent 55%),
+          var(--bg);"></div>
+
+      <aside class="sidebar" style="background:var(--side-bg);backdrop-filter:blur(20px) saturate(120%);-webkit-backdrop-filter:blur(20px) saturate(120%);border-right:1px solid var(--line);">
+        <div class="brand">
+          <div class="brand-mark" style="background:linear-gradient(150deg,var(--accent),var(--accent-2));box-shadow:0 0 22px rgba(95,227,218,.5)"><div class="brand-pulse" style="background:#06201c"></div></div>
+          <div><div class="brand-name" style="color:var(--ink)">AI News Tutor</div><div class="brand-sub" style="color:var(--muted)">Grounded in the Claude blog</div></div>
+        </div>
+        <div class="kb-head" style="border-bottom:1px solid var(--line-2)">
+          <div class="kb-title" style="color:var(--ink-soft)"><span>Knowledge base</span>
+            <button class="kb-refresh" style="border-color:var(--line);color:var(--accent)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 4v5h-5"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="kb-list">
+          <div class="kb-card" style="background:var(--panel);border-color:var(--accent);box-shadow:0 0 0 1px rgba(95,227,218,.25),0 8px 22px rgba(0,0,0,.4)">
+            <span class="cat" style="background:rgba(95,227,218,.16);color:var(--accent)">Agents</span>
+            <div class="t" style="color:var(--ink)">Introducing Agent Skills for Claude</div>
+            <div class="d" style="color:var(--muted)">Jun 9, 2026</div>
+          </div>
+          <div class="kb-card" style="background:rgba(255,255,255,.03);border-color:transparent">
+            <span class="cat" style="background:rgba(255,255,255,.07);color:var(--ink-soft)">Research</span>
+            <div class="t" style="color:var(--ink)">How we measure model reliability</div>
+            <div class="d" style="color:var(--muted)">Jun 6, 2026</div>
+          </div>
+          <div class="kb-card" style="background:rgba(255,255,255,.03);border-color:transparent">
+            <span class="cat" style="background:rgba(255,255,255,.07);color:var(--ink-soft)">Product</span>
+            <div class="t" style="color:var(--ink)">Claude in the enterprise: what changed</div>
+            <div class="d" style="color:var(--muted)">Jun 2, 2026</div>
+          </div>
+          <div class="kb-card" style="background:rgba(255,255,255,.03);border-color:transparent">
+            <span class="cat" style="background:rgba(255,255,255,.07);color:var(--ink-soft)">Safety</span>
+            <div class="t" style="color:var(--ink)">A new approach to prompt-injection defense</div>
+            <div class="d" style="color:var(--muted)">May 28, 2026</div>
+          </div>
+        </div>
+      </aside>
+
+      <div class="main">
+        <div class="topbar">
+          <button class="tb-btn" style="background:var(--topbtn-bg);border-color:var(--line);color:var(--ink-soft)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+          <button class="tb-btn" style="background:var(--topbtn-bg);border-color:var(--line);color:var(--ink-soft)"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+        </div>
+        <div class="thread">
+          <div class="user-row"><div class="bubble" style="background:rgba(255,255,255,.08);color:var(--ink)">What's new with Claude's Agent Skills?</div></div>
+          <div class="ai-answer" style="color:var(--ink)">
+            <p>Agent Skills let you package a capability — instructions, scripts, and resources — into a folder Claude loads <em>only when it's relevant</em>, so the model stays fast while gaining deep, on-demand expertise.</p>
+            <div class="meta" style="color:var(--muted)">Received from 1 article · Thought for 4s</div>
+            <h3>Why it matters</h3>
+            <p>Instead of stuffing every instruction into one giant prompt, teams ship small, composable skills that travel with the work and version cleanly.</p>
+            <div class="impact" style="background:linear-gradient(135deg,rgba(95,227,218,.12),rgba(194,240,154,.08));border:1px solid var(--line)">
+              <div class="lbl" style="color:var(--accent)"><span style="box-shadow:0 0 8px var(--accent)"></span>Business impact</div>
+              <p style="color:var(--ink-soft)">Skills cut prompt-engineering overhead and make agent behaviour auditable — a clear path to reliable automation without ballooning token costs.</p>
+            </div>
+            <div class="chips">
+              <span class="chip" style="background:rgba(255,255,255,.05);border-color:var(--line);color:var(--ink-soft)"><span class="dot" style="background:linear-gradient(150deg,var(--accent),var(--accent-2))"></span>Introducing Agent Skills</span>
+              <span class="chip" style="background:rgba(255,255,255,.05);border-color:var(--line);color:var(--ink-soft)"><span class="dot" style="background:linear-gradient(150deg,var(--accent),var(--accent-2))"></span>Claude in the enterprise</span>
+            </div>
+            <div class="actions">
+              <button class="act" style="border-color:var(--line);background:rgba(255,255,255,.04);color:var(--muted)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+              <button class="act" style="border-color:var(--accent);background:rgba(95,227,218,.14);color:var(--accent)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg></button>
+              <button class="act" style="border-color:var(--line);background:rgba(255,255,255,.04);color:var(--muted)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 10v12M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76"/></svg></button>
+            </div>
+          </div>
+        </div>
+        <div class="dock">
+          <div class="orb-wrap">
+            <div class="orb" style="background:radial-gradient(circle at 34% 30%, #d6fff5, var(--accent) 55%, var(--accent-strong));box-shadow:0 0 50px rgba(95,227,218,.6), 0 0 90px rgba(95,227,218,.3), inset 0 2px 12px rgba(255,255,255,.5)">
+              <div style="position:absolute;inset:0;border-radius:50%;border:2px solid rgba(255,255,255,.35)"></div>
+            </div>
+            <div class="orb-hint" style="color:var(--ink-soft)">Tap to speak</div>
+          </div>
+          <div class="seg" style="background:var(--glass);border-color:var(--line)">
+            <b style="background:var(--accent);color:#06201c">Voice</b>
+            <span style="color:var(--muted)">Text</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</body>
+</html>
