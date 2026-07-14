@@ -13,10 +13,10 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.40.0",
-    "@neondatabase/serverless": "^1.1.0",
     "fast-xml-parser": "^4.3.6",
     "next": "^14.2.35",
     "node-html-parser": "^7.1.0",
+    "postgres": "^3.4.9",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
