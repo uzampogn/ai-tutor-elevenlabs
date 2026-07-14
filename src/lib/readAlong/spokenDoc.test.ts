@@ -214,3 +214,12 @@ describe('buildSpokenDoc — edge cases', () => {
     expect(doc.sentences.every((s) => s.region === 'body')).toBe(true);
   });
 });
+
+describe('buildSpokenDoc — citation markers are invisible (alignment invariant)', () => {
+  it('marked and unmarked answers produce identical spoken docs', () => {
+    const marked = buildSpokenDoc('Claude shipped it [1]. Fast [2][3]. Done.');
+    const clean = buildSpokenDoc('Claude shipped it. Fast. Done.');
+    expect(marked.spokenText).toBe(clean.spokenText);
+    expect(marked.words.length).toBe(clean.words.length);
+  });
+});
