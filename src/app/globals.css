@@ -401,6 +401,15 @@ button { font-family: inherit; cursor: pointer; }
 .source-chip svg { flex: none; opacity: .7; }
 .source-chip-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* Inline citation superscripts + numbered source chips (spec/rag-retrieval-citations 02) */
+.cite { font-size: .72em; line-height: 0; }
+.cite a { color: inherit; opacity: .65; text-decoration: none; }
+.cite a:hover, .cite a:focus-visible { opacity: 1; text-decoration: underline; }
+.source-chip-num {
+  flex: none; font-family: var(--mono); font-size: 11px;
+  font-variant-numeric: tabular-nums; opacity: .7;
+}
+
 .msg-actions { display: flex; gap: 6px; margin-top: 14px; }
 .act {
   display: inline-flex; align-items: center; gap: 6px;

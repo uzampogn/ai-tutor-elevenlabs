@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import type { Article } from '@/lib/types';
-import { parseAnswer, resolveSources, parseBlocks } from '@/lib/parseAnswer';
+import { parseAnswer, resolveSources, parseBlocks, glueCitations, citationTargets } from '@/lib/parseAnswer';
 import { buildSpokenDoc, makeWordCursor } from '@/lib/readAlong/spokenDoc';
 import InlineMarkdown from './InlineMarkdown';
 import ImpactCard from './ImpactCard';
@@ -32,8 +32,9 @@ export default function AiRow({ content, streaming, articles, speaking, rowRef, 
   const [copied, setCopied] = useState(false);
   const [liked, setLiked] = useState(false);
 
-  const { body, impact } = parseAnswer(content);
+  const { body, impact } = parseAnswer(glueCitations(content));
   const sources = resolveSources(sourceSlugs, content, articles);
+  const citeTargets = citationTargets(sourceSlugs, articles);
 
   const blocks = parseBlocks(body);
 
@@ -91,7 +92,7 @@ export default function AiRow({ content, streaming, articles, speaking, rowRef, 
                   const isLastItem = j === block.items.length - 1;
                   return (
                     <li key={j} className="ai-list-item">
-                      <InlineMarkdown text={item} cursor={bodyCursor} />
+                      <InlineMarkdown text={item} cursor={bodyCursor} citeTargets={citeTargets} />
                       {streaming && impact === null && isLast && isLastItem && <span className="caret" />}
                     </li>
                   );
@@ -106,7 +107,7 @@ export default function AiRow({ content, streaming, articles, speaking, rowRef, 
                   const isLastItem = j === block.items.length - 1;
                   return (
                     <li key={j} className="ai-list-item">
-                      <InlineMarkdown text={item} cursor={bodyCursor} />
+                      <InlineMarkdown text={item} cursor={bodyCursor} citeTargets={citeTargets} />
                       {streaming && impact === null && isLast && isLastItem && <span className="caret" />}
                     </li>
                   );
@@ -116,15 +117,15 @@ export default function AiRow({ content, streaming, articles, speaking, rowRef, 
           }
           return (
             <p key={i} className="ai-para">
-              <InlineMarkdown text={block.text} cursor={bodyCursor} />
+              <InlineMarkdown text={block.text} cursor={bodyCursor} citeTargets={citeTargets} />
               {streaming && impact === null && isLast && <span className="caret" />}
             </p>
           );
         })}
 
-        {impact !== null && impact.length > 0 && <ImpactCard text={impact} cursor={impactCursor} />}
+        {impact !== null && impact.length > 0 && <ImpactCard text={impact} cursor={impactCursor} citeTargets={citeTargets} />}
 
-        <SourceChips sources={sources} />
+        <SourceChips sources={sources} numbered={Boolean(sourceSlugs?.length)} />
 
         {!streaming && content.trim().length > 0 && (
           <div className="msg-actions">
