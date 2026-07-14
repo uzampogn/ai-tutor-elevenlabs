@@ -142,4 +142,19 @@ describe('POST /api/chat — RAG retrieved block (spec/rag-retrieval-citations)'
     ]);
     expect(retrieveArticlesMock).toHaveBeenCalledWith('second question');
   });
+
+  it('retrieved block instructs inline [n] markers keyed to source numbers', async () => {
+    retrieveArticlesMock.mockResolvedValue([retrieved('post-a')]);
+    await post([{ role: 'user', content: 'q' }]);
+    const sysArg = streamMock.mock.calls[0][0].system;
+    expect(sysArg[1].text).toContain('inline marker like [1]');
+    expect(sysArg[1].text).not.toContain('write its article title EXACTLY');
+  });
+
+  it('no retrieval → no marker instruction anywhere new (single block)', async () => {
+    await post([{ role: 'user', content: 'q' }]);
+    const sysArg = streamMock.mock.calls[0][0].system;
+    expect(sysArg).toHaveLength(1);
+    expect(sysArg[0].text).not.toContain('inline marker like [1]');
+  });
 });

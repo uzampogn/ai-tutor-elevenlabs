@@ -14,7 +14,10 @@ function buildRetrievedBlock(retrieved: RetrievedArticle[]): string {
     const excerpt = r.body.slice(0, BODY_EXCERPT_CAP) || r.summary;
     return `### [Source ${i + 1}] ${r.title}\nURL: ${r.url}\n\n${excerpt}`;
   });
-  return `RETRIEVED SOURCES — full articles most relevant to the user's latest question. Prefer these for depth and specifics; the knowledge base above holds only short summaries. When you cite one, write its article title EXACTLY as given.\n\n${blocks.join('\n\n---\n\n')}`;
+  return `RETRIEVED SOURCES — full articles most relevant to the user's latest question, numbered for citation. Prefer these for depth and specifics; the knowledge base above holds only short summaries.
+Cite claims drawn from a retrieved source with an inline marker like [1], placed directly after the claim it supports, where the number matches the source number below. Use markers ONLY for these numbered sources — never invent a number. Not every sentence needs one; cite where grounding matters.
+
+${blocks.join('\n\n---\n\n')}`;
 }
 
 export async function POST(req: NextRequest) {
