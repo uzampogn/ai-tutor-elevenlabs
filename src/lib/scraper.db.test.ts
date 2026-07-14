@@ -11,6 +11,9 @@ const db = vi.hoisted(() => ({
 }));
 vi.mock('@/lib/db', () => db);
 
+const embedArticles = vi.hoisted(() => ({ embedStaleArticles: vi.fn() }));
+vi.mock('@/lib/embedArticles', () => embedArticles);
+
 const ORIGIN = 'https://claude.com';
 const articleRow = (slug: string) => ({
   title: `T ${slug}`, url: `${ORIGIN}/blog/${slug}`, pubDate: '2026-06-10T09:00:00.000Z',
@@ -49,6 +52,7 @@ beforeEach(() => {
   db.deleteMissing.mockReset().mockResolvedValue(undefined);
   db.readMeta.mockReset().mockResolvedValue({ lastSuccessfulFetch: null, lastError: null });
   db.writeMeta.mockReset().mockResolvedValue(undefined);
+  embedArticles.embedStaleArticles.mockReset().mockResolvedValue(undefined);
 });
 afterEach(() => vi.unstubAllGlobals());
 
@@ -106,6 +110,15 @@ describe('getClaudeArticles — DB-first', () => {
     expect(out).toHaveLength(1); // served from DB, not []
     expect(db.writeMeta).toHaveBeenCalledWith(expect.objectContaining({ lastError: expect.any(String) }));
     expect(getIngestionStatus().lastError).toBeTruthy();
+  });
+
+  it('embeds stale articles after persisting (force path)', async () => {
+    vi.stubGlobal('fetch', makeFetchMock());
+    const scraper = await freshScraper();
+    await scraper.getClaudeArticles({ force: true });
+    expect(embedArticles.embedStaleArticles).toHaveBeenCalledTimes(1);
+    const arg = embedArticles.embedStaleArticles.mock.calls[0][0];
+    expect(arg[0]).toMatchObject({ url: 'https://claude.com/blog/post-a' });
   });
 
   it('getIngestionStatus reflects kb_meta after a DB-hit read', async () => {
