@@ -10,13 +10,46 @@
 
 import { Fragment } from 'react';
 import type { ReactNode } from 'react';
-import { parseInline } from '@/lib/parseAnswer';
+import { parseInline, CITATION_SENTINEL_RE } from '@/lib/parseAnswer';
+import type { Article } from '@/lib/types';
 import type { SpokenWord, WordCursor } from '@/lib/readAlong/spokenDoc';
 
 interface InlineMarkdownProps {
   text: string;
   /** Optional read-along cursor; when present, emit addressable spans. */
   cursor?: WordCursor;
+  /** Positional citation targets: sentinel ⟦n⟧ links to citeTargets[n-1]. */
+  citeTargets?: (Article | undefined)[];
+}
+
+const SENTINEL_SPLIT_RE = /(⟦\d{1,2}⟧)/g;
+
+/**
+ * Render a text run, replacing ⟦n⟧ sentinels with superscript source links.
+ * Unresolvable sentinels (no target / out of range) render as literal "[n]".
+ * Citations are NOT spoken words: they live inside the surrounding word's
+ * node, so they never consume a WordCursor entry.
+ */
+function renderCited(
+  text: string,
+  citeTargets: (Article | undefined)[] | undefined,
+  keyBase: string,
+): ReactNode {
+  if (!CITATION_SENTINEL_RE.test(text)) return text;
+  return text.split(SENTINEL_SPLIT_RE).filter((p) => p !== '').map((part, j) => {
+    const m = part.match(/^⟦(\d{1,2})⟧$/);
+    if (!m) return <Fragment key={`${keyBase}c${j}`}>{part}</Fragment>;
+    const n = Number(m[1]);
+    const target = citeTargets?.[n - 1];
+    if (!target) return <Fragment key={`${keyBase}c${j}`}>[{n}]</Fragment>;
+    return (
+      <sup key={`${keyBase}c${j}`} className="cite">
+        <a href={target.url} target="_blank" rel="noopener noreferrer" title={target.title}>
+          [{n}]
+        </a>
+      </sup>
+    );
+  });
 }
 
 // One emitted piece: either a spoken word (carrying its model word) or a
@@ -25,7 +58,7 @@ type Piece =
   | { kind: 'word'; node: ReactNode; word: SpokenWord }
   | { kind: 'space'; text: string };
 
-export default function InlineMarkdown({ text, cursor }: InlineMarkdownProps) {
+export default function InlineMarkdown({ text, cursor, citeTargets }: InlineMarkdownProps) {
   const tokens = parseInline(text);
 
   // --- Legacy path: render exactly as before (no spans). ---
@@ -33,9 +66,9 @@ export default function InlineMarkdown({ text, cursor }: InlineMarkdownProps) {
     return (
       <>
         {tokens.map((t, i) => {
-          if (t.type === 'strong') return <strong key={i}>{t.value}</strong>;
-          if (t.type === 'em') return <em key={i}>{t.value}</em>;
-          return <Fragment key={i}>{t.value}</Fragment>;
+          if (t.type === 'strong') return <strong key={i}>{renderCited(t.value, citeTargets, `t${i}`)}</strong>;
+          if (t.type === 'em') return <em key={i}>{renderCited(t.value, citeTargets, `t${i}`)}</em>;
+          return <Fragment key={i}>{renderCited(t.value, citeTargets, `t${i}`)}</Fragment>;
         })}
       </>
     );
@@ -68,19 +101,19 @@ export default function InlineMarkdown({ text, cursor }: InlineMarkdownProps) {
       if (t.type === 'strong') {
         node = (
           <strong key={key++} className="w" data-w={word.id}>
-            {inner}
+            {renderCited(inner, citeTargets, `w${word.id}`)}
           </strong>
         );
       } else if (t.type === 'em') {
         node = (
           <em key={key++} className="w" data-w={word.id}>
-            {inner}
+            {renderCited(inner, citeTargets, `w${word.id}`)}
           </em>
         );
       } else {
         node = (
           <span key={key++} className="w" data-w={word.id}>
-            {inner}
+            {renderCited(inner, citeTargets, `w${word.id}`)}
           </span>
         );
       }

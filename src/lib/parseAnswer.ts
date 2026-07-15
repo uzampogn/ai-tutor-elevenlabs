@@ -59,6 +59,8 @@ function normalize(text: string): string {
   return text.replace(/\s+/g, ' ').trim().toLowerCase();
 }
 
+// TODO(rag-02): retire once retrieval has been on in prod for a while —
+// matchSources now only serves the retrieval-off fallback path (resolveSources).
 /**
  * Recover the source articles cited in an answer by matching article titles
  * against the answer text (case-insensitive, whitespace-normalized substring).
@@ -178,6 +180,42 @@ export function parseBlocks(body: string): Block[] {
   }
 
   return blocks;
+}
+
+// --- Inline citations (spec/rag-retrieval-citations 02) -------------------
+// Display side: markers are glued to the preceding word with sentinel brackets
+// (⟦n⟧, U+27E6/7 — never model-emitted) BEFORE block parsing, so a marker never
+// becomes its own word-run and read-along word counts stay aligned with the
+// spoken doc. Speech side: stripMarkdown deletes the same glued markers with
+// the SAME guarded pattern. Keep the two regexes identical.
+
+/** Matches one glued sentinel; capture group 1 = the source number. */
+export const CITATION_SENTINEL_RE = /⟦(\d{1,2})⟧/;
+
+/** Glue [n] markers to the preceding word: "claim [1]." → "claim⟦1⟧.". */
+export function glueCitations(text: string): string {
+  if (!text) return text;
+  let out = text;
+  let prev: string;
+  do {
+    prev = out;
+    out = out.replace(/(\S)[ \t]*\[(\d{1,2})\]/g, '$1⟦$2⟧');
+  } while (out !== prev); // loop handles adjacent markers "[1][2]"
+  return out;
+}
+
+/**
+ * Positional marker targets: marker [n] → result[n-1]. Holes (undefined) are
+ * preserved for unknown slugs so numbering never shifts; the renderer shows
+ * out-of-range / unresolvable markers as literal text.
+ */
+export function citationTargets(
+  slugs: string[] | undefined,
+  articles: Article[],
+): (Article | undefined)[] {
+  if (!slugs || slugs.length === 0) return [];
+  const bySlug = new Map(articles.map((a) => [articleSlug(a.url), a]));
+  return slugs.map((s) => bySlug.get(s));
 }
 
 export type InlineToken = { type: 'text' | 'strong' | 'em'; value: string };

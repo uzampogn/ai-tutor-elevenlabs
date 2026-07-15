@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseAnswer, matchSources, parseInline, parseBlocks, resolveSources, articleSlug } from './parseAnswer';
+import { parseAnswer, matchSources, parseInline, parseBlocks, resolveSources, articleSlug, glueCitations, citationTargets } from './parseAnswer';
 import type { Article } from './scraper';
 
 const article = (over: Partial<Article> = {}): Article => ({
@@ -194,5 +194,35 @@ describe('resolveSources', () => {
     const answer = 'As covered in Title b, ...';
     expect(resolveSources(undefined, answer, articles).map((a) => a.title)).toEqual(['Title b']);
     expect(resolveSources(['ghost'], answer, articles).map((a) => a.title)).toEqual(['Title b']);
+  });
+});
+
+describe('glueCitations', () => {
+  it('glues a marker to the preceding word, eating the space', () => {
+    expect(glueCitations('A claim [1]. Next.')).toBe('A claim⟦1⟧. Next.');
+  });
+  it('handles adjacent markers', () => {
+    expect(glueCitations('Fast [1][2]. Done.')).toBe('Fast⟦1⟧⟦2⟧. Done.');
+  });
+  it('leaves a start-of-line marker as literal text', () => {
+    expect(glueCitations('[1] leads the line')).toBe('[1] leads the line');
+  });
+  it('ignores 3+ digit brackets and non-numeric brackets', () => {
+    expect(glueCitations('see [123] and [note]')).toBe('see [123] and [note]');
+  });
+});
+
+describe('citationTargets', () => {
+  const art = (slug: string): Article => ({
+    title: `Title ${slug}`, url: `https://claude.com/blog/${slug}`, pubDate: '',
+    description: '', body: '', summary: '', heroImage: '',
+  });
+  it('maps positionally and preserves holes for unknown slugs', () => {
+    const out = citationTargets(['ghost', 'b'], [art('a'), art('b')]);
+    expect(out[0]).toBeUndefined();
+    expect(out[1]?.title).toBe('Title b'); // [2] still points at source 2
+  });
+  it('returns [] without slugs', () => {
+    expect(citationTargets(undefined, [art('a')])).toEqual([]);
   });
 });
