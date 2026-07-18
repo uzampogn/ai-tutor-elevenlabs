@@ -150,6 +150,45 @@ describe('parseBlocks', () => {
   });
 });
 
+describe('parseBlocks extensions (Spec 09)', () => {
+  it('extracts fenced code (fences may contain blank lines)', () => {
+    const blocks = parseBlocks('Intro:\n\n```js\nconst a = 1;\n\nconst b = 2;\n```\n\nAfter.');
+    expect(blocks).toEqual([
+      { type: 'paragraph', text: 'Intro:' },
+      { type: 'code', raw: 'const a = 1;\n\nconst b = 2;' },
+      { type: 'paragraph', text: 'After.' },
+    ]);
+  });
+
+  it('treats an unterminated fence tail as an open code block', () => {
+    const blocks = parseBlocks('Text.\n\n```py\nprint(1)');
+    expect(blocks[1]).toEqual({ type: 'code', raw: 'print(1)' });
+  });
+
+  it('recognizes indented and + bullets', () => {
+    const blocks = parseBlocks('- top\n  - nested\n+ plus');
+    expect(blocks).toEqual([{ type: 'ul', items: ['top', 'nested', 'plus'] }]);
+  });
+
+  it('recognizes indented ordered items', () => {
+    expect(parseBlocks('1. one\n  2. two')).toEqual([{ type: 'ol', items: ['one', 'two'] }]);
+  });
+
+  it('strips blockquote markers into the paragraph', () => {
+    expect(parseBlocks('> quoted line\n> second')).toEqual([
+      { type: 'paragraph', text: 'quoted line\nsecond' },
+    ]);
+  });
+
+  it('drops horizontal rules and lifts image-only lines', () => {
+    expect(parseBlocks('Before.\n\n---\n\n![diagram](https://x/y.png)\n\nAfter.')).toEqual([
+      { type: 'paragraph', text: 'Before.' },
+      { type: 'image', alt: 'diagram' },
+      { type: 'paragraph', text: 'After.' },
+    ]);
+  });
+});
+
 describe('parseInline', () => {
   it('parses bold', () => {
     const toks = parseInline('hello **world**');
