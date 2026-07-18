@@ -1,0 +1,746 @@
+[
+  {
+    "id": "1y061st",
+    "question": "How does CursorBench's approach to evaluation differ from traditional benchmarks, and why does it better predict real developer experience?",
+    "expectedSlugs": [
+      "working-at-the-frontier-cursor"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "1ermaxt",
+    "question": "What specifically changed in Claude Fable 5's reasoning that allows it to plan multi-step solutions like orbital missions instead of repeated trial-and-error?",
+    "expectedSlugs": [
+      "working-at-the-frontier-cursor"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "fou3k5",
+    "question": "How should teams decide when to use Fable 5 versus cheaper models for different tasks, and what is the cost-to-capability tradeoff?",
+    "expectedSlugs": [
+      "working-at-the-frontier-cursor"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "k9hfyg",
+    "question": "What are the four core questions Anthropic uses to assess agentic AI risk, and why is answering them better than simply saying no to agent deployments?",
+    "expectedSlugs": [
+      "ciso-guide-to-agentic-ai"
+    ],
+    "kind": "single",
+    "curated": true
+  },
+  {
+    "id": "7e64h8",
+    "question": "Why is ambiguous accountability in the middle of the identity spectrum (delegated identities) especially dangerous for agent security, and how does Anthropic avoid it?",
+    "expectedSlugs": [
+      "ciso-guide-to-agentic-ai"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "1j3gjy0",
+    "question": "How did Anthropic's incident response agent spontaneously attempt to fix production code, and what does this emergent behavior teach about designing agent controls?",
+    "expectedSlugs": [
+      "ciso-guide-to-agentic-ai"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "kp7f6l",
+    "question": "How exactly does the rulebook-based translation differ from naive line-by-line code conversion, and what kinds of gaps does the rulebook help address?",
+    "expectedSlugs": [
+      "ai-code-migration"
+    ],
+    "kind": "single",
+    "curated": true
+  },
+  {
+    "id": "zyssw7",
+    "question": "Why did Jarred ban the compiler from the review loop while Mike ran it continuously, and how does this choice affect the overall migration timeline?",
+    "expectedSlugs": [
+      "ai-code-migration"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "uwymlj",
+    "question": "What would cause a migration to fail at the adversarial review stage, and how do reviewers catching repeated mistakes change the rulebook rather than individual files?",
+    "expectedSlugs": [
+      "ai-code-migration"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "l31njz",
+    "question": "What specific types of multi-step work would benefit most from Claude Fable 5 over earlier models?",
+    "expectedSlugs": [
+      "working-with-claude-fable-5-in-claude-cowork"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "jya0r6",
+    "question": "How does the effort setting trade off between cost and quality, and when should you choose lower effort over higher effort?",
+    "expectedSlugs": [
+      "working-with-claude-fable-5-in-claude-cowork"
+    ],
+    "kind": "single",
+    "curated": true
+  },
+  {
+    "id": "s6n33z",
+    "question": "What safeguards does Claude Fable 5 have, and how might they affect legitimate business use cases?",
+    "expectedSlugs": [
+      "working-with-claude-fable-5-in-claude-cowork"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "qyjgn5",
+    "question": "What specific reasoning approach does Claude Fable 5 use that makes it search for solutions elsewhere in the codebase instead of getting stuck on individual errors?",
+    "expectedSlugs": [
+      "working-at-the-frontier-why-base44-trusts-claude-fable-5-with-their-most-challenging-engineering-work"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "15cumr6",
+    "question": "How does Base44 measure whether the 90-95% output from Claude Fable 5 is production-ready, and what do humans need to review before shipping?",
+    "expectedSlugs": [
+      "working-at-the-frontier-why-base44-trusts-claude-fable-5-with-their-most-challenging-engineering-work"
+    ],
+    "kind": "single",
+    "curated": true
+  },
+  {
+    "id": "e7tw0e",
+    "question": "Could this capability to delegate complex engineering work to AI create risks if teams lose touch with how their core systems actually work?",
+    "expectedSlugs": [
+      "working-at-the-frontier-why-base44-trusts-claude-fable-5-with-their-most-challenging-engineering-work"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "11iacpu",
+    "question": "How does Hebbia's finance-specific benchmark differ from general AI benchmarks, and why is domain-specific evaluation critical for financial applications?",
+    "expectedSlugs": [
+      "working-at-the-frontier-how-hebbia-builds-ai-for-financial-diligence-that-cant-miss-a-detail"
+    ],
+    "kind": "single",
+    "curated": true
+  },
+  {
+    "id": "ighafp",
+    "question": "What specific document types or analysis tasks remain challenging for Claude models despite the Fable 5 improvements?",
+    "expectedSlugs": [
+      "working-at-the-frontier-how-hebbia-builds-ai-for-financial-diligence-that-cant-miss-a-detail"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "17cg0qa",
+    "question": "How does decomposing work into smaller agentic steps maintain compliance and auditability compared to a single end-to-end model run?",
+    "expectedSlugs": [
+      "working-at-the-frontier-how-hebbia-builds-ai-for-financial-diligence-that-cant-miss-a-detail"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "fa41i3",
+    "question": "What specific improvements in Claude Fable 5's architecture allow it to maintain context and focus for 8+ hours compared to earlier models that drifted after minutes?",
+    "expectedSlugs": [
+      "working-at-the-frontier-how-cognition-trusts-claude-fable-5-to-work-through-the-night"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "jjf8gq",
+    "question": "How does Cognition's Frontier Code benchmark differ from standard coding benchmarks, and why does it better predict real-world reliability?",
+    "expectedSlugs": [
+      "working-at-the-frontier-how-cognition-trusts-claude-fable-5-to-work-through-the-night"
+    ],
+    "kind": "single",
+    "curated": true
+  },
+  {
+    "id": "72bhc9",
+    "question": "What are the potential risks or failure modes when deploying unsupervised AI agents to make autonomous code changes in production systems?",
+    "expectedSlugs": [
+      "working-at-the-frontier-how-cognition-trusts-claude-fable-5-to-work-through-the-night"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "hqxuhu",
+    "question": "What specific evaluation criteria distinguish a professional-grade AI system from a general-purpose chatbot in high-stakes fields?",
+    "expectedSlugs": [
+      "working-at-the-frontier-how-thomson-reuters-builds-ai-for-high--stakes-professional-work"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "156c9bp",
+    "question": "How does building agents that orchestrate multiple tools change the skills engineers need and the way products deliver value?",
+    "expectedSlugs": [
+      "working-at-the-frontier-how-thomson-reuters-builds-ai-for-high--stakes-professional-work"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "1yl1yyw",
+    "question": "Why does Thomson Reuters prioritize citation validation and human-in-the-loop design over fully automated AI answers?",
+    "expectedSlugs": [
+      "working-at-the-frontier-how-thomson-reuters-builds-ai-for-high--stakes-professional-work"
+    ],
+    "kind": "single",
+    "curated": true
+  },
+  {
+    "id": "1fshski",
+    "question": "How does Claude validate that data from different marketing platforms matches before surfacing it in reports?",
+    "expectedSlugs": [
+      "how-anthropics-marketing-operations-team-uses-claude-cowork-to-automate-reporting-and-campaign-builds"
+    ],
+    "kind": "single",
+    "curated": true
+  },
+  {
+    "id": "1ahbuh8",
+    "question": "What happens when the event build workflow encounters an edge case or integration that Annabel hasn't trained it on yet?",
+    "expectedSlugs": [
+      "how-anthropics-marketing-operations-team-uses-claude-cowork-to-automate-reporting-and-campaign-builds"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "1tfpb5o",
+    "question": "How do marketers know when to trust Claude's automated campaign setups versus when to manually review work before it goes live?",
+    "expectedSlugs": [
+      "how-anthropics-marketing-operations-team-uses-claude-cowork-to-automate-reporting-and-campaign-builds"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "182jks",
+    "question": "How does storing conversation history locally on agency-managed devices rather than in the cloud affect the security and auditability of government AI use?",
+    "expectedSlugs": [
+      "bringing-claude-code-and-claude-cowork-to-government"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "1iafxf2",
+    "question": "What specific types of government workflows are most likely to benefit from Claude Code versus Claude Cowork, and how do agencies decide which tool to deploy first?",
+    "expectedSlugs": [
+      "bringing-claude-code-and-claude-cowork-to-government"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "1lhv8oi",
+    "question": "How do the fixed spending increment caps and burndown alerts help agencies manage AI costs under federal budget constraints?",
+    "expectedSlugs": [
+      "bringing-claude-code-and-claude-cowork-to-government"
+    ],
+    "kind": "single",
+    "curated": true
+  },
+  {
+    "id": "lpcjkt",
+    "question": "Why doesn't increasing effort level make Claude artificially overthink simple tasks, and how does it avoid wasting tokens?",
+    "expectedSlugs": [
+      "claude-model-and-effort-level-in-claude-code"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "11olvnt",
+    "question": "When should you pick Claude Opus over Sonnet if both can technically complete a task, and how do their token economics differ?",
+    "expectedSlugs": [
+      "claude-model-and-effort-level-in-claude-code"
+    ],
+    "kind": "single",
+    "curated": true
+  },
+  {
+    "id": "y4amzd",
+    "question": "What's the difference between a hallucination (confident wrong answer) and a genuinely missing piece of knowledge, and how does that distinction guide whether to upgrade the model or increase effort?",
+    "expectedSlugs": [
+      "claude-model-and-effort-level-in-claude-code"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "s2drv",
+    "question": "How does Claude handle tasks that require real-time decision-making when the user is offline and unreachable?",
+    "expectedSlugs": [
+      "cowork-web-mobile"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "1ork4em",
+    "question": "What security and privacy controls prevent unauthorized access to connected files, emails, and calendars when tasks run in the background?",
+    "expectedSlugs": [
+      "cowork-web-mobile"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "d5ufd1",
+    "question": "How much do Cowork usage limits cost after the August 5th promotional period ends?",
+    "expectedSlugs": [
+      "cowork-web-mobile"
+    ],
+    "kind": "single",
+    "curated": true
+  },
+  {
+    "id": "76coqi",
+    "question": "Why do the top two usage categories—business operations and content creation—together represent roughly half of all Claude Cowork sessions?",
+    "expectedSlugs": [
+      "how-people-are-using-claude-cowork"
+    ],
+    "kind": "single",
+    "curated": true
+  },
+  {
+    "id": "1h50pbv",
+    "question": "How does the way developers use Claude Cowork differ from how they use Claude Code, and what does this reveal about AI's role in different types of work?",
+    "expectedSlugs": [
+      "how-people-are-using-claude-cowork"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "dho4o4",
+    "question": "If a lawyer uses Claude Cowork to handle document formatting to free up time for legal judgment, what similar 'work around the work' task could a software engineer delegate?",
+    "expectedSlugs": [
+      "how-people-are-using-claude-cowork"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "lmh5ib",
+    "question": "What are the four ways the author breaks down problems to identify unknowns before coding starts?",
+    "expectedSlugs": [
+      "a-field-guide-to-claude-fable-finding-your-unknowns"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "1o8ty0c",
+    "question": "Why does asking Claude to create implementation plans before starting a fresh session produce better results than jumping straight into coding?",
+    "expectedSlugs": [
+      "a-field-guide-to-claude-fable-finding-your-unknowns"
+    ],
+    "kind": "single",
+    "curated": true
+  },
+  {
+    "id": "1pmc9gj",
+    "question": "How does the author discover unknowns about things they cannot clearly articulate, like visual design preferences?",
+    "expectedSlugs": [
+      "a-field-guide-to-claude-fable-finding-your-unknowns"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "185xtps",
+    "question": "How do model defaults help reduce costs when admins set cheaper models as defaults for routine tasks?",
+    "expectedSlugs": [
+      "giving-admins-more-visibility-and-control-over-claude-usage-and-spend"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "1pylqai",
+    "question": "Can individual teams or departments have different spend limits and model access permissions?",
+    "expectedSlugs": [
+      "giving-admins-more-visibility-and-control-over-claude-usage-and-spend"
+    ],
+    "kind": "single",
+    "curated": true
+  },
+  {
+    "id": "5zaj60",
+    "question": "How does the Analytics API help connect Claude spend data to existing cloud cost management platforms?",
+    "expectedSlugs": [
+      "giving-admins-more-visibility-and-control-over-claude-usage-and-spend"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "1dg4ye8",
+    "question": "How does Claude Code automatically populate artifact data from connected monitoring and code tools without manual setup?",
+    "expectedSlugs": [
+      "artifacts-in-claude-code"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "18rpv7x",
+    "question": "What happens to artifact version history if I need to rollback changes or compare earlier investigations?",
+    "expectedSlugs": [
+      "artifacts-in-claude-code"
+    ],
+    "kind": "single",
+    "curated": true
+  },
+  {
+    "id": "1f2476j",
+    "question": "Can non-technical stakeholders view and interact with artifacts, or are they limited to engineers on my team?",
+    "expectedSlugs": [
+      "artifacts-in-claude-code"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "83ijn3",
+    "question": "How does the Foundation Models framework decide when to use on-device models versus Claude for a given task?",
+    "expectedSlugs": [
+      "claude-for-foundation-models"
+    ],
+    "kind": "single",
+    "curated": true
+  },
+  {
+    "id": "1xnyzvh",
+    "question": "What are the latency and cost implications of routing requests between on-device processing and Claude API calls?",
+    "expectedSlugs": [
+      "claude-for-foundation-models"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "54yzzf",
+    "question": "Can developers use Claude's tool use and web search capabilities through this Swift package, and how are results streamed back to SwiftUI views?",
+    "expectedSlugs": [
+      "claude-for-foundation-models"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "28q138",
+    "question": "What specific security benefits does keeping tool execution in a self-hosted sandbox provide compared to fully cloud-based agent execution?",
+    "expectedSlugs": [
+      "claude-managed-agents-updates"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "1e2p4sd",
+    "question": "How does the MCP tunnel approach prevent exposing private services to the public internet while still allowing agent access?",
+    "expectedSlugs": [
+      "claude-managed-agents-updates"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "fwwfsr",
+    "question": "Which use cases benefit most from self-hosted sandboxes versus traditional Claude API integration?",
+    "expectedSlugs": [
+      "claude-managed-agents-updates"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "q01ohi",
+    "question": "How does dreaming prevent agents from repeating the same mistakes if they don't have full visibility into all past agent interactions?",
+    "expectedSlugs": [
+      "new-in-claude-managed-agents"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "nvecu8",
+    "question": "Can outcomes work for subjective tasks where there's legitimate disagreement about what constitutes success?",
+    "expectedSlugs": [
+      "new-in-claude-managed-agents"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "ut8j3p",
+    "question": "What happens if specialist agents in multiagent orchestration get stuck or disagree on how to interpret the lead agent's delegation?",
+    "expectedSlugs": [
+      "new-in-claude-managed-agents"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "1xc6xt3",
+    "question": "How does Claude decide which connector to suggest when multiple apps could help answer a question?",
+    "expectedSlugs": [
+      "connectors-for-everyday-life"
+    ],
+    "kind": "single",
+    "curated": true
+  },
+  {
+    "id": "1ty7uqo",
+    "question": "What happens if you disconnect a service after Claude has already accessed data through it?",
+    "expectedSlugs": [
+      "connectors-for-everyday-life"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "1c6y15o",
+    "question": "Can you use connectors across all Claude subscription plans, or are some limited to paid tiers?",
+    "expectedSlugs": [
+      "connectors-for-everyday-life"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "c55h3j",
+    "question": "How does filesystem-based memory for agents differ from traditional vector database approaches, and why is that better for agentic tasks?",
+    "expectedSlugs": [
+      "claude-managed-agents-memory"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "7rafbe",
+    "question": "Can multiple agents share the same memory store with different permission levels, and how does that prevent conflicts when agents write simultaneously?",
+    "expectedSlugs": [
+      "claude-managed-agents-memory"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "1vg4t1h",
+    "question": "What specific types of agent learnings are most valuable to persist across sessions, and how do developers decide what to keep versus discard?",
+    "expectedSlugs": [
+      "claude-managed-agents-memory"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "13git59",
+    "question": "How does the side chat feature prevent Claude from getting confused when you ask mid-task questions about one project while working on another?",
+    "expectedSlugs": [
+      "claude-code-desktop-redesign"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "1rq2nkd",
+    "question": "What performance improvements were made under the hood, and does streaming responses as they generate really make a noticeable difference in a multi-session workflow?",
+    "expectedSlugs": [
+      "claude-code-desktop-redesign"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "1673scy",
+    "question": "Can you explain what the three view modes (Verbose, Normal, Summary) show, and when would a developer choose each one?",
+    "expectedSlugs": [
+      "claude-code-desktop-redesign"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "a2dtcs",
+    "question": "Why does reversing a patch into an exploit play to AI models' strengths better than other attack vectors?",
+    "expectedSlugs": [
+      "preparing-your-security-program-for-ai-accelerated-offense"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "1nph7w6",
+    "question": "What is the relationship between SLSA attestations and supply chain security in this context?",
+    "expectedSlugs": [
+      "preparing-your-security-program-for-ai-accelerated-offense"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "husdwv",
+    "question": "How should teams prioritize between implementing zero-trust architecture versus deploying AI-assisted code scanning first?",
+    "expectedSlugs": [
+      "preparing-your-security-program-for-ai-accelerated-offense"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "fwx7uz",
+    "question": "What specific infrastructure components does Managed Agents handle that previously required months of custom development?",
+    "expectedSlugs": [
+      "claude-managed-agents"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "114dzdr",
+    "question": "How does the self-evaluation and iteration capability work, and what types of tasks see the biggest improvement in success rates?",
+    "expectedSlugs": [
+      "claude-managed-agents"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "nv1aoy",
+    "question": "What does the pricing model of $0.08 per session-hour mean in practice for different agent use cases?",
+    "expectedSlugs": [
+      "claude-managed-agents"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "iuk8um",
+    "question": "Why does giving Claude a bash tool lead to better agentic performance than designing specialized tools for each task?",
+    "expectedSlugs": [
+      "harnessing-claudes-intelligence"
+    ],
+    "kind": "single",
+    "curated": true
+  },
+  {
+    "id": "17j5y2f",
+    "question": "How does prompt caching with breakpoints help maximize cost efficiency in agent harnesses?",
+    "expectedSlugs": [
+      "harnessing-claudes-intelligence"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "1ix5ec8",
+    "question": "What are concrete examples of assumptions built into agent harnesses that became unnecessary as Claude improved?",
+    "expectedSlugs": [
+      "harnessing-claudes-intelligence"
+    ],
+    "kind": "single",
+    "curated": false
+  },
+  {
+    "id": "8mlgig",
+    "question": "How do Base44 and Cognition each describe the reliability gains they get from Claude Fable 5 on long-running engineering work?",
+    "expectedSlugs": [
+      "working-at-the-frontier-why-base44-trusts-claude-fable-5-with-their-most-challenging-engineering-work",
+      "working-at-the-frontier-how-cognition-trusts-claude-fable-5-to-work-through-the-night"
+    ],
+    "kind": "multi",
+    "curated": true
+  },
+  {
+    "id": "ytx7uf",
+    "question": "How does choosing the right model and effort level to balance cost against quality work in Claude Code compared with Claude Cowork?",
+    "expectedSlugs": [
+      "claude-model-and-effort-level-in-claude-code",
+      "working-with-claude-fable-5-in-claude-cowork"
+    ],
+    "kind": "multi",
+    "curated": true
+  },
+  {
+    "id": "ta1m60",
+    "question": "Across Claude Managed Agents' launch and later updates, how did memory and self-hosted sandbox capabilities expand what agents can do?",
+    "expectedSlugs": [
+      "claude-managed-agents",
+      "claude-managed-agents-memory",
+      "claude-managed-agents-updates"
+    ],
+    "kind": "multi",
+    "curated": true
+  },
+  {
+    "id": "3tsqul",
+    "question": "What do Anthropic's security guides recommend for defending against AI-accelerated offensive attacks and for governing agentic AI risk?",
+    "expectedSlugs": [
+      "ciso-guide-to-agentic-ai",
+      "preparing-your-security-program-for-ai-accelerated-offense"
+    ],
+    "kind": "multi",
+    "curated": true
+  },
+  {
+    "id": "qrp3w0",
+    "question": "What's a good recipe for homemade pasta from scratch?",
+    "expectedSlugs": [],
+    "kind": "offtopic",
+    "curated": true
+  },
+  {
+    "id": "1s7d3ar",
+    "question": "Who won the 2022 FIFA World Cup?",
+    "expectedSlugs": [],
+    "kind": "offtopic",
+    "curated": true
+  },
+  {
+    "id": "1s9hv0i",
+    "question": "How do I file my personal income taxes in Germany?",
+    "expectedSlugs": [],
+    "kind": "offtopic",
+    "curated": true
+  },
+  {
+    "id": "6ztya",
+    "question": "What's the best way to train for my first marathon?",
+    "expectedSlugs": [],
+    "kind": "offtopic",
+    "curated": true
+  }
+]

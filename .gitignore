@@ -16,6 +16,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Eval harness: dataset.json + baseline.json are committed; last-run is not
+eval/last-run.json
+
 # Playwright MCP debug artifacts
 .playwright-mcp/
 

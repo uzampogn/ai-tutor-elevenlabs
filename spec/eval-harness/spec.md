@@ -106,6 +106,11 @@ Prompt-assembly logic moves out of `route.ts`:
 - Hand-curation pass (human): fix labels, prune weak questions, add **multi-source** questions (expected slugs spanning ≥2 articles) and **off-topic/adversarial** questions (expected: empty retrieval). Target 20–30 items, each `"curated": true`.
 - `eval:push` — uploads curated items to a Langfuse dataset (name: `rag-golden`, item metadata carries `kind: single | multi | offtopic`). Re-push upserts by question hash.
 - Item shape: `{ input: { question }, expectedOutput: { slugs: string[] }, metadata: { kind, curated } }`.
+- Implementation notes (Task 5):
+  - `eval:push` only sends `metadata: { kind }` (not `curated`) to Langfuse — every pushed item is curated by definition, so the flag carries no signal in the remote dataset. `curated` stays local in `eval/dataset.json` as the push filter. Deviation from the item-shape line above, recorded here per the harness precedence rule.
+  - Dataset creation uses `langfuse.api.datasets.create` (idempotent server-side) wrapped in try/catch; items upsert on their stable `questionId` (`api` datasets `create` returns success even when the dataset already exists, so a re-push neither errors nor duplicates — verified: count stayed 26 across two pushes).
+  - `seedDataset.ts` dedupes candidates **within the batch** (first id wins) before `mergeCandidates`, closing the Task-4 gap where `mergeCandidates` dedupes only against existing items — two articles yielding the same normalized question would otherwise append one id twice.
+  - **Runtime constraint:** `eval:seed` must run on a Node runtime whose `fetch` the pinned `@anthropic-ai/sdk@0.40.1` uses natively. Under Node 24 the SDK falls back to its bundled `node-fetch@2`, whose gzip stream aborts every request with `ERR_STREAM_PREMATURE_CLOSE`; Node 22 (native fetch) works. The seed and push runs for this task were executed on Node 22. `eval:push` (`@langfuse/client`) is unaffected but was run on Node 22 for consistency.
 
 ### 4. Eval runner — `scripts/eval/run.ts` (`npm run eval`)
 
