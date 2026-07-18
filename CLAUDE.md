@@ -35,6 +35,7 @@ Requires **Node 24+** (impeccable's CLI requires `>=24`). Pinned via `.nvmrc` �
 
 - **Don't run `next build` while `next dev` is live** — they share `.next/`; the prod build corrupts the dev runtime (HTTP 500, `MODULE_NOT_FOUND`). Stop dev first.
 - **Subagent dev → use a git worktree.** This repo shares one working tree across many active branches; isolate subagent work in a worktree with hard git rules.
+- **All worktrees live under `/Users/vkau/Personal-space/Projects/` named `ai-tutor-wt-<feature>`** — create them there, nowhere else.
 
 ## Design — Impeccable
 
