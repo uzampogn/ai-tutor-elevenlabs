@@ -109,19 +109,55 @@ describe('useVoiceInput', () => {
   it.each(['rate_limited', 'socket'] as const)(
     '%s before any speech falls back this turn only and retries scribe next turn',
     (kind) => {
-      const { hook } = setup();
-      act(() => hook().toggle());
-      scribeError(kind);
-      // seamless same-turn continuation on web speech
-      expect(webToggle).toHaveBeenCalledTimes(1);
-      expect(hook().engine).toBe('scribe'); // session engine unchanged
-      expect(scribeOpts!.active).toBe(true);
-      // a NEW turn tries scribe again
-      act(() => hook().toggle()); // (stops the webspeech turn)
-      act(() => hook().toggle());
-      expect(scribeToggle).toHaveBeenCalledTimes(2);
+      vi.useFakeTimers();
+      try {
+        const { hook } = setup();
+        act(() => hook().toggle());
+        scribeError(kind);
+        // The fallback start is deferred one macrotask (so React can flush the
+        // batched setListening(false) first); flush it to observe the handover.
+        act(() => vi.runAllTimers());
+        // seamless same-turn continuation on web speech
+        expect(webToggle).toHaveBeenCalledTimes(1);
+        expect(hook().engine).toBe('scribe'); // session engine unchanged
+        expect(scribeOpts!.active).toBe(true);
+        // a NEW turn tries scribe again
+        act(() => hook().toggle()); // (stops the webspeech turn)
+        act(() => hook().toggle());
+        expect(scribeToggle).toHaveBeenCalledTimes(2);
+      } finally {
+        vi.useRealTimers();
+      }
     },
   );
+
+  it('starts Web Speech after a turn-scoped error that already opened the Scribe session', () => {
+    // Regression: a turn that reached SESSION_STARTED (listening=true) then hit a
+    // turn-scoped failure must still hand off to Web Speech. The naive
+    // synchronous webSpeech.toggle() saw the stale listening=true and stopped
+    // instead of starting, silently losing the turn.
+    vi.useFakeTimers();
+    try {
+      const { hook } = setup();
+      act(() => hook().toggle()); // start on scribe
+      // SESSION_STARTED: Scribe flips listening true (its own render commits).
+      act(() => scribeOpts!.setListening(true));
+      // Same tick as the failure: teardown sets listening false (batched, not
+      // yet re-rendered) and onTurnError fires synchronously with the stale
+      // listening=true render still in scope.
+      act(() => {
+        scribeOpts!.setListening(false);
+        scribeOpts!.onTurnError({ kind: 'socket', partial: '' });
+      });
+      // Deferred, so nothing has toggled yet.
+      expect(webToggle).not.toHaveBeenCalled();
+      act(() => vi.runAllTimers()); // React has flushed listening=false; now start
+      expect(webToggle).toHaveBeenCalledTimes(1);
+      expect(webOpts!.listening).toBe(true); // Web Speech actually took over
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 
   it('error with partial text stops the turn but does NOT auto-restart an engine', () => {
     const { props, hook } = setup();

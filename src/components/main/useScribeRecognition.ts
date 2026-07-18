@@ -152,8 +152,11 @@ export function useScribeRecognition({
       if (!isCurrent()) return;
       const text = (msg as { text: string }).text.trim();
       teardown();
-      // Empty commit (VAD fired on noise): the turn just ends, nothing sent —
-      // parity with the old timer firing on an empty transcript.
+      // Empty commit (server VAD committed a silent/noise turn): end the turn
+      // silently, nothing sent. This is a deliberate divergence from the old
+      // engine, whose silence timer firing on an empty transcript kept listening
+      // (see useSpeechRecognition commit(cancelIfEmpty=false)); here server-side
+      // VAD owns the turn boundary, so an empty commit ends it.
       if (text) cb.current.onFinal(text);
     });
 
