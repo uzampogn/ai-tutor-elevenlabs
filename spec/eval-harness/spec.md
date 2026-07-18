@@ -93,8 +93,8 @@ Prompt-assembly logic moves out of `route.ts`:
 ### 2. Langfuse client + prod tracing — `src/lib/langfuse.ts`
 
 - Singleton following the `embeddings.ts` degradation pattern: `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_BASE_URL` unset → client is a silent no-op; app behavior identical to today.
-- Chat route: one trace per request. Spans: **retrieval** (input: question; output: slugs + similarities; metadata: `K`, `SIM_FLOOR`) and **generation** (model, token usage incl. cache read/write, latency). Trace output: final answer text + `X-Sources` slugs.
-- Serverless flush: events flushed via `after()` (Next.js) so responses are never delayed; tracing errors are caught and logged, never thrown into the chat path.
+- Chat route: one trace per request (root observation **chat**). Child observations: **retrieval** (typed `retriever` per Langfuse's "most specific observation type" best practice — input: question; output: slugs + similarities; metadata: `K`, `SIM_FLOOR`) and **generation** (typed `generation` — model, token usage incl. cache read, full answer text). Trace output: final answer text + source slugs. Observation names `chat` / `retrieval` / `generation` are load-bearing (the managed evaluator filters on them).
+- Serverless flush: Next 14 has no stable `after()` — events flush in the stream's `finally` (the function is still alive while the stream is open), so responses are never delayed; tracing errors are caught and logged, never thrown into the chat path.
 
 ### 3. Golden dataset — `scripts/eval/` + `eval/dataset.json`
 
