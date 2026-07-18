@@ -10,6 +10,7 @@
     "test": "vitest",
     "test:run": "vitest run",
     "typecheck": "tsc --noEmit",
+    "eval": "tsx --env-file-if-exists=.env.local scripts/eval/run.ts",
     "eval:seed": "tsx --env-file-if-exists=.env.local scripts/eval/seedDataset.ts",
     "eval:push": "tsx --env-file-if-exists=.env.local scripts/eval/pushDataset.ts"
   },
