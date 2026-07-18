@@ -59,7 +59,7 @@ async function main() {
     name: 'rag-quality',
     runName,
     description: `spec/eval-harness offline run @ ${sha}`,
-    maxConcurrency: 3, // gentle on Voyage + Anthropic + pooler (reads only)
+    maxConcurrency: 1, // serialized: Voyage free-tier is 3 RPM — per-item gen+judge pacing keeps embeds under the limit
     metadata: { chatModel: CHAT_MODEL, sha },
     task: async (item): Promise<TaskOutput> => {
       const question = (item.input as { question: string }).question;
