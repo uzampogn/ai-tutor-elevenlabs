@@ -36,6 +36,11 @@ RAG retrieval + inline citations (#2) is landing. Its quality knobs (`RETRIEVAL_
 
 Two consumers (the production route and the offline eval runner) share one extracted pipeline; both report into Langfuse, which is where quality becomes visible.
 
+![Eval harness architecture: production path and offline eval path sharing answerPipeline.ts, both reporting into Langfuse](eval-architecture.svg)
+
+<details>
+<summary>Diagram source (Mermaid)</summary>
+
 ```mermaid
 flowchart TB
     subgraph PROD["Production path — every real chat turn"]
@@ -72,6 +77,8 @@ flowchart TB
     RUN -->|"trace + scores per item"| EXP
 ```
 
+</details>
+
 Reading guide: the **production path** (top-left) only gains tracing — behavior is unchanged. The **eval path** replays curated questions through the *same* shared pipeline, so a score regression can only come from a real code/prompt/data change, never from eval-only drift. Langfuse holds all four artifacts: the golden dataset, prod traces (sampled and auto-scored by the managed evaluator), and offline experiment runs with their scores.
 
 ### 1. Pipeline extraction — `src/lib/answerPipeline.ts`
@@ -102,6 +109,11 @@ Per item: fetch from Langfuse dataset → `prepareAnswerContext` → generation 
 
 Life of one eval item:
 
+![Sequence diagram: one eval item flowing through retrieval, generation, deterministic metrics, LLM judge, and Langfuse scoring](eval-sequence.svg)
+
+<details>
+<summary>Diagram source (Mermaid)</summary>
+
 ```mermaid
 sequenceDiagram
     participant R as run.ts (runner)
@@ -128,6 +140,8 @@ sequenceDiagram
     Note over R: aggregate metrics, diff vs eval/baseline.json
     R-->>R: print diff table, exit 0 (ok) / 1 (regression)
 ```
+
+</details>
 
 **Metric group 1 — retrieval (deterministic):** recall@3, precision@3, MRR vs `expectedOutput.slugs`. `offtopic` items invert: pass ⇔ retrieval returns empty (validates `SIM_FLOOR`).
 
