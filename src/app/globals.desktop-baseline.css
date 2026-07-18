@@ -381,6 +381,7 @@ button { font-family: inherit; cursor: pointer; }
 }
 .impact-text strong { color: var(--ink); font-weight: 650; }
 .impact-text .ai-para { font-size: inherit; color: inherit; margin: 0; }
+.impact-text .ai-list { font-size: inherit; color: inherit; margin: 0; }
 
 /* sources */
 .sources { margin-top: 16px; }
