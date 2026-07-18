@@ -1,7 +1,7 @@
 'use client';
 
 import { MicIcon } from '../icons';
-import { useSpeechRecognition } from './useSpeechRecognition';
+import { useVoiceInput } from './useVoiceInput';
 
 interface MicBtnProps {
   /** Listening state owned by the shell (also drives the shared waveform). */
@@ -22,7 +22,7 @@ export default function MicBtn({
   onFinal,
   disabled = false,
 }: MicBtnProps) {
-  const { supported, toggle } = useSpeechRecognition({
+  const { supported, toggle } = useVoiceInput({
     listening,
     setListening,
     onInterim,
