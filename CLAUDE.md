@@ -6,6 +6,7 @@ Conversational agent that turns the latest [Claude blog](https://claude.com/blog
 
 - **Next.js 14** + **React 18** + **TypeScript 5**, **Tailwind CSS 3**
 - **@anthropic-ai/sdk** (explanations), **ElevenLabs** (TTS + timestamps), **Voyage AI** (embeddings for RAG retrieval → pgvector on Supabase; optional, off without `VOYAGE_API_KEY`)
+- **Langfuse** (tracing + evals; optional, off without `LANGFUSE_*` keys)
 - Tests: **Vitest** · Deployed on **Vercel**
 
 ## Layout
@@ -26,6 +27,8 @@ npm run lint        # next lint
 npm run typecheck   # tsc --noEmit
 npm run test:run    # vitest run
 ```
+
+`npm run eval` (live-API eval vs. the Langfuse `rag-golden` dataset) is **separate** from this gate — it spends real tokens and needs keys + a DB, so it's never part of `test:run`. Run it before merging changes that touch **retrieval, prompts, or citations** (see README → Evals & observability, `spec/eval-harness/`).
 
 ## Node
 

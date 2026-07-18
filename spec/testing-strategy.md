@@ -166,6 +166,41 @@ Run after all automated tests pass, against `npm run dev`:
 
 ---
 
+### 8. Eval Harness — Offline Modules (in-gate) + Live Run (out-of-gate)
+
+The Langfuse-backed eval harness (`spec/eval-harness/`) adds a second, orthogonal
+kind of testing: it scores answer **quality**, not UI structure. It splits cleanly
+across the gate boundary.
+
+**In the normal Vitest gate** — pure, offline, no network. These run as part of
+`npm run test:run` like any other unit test:
+
+| Target | What to assert |
+|--------|---------------|
+| `src/lib/eval/retrievalMetrics.ts` | recall/precision/MRR table cases; empty-expected; off-topic inversion; slug-order independence |
+| `src/lib/eval/citationMetrics.ts` | in-range/out-of-range markers; no-retrieval ⇒ no-marker; coverage ratio; glue/strip round-trip |
+| `src/lib/eval/judge.ts` | prompt builder includes question/excerpts/answer; strict-JSON parse; malformed JSON → one retry → failed item (SDK mocked) |
+| `src/lib/eval/baseline.ts` | tolerance edges (at / just below); improvement; metric absent from baseline; missing baseline file |
+| `src/lib/langfuse.ts` | keys unset ⇒ no-op (no network, no throw); trace helper swallows internal errors |
+| `src/lib/answerPipeline.ts` | system blocks byte-identical to the pre-extraction route assembly; constants exported |
+
+**NOT in the gate — `npm run eval` is a live-API experiment run.** It calls the
+real Anthropic API (generation + LLM judge) and reads Supabase pgvector, so it
+spends real tokens and needs `ANTHROPIC_API_KEY` + `DATABASE_URL` (and
+`LANGFUSE_*` to record the run). It is **never part of `npm run test:run`** — the
+Vitest suite stays fully offline. Run it manually before merging changes that
+touch retrieval, prompts, or citations. (It also wants **Node 22**, not 24 — see
+`spec/eval-harness/spec.md` §3.)
+
+**Baseline-gate semantics.** `eval/baseline.json` is committed. Each `npm run eval`
+prints a baseline-vs-current diff table and **exits non-zero** if any metric drops
+below `baseline − tolerance` (deterministic ≤0.02; judge dims 0.3). Re-blessing the
+baseline is a deliberate act: `npm run eval:accept` copies the latest run's
+aggregates into `eval/baseline.json` as a reviewable git diff — the baseline never
+moves silently. Managed-evaluator setup on prod traces: `spec/eval-harness/langfuse-setup.md`.
+
+---
+
 ## Green-Bar Definition of Done
 
 All of the following must be true before the cleanup is considered complete:
