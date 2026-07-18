@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Message, Article, ArticleDigest } from '@/lib/types';
 import { buildSpokenDoc } from '@/lib/readAlong/spokenDoc';
 import { buildTimings, type ReadAlongTimings } from '@/lib/readAlong/timingMap';
+import { driftCheck, type ChunkMeta } from '@/lib/readAlong/driftCheck';
 import Sidebar from './sidebar/Sidebar';
 import SidebarToggle from './sidebar/SidebarToggle';
 import Thread from './main/Thread';
@@ -32,6 +33,7 @@ interface SpeakAlignment {
 interface SpeakResult {
   audioBase64: string;
   alignment: SpeakAlignment;
+  chunkMeta?: ChunkMeta;
 }
 
 /** Decode base64 → Blob('audio/mpeg') → object URL for playback. */
@@ -199,9 +201,16 @@ export default function AppShell() {
           body: JSON.stringify({ text: spokenText }),
         });
         if (!res.ok) return;
-        const { audioBase64, alignment } = (await res.json()) as SpeakResult;
+        const { audioBase64, alignment, chunkMeta } = (await res.json()) as SpeakResult;
         const audio = new Audio(audioUrlFromBase64(audioBase64));
         audioRef.current = audio;
+        audio.addEventListener('loadedmetadata', () => {
+          const totalSec = alignment?.charEndTimesSec.length
+            ? Math.max(...alignment.charEndTimesSec)
+            : 0;
+          const { level, message } = driftCheck(audio.duration, totalSec, chunkMeta);
+          console[level](message);
+        }, { once: true });
         audio.onplay = () => {
           setSpeakingContent(content);
           setSpeakingAlignment(alignment);
@@ -321,9 +330,16 @@ export default function AppShell() {
           signal: controller.signal,
         });
         if (!res.ok) { setSpeakingContent(null); setSpeakingAlignment(null); setAudioEl(null); return; }
-        const { audioBase64, alignment } = (await res.json()) as SpeakResult;
+        const { audioBase64, alignment, chunkMeta } = (await res.json()) as SpeakResult;
         const audio = new Audio(audioUrlFromBase64(audioBase64));
         audioRef.current = audio;
+        audio.addEventListener('loadedmetadata', () => {
+          const totalSec = alignment?.charEndTimesSec.length
+            ? Math.max(...alignment.charEndTimesSec)
+            : 0;
+          const { level, message } = driftCheck(audio.duration, totalSec, chunkMeta);
+          console[level](message);
+        }, { once: true });
         audio.onplay = () => {
           setSpeakingContent(content);
           setSpeakingAlignment(alignment);
