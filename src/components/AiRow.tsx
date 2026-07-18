@@ -114,6 +114,11 @@ export default function AiRow({ content, streaming, articles, speaking, rowRef, 
               </ol>
             );
           }
+          if (block.type === 'code' || block.type === 'image') {
+            // TODO(spec-10): render code/image blocks. Parser support landed in
+            // spec 09; the block-overlay renderer is spec 10's scope.
+            return null;
+          }
           return (
             <p key={i} className="ai-para">
               <InlineMarkdown text={block.text} cursor={bodyCursor} />
