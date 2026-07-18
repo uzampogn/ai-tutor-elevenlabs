@@ -68,7 +68,9 @@ export function makeWordCursor(words: SpokenWord[]): WordCursor {
 // --- Emphasis overlay --------------------------------------------------------
 
 // Same precedence as parseInline: **bold**/__bold__ first, then *em*/_em_.
-const EMPHASIS_PATTERN = /(\*\*([^*]+?)\*\*)|(__([^_]+?)__)|(\*([^*]+?)\*)|(_([^_]+?)_)/g;
+// Flanking-aware: intra-word delimiters don't trigger emphasis (e.g., snake_case).
+const EMPHASIS_PATTERN =
+  /(\*\*(?!\s)([^*\n]*?\S)\*\*)|(?<!\w)(__(?!\s)([^_\n]*?\S)__)(?!\w)|(?<![\w*])(\*(?!\s)([^*\n]*?\S)\*)(?![\w*])|(?<!\w)(_(?!\s)([^_\n]*?\S)_)(?!\w)/g;
 
 /**
  * Build a per-character emphasis overlay aligned to spokenText.

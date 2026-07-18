@@ -214,3 +214,18 @@ describe('buildSpokenDoc — edge cases', () => {
     expect(doc.sentences.every((s) => s.region === 'body')).toBe(true);
   });
 });
+
+describe('emphasis overlay flanking (Spec 09)', () => {
+  it('does not tag snake_case as emphasis', () => {
+    const doc = buildSpokenDoc('The user_id maps to auth_token here.');
+    expect(doc.words.every((w) => w.emphasis === undefined)).toBe(true);
+    expect(doc.spokenText).toContain('user_id');
+  });
+
+  it('still tags real strong/em', () => {
+    const doc = buildSpokenDoc('a **bold** and _soft_ word');
+    const byText = (t: string) => doc.words.find((w) => w.text === t)!;
+    expect(byText('bold').emphasis).toBe('strong');
+    expect(byText('soft').emphasis).toBe('em');
+  });
+});
