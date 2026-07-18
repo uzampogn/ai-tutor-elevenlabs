@@ -13,7 +13,8 @@ export function scoreRetrieval(
   const expected = new Set(expectedSlugs);
   const hits = retrievedSlugs.filter((s) => expected.has(s));
 
-  const recall = expected.size === 0 ? 0 : hits.length / expected.size;
+  const distinctHits = new Set(hits).size;
+  const recall = expected.size === 0 ? 0 : distinctHits / expected.size;
   const precision = retrievedSlugs.length === 0 ? 0 : hits.length / retrievedSlugs.length;
   const firstHit = retrievedSlugs.findIndex((s) => expected.has(s));
   const mrr = firstHit === -1 ? 0 : 1 / (firstHit + 1);

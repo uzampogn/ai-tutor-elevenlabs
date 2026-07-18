@@ -31,6 +31,20 @@ describe('scoreRetrieval — single/multi', () => {
     expect(a['retrieval.recall']).toBe(1);
     expect(a['retrieval.precision']).toBe(1);
   });
+  it('duplicate retrieved slugs do not inflate recall past 1', () => {
+    expect(scoreRetrieval(['a'], ['a', 'a'], 'single')).toEqual({
+      'retrieval.recall': 1, 'retrieval.precision': 1, 'retrieval.mrr': 1,
+    });
+  });
+  it('duplicate retrieved with a miss: distinct hits for recall, all hits for precision', () => {
+    const s = scoreRetrieval(['a', 'b'], ['a', 'a', 'x'], 'multi');
+    expect(s['retrieval.recall']).toBeCloseTo(0.5);
+    expect(s['retrieval.precision']).toBeCloseTo(2 / 3);
+    expect(s['retrieval.mrr']).toBe(1);
+  });
+  it('duplicate expected slugs are deduped', () => {
+    expect(scoreRetrieval(['a', 'a'], ['a'], 'single')['retrieval.recall']).toBe(1);
+  });
 });
 
 describe('scoreRetrieval — offtopic inversion', () => {
