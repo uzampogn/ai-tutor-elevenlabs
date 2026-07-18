@@ -95,6 +95,10 @@ Prompt-assembly logic moves out of `route.ts`:
 - Singleton following the `embeddings.ts` degradation pattern: `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_BASE_URL` unset → client is a silent no-op; app behavior identical to today.
 - Chat route: one trace per request (root observation **chat**). Child observations: **retrieval** (typed `retriever` per Langfuse's "most specific observation type" best practice — input: question; output: slugs + similarities; metadata: `K`, `SIM_FLOOR`) and **generation** (typed `generation` — model, token usage incl. cache read, full answer text). Trace output: final answer text + source slugs. Observation names `chat` / `retrieval` / `generation` are load-bearing (the managed evaluator filters on them).
 - Serverless flush: Next 14 has no stable `after()` — events flush in the stream's `finally` (the function is still alive while the stream is open), so responses are never delayed; tracing errors are caught and logged, never thrown into the chat path.
+- Implementation deviations (from Task 3 brief):
+  - Trace-level I/O set via `root.setTraceIO({ input, output })`: v5 OTel keeps trace-level I/O separate from the root observation's I/O, and legacy/managed LLM-judge evaluators read trace-level fields; `root.update({ output })` alone leaves them empty.
+  - Trace-level name set via `root.otelSpan.setAttribute(LangfuseOtelSpanAttributes.TRACE_NAME, 'chat')`: v5 leaves the trace name unset otherwise, but the managed evaluator (§6) filters traces by `name = chat`.
+  - `RETRIEVAL_K` / `SIM_FLOOR` moved to a dependency-free leaf module `src/lib/retrievalConfig.ts` (re-exported from `retrieval.ts`, public API unchanged): `route.test.ts`'s partial mock of `@/lib/retrieval` supplies only `retrieveArticles`, so importing the constants from that module throws under the mock.
 
 ### 3. Golden dataset — `scripts/eval/` + `eval/dataset.json`
 

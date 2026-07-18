@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
-import { startObservation } from '@langfuse/tracing';
+import { startObservation, LangfuseOtelSpanAttributes } from '@langfuse/tracing';
 import { prepareAnswerContext, CHAT_MODEL, CHAT_MAX_TOKENS } from '@/lib/answerPipeline';
 import { RETRIEVAL_K, SIM_FLOOR } from '@/lib/retrievalConfig';
 import { flushLangfuse } from '@/lib/langfuse';
@@ -16,8 +16,28 @@ export async function POST(req: NextRequest) {
   const question = typeof lastUser?.content === 'string' ? lastUser.content : '';
 
   const root = startObservation('chat', { input: { question } });
+  // Set the trace-level name (v5 OTel keeps observation name and trace name separate;
+  // Task 12's managed evaluator filters traces by name = 'chat'). Safe no-op on non-recording spans.
+  root.otelSpan.setAttribute(LangfuseOtelSpanAttributes.TRACE_NAME, 'chat');
   const retrievalSpan = root.startObservation('retrieval', { input: { question } }, { asType: 'retriever' });
-  const { system, retrieved } = await prepareAnswerContext(messages);
+
+  let system: Awaited<ReturnType<typeof prepareAnswerContext>>['system'];
+  let retrieved: Awaited<ReturnType<typeof prepareAnswerContext>>['retrieved'];
+  try {
+    ({ system, retrieved } = await prepareAnswerContext(messages));
+  } catch (err) {
+    // Retrieval/context prep failed: end the open spans and flush so the trace isn't
+    // dangling, then re-throw to preserve the exact client-visible failure (same status/body).
+    try {
+      retrievalSpan.end();
+      root.end();
+      await flushLangfuse();
+    } catch (traceErr) {
+      console.warn('[langfuse] trace finalize failed:', traceErr);
+    }
+    throw err;
+  }
+
   retrievalSpan
     .update({
       output: { slugs: retrieved.map((r) => r.slug), similarities: retrieved.map((r) => r.similarity) },
