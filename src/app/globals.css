@@ -380,8 +380,8 @@ button { font-family: inherit; cursor: pointer; }
   font-weight: 450; text-wrap: pretty;
 }
 .impact-text strong { color: var(--ink); font-weight: 650; }
-.impact-text .ai-para { font-size: inherit; color: inherit; margin: 0; }
-.impact-text .ai-list { font-size: inherit; color: inherit; margin: 0; }
+.impact-text .ai-para { font-size: inherit; color: inherit; margin: 0; font-family: inherit; }
+.impact-text .ai-list { font-size: inherit; color: inherit; margin: 0; font-family: inherit; }
 
 /* sources */
 .sources { margin-top: 16px; }

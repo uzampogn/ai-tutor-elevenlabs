@@ -62,6 +62,8 @@ export default function DocBlocks({ doc, region, streaming }: DocBlocksProps) {
 
   return (
     <>
+      {/* Positional keys (i, j) are safe: blocks/items are append-only during
+          streaming — never reordered or removed. */}
       {blocks.map((block: DocBlock, i) => {
         const isLast = i === blocks.length - 1;
         if (block.type === 'code') {
