@@ -350,6 +350,7 @@ button { font-family: inherit; cursor: pointer; }
 .ai-list-item:last-child { margin-bottom: 0; }
 .ai-list-item strong { font-weight: 600; color: var(--ink); }
 .ai-list-item em { font-style: italic; }
+.ai-code { background: var(--panel-2, var(--panel)); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; overflow-x: auto; font-size: 0.85em; }
 .caret {
   display: inline-block; width: 2px; height: 1.05em; vertical-align: -0.18em;
   background: var(--accent); margin-left: 2px;
@@ -379,6 +380,8 @@ button { font-family: inherit; cursor: pointer; }
   font-weight: 450; text-wrap: pretty;
 }
 .impact-text strong { color: var(--ink); font-weight: 650; }
+.impact-text .ai-para { font-size: inherit; color: inherit; margin: 0; font-family: inherit; }
+.impact-text .ai-list { font-size: inherit; color: inherit; margin: 0; font-family: inherit; }
 
 /* sources */
 .sources { margin-top: 16px; }

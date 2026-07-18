@@ -50,31 +50,6 @@ export interface SpokenDoc {
   blocks: DocBlock[];
 }
 
-// --- Word cursor (shared by the addressable render path) ---------------------
-
-export interface WordCursor {
-  /** Consume and return the next word in this region, or null if exhausted. */
-  next(): SpokenWord | null;
-}
-
-/**
- * Build a cursor over a region's words (body or impact), in document order.
- *
- * A region is rendered from the SAME text that produced its slice of doc.words,
- * so the visible word sequence matches doc.words 1:1. The cursor hands out the
- * next word each time the renderer emits a non-whitespace run, letting the
- * components wrap words in <span data-w> and group them under <span data-s>
- * without needing to know character offsets.
- */
-export function makeWordCursor(words: SpokenWord[]): WordCursor {
-  let i = 0;
-  return {
-    next() {
-      return i < words.length ? words[i++] : null;
-    },
-  };
-}
-
 // --- Emphasis overlay --------------------------------------------------------
 
 // Same precedence as parseInline: **bold**/__bold__ first, then *em*/_em_.
