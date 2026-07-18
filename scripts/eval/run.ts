@@ -29,6 +29,19 @@ interface TaskOutput {
   error?: string;
 }
 
+// Voyage free tier allows 3 requests/min and each item embeds its question once.
+// maxConcurrency: 1 alone is not enough: fast items (offtopic → short answer,
+// quick judge) can cycle in <20s, trip HTTP 429, and silently degrade retrieval
+// to [] — contaminating recall/mrr. Enforce a hard floor between item starts so
+// embeds never exceed ~2.4/min.
+const MIN_ITEM_INTERVAL_MS = 25_000;
+let lastItemStart = 0;
+async function throttleItemStart(): Promise<void> {
+  const wait = lastItemStart + MIN_ITEM_INTERVAL_MS - Date.now();
+  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+  lastItemStart = Date.now();
+}
+
 async function main() {
   const missing = REQUIRED_ENV.filter((k) => !process.env[k]);
   if (missing.length > 0) {
@@ -66,6 +79,7 @@ async function main() {
       const expected = (item.expectedOutput as { slugs: string[] } | null)?.slugs ?? [];
       const kind = ((item.metadata as { kind?: EvalKind } | null)?.kind ?? 'single') as EvalKind;
       try {
+        await throttleItemStart();
         const messages = [{ role: 'user' as const, content: question }];
         const { system, retrieved } = await prepareAnswerContext(messages);
         const stream = anthropic.messages.stream({
