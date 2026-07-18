@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "eval": "tsx --env-file-if-exists=.env.local scripts/eval/run.ts",
     "eval:seed": "tsx --env-file-if-exists=.env.local scripts/eval/seedDataset.ts",
-    "eval:push": "tsx --env-file-if-exists=.env.local scripts/eval/pushDataset.ts"
+    "eval:push": "tsx --env-file-if-exists=.env.local scripts/eval/pushDataset.ts",
+    "eval:accept": "tsx scripts/eval/accept.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.40.0",
