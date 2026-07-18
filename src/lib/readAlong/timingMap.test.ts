@@ -381,3 +381,41 @@ describe('activeIndexAt', () => {
     expect(activeIndexAt(windows, 5, 0)).toBe(2);
   });
 });
+
+describe('code-point alignment expansion (Spec 11)', () => {
+  const codePointAlignment = (text: string) => {
+    const cps = Array.from(text);
+    return {
+      chars: cps,
+      charStartTimesSec: cps.map((_, i) => i * 0.1),
+      charEndTimesSec: cps.map((_, i) => (i + 1) * 0.1),
+    };
+  };
+
+  it('takes the measured path for emoji answers', () => {
+    const doc = buildSpokenDoc('Great results 🚀 today.\n\n💼 Business Impact\n\nRevenue grew.');
+    const t = buildTimings(doc, codePointAlignment(doc.spokenText));
+    expect(t.estimated).toBeFalsy();
+    expect(t.words.length).toBe(doc.words.length);
+    for (let i = 1; i < t.words.length; i++) {
+      expect(t.words[i].startSec).toBeGreaterThanOrEqual(t.words[i - 1].startSec);
+    }
+  });
+
+  it('handles astral chars at the edges and ZWJ sequences', () => {
+    for (const text of ['🚀 start here', 'end here 🚀', 'mid 👩‍💻 word']) {
+      const doc = buildSpokenDoc(text);
+      const t = buildTimings(doc, codePointAlignment(doc.spokenText));
+      expect(t.estimated, text).toBeFalsy();
+    }
+  });
+
+  it('still falls back when chars do not reconstruct spokenText', () => {
+    const doc = buildSpokenDoc('Plain text answer here. 🚀');
+    const a = codePointAlignment(doc.spokenText);
+    a.chars = a.chars.slice(1); // drop a char → join mismatch AND length mismatch
+    a.charStartTimesSec = a.charStartTimesSec.slice(1);
+    a.charEndTimesSec = a.charEndTimesSec.slice(1);
+    expect(buildTimings(doc, a).estimated).toBe(true);
+  });
+});

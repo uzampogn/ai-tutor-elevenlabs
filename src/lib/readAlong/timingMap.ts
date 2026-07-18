@@ -63,6 +63,24 @@ function maxOf(xs: number[]): number {
   return seen ? max : 0;
 }
 
+/** Expand a code-point-indexed alignment to UTF-16 indexing over `text`.
+ *  Each alignment char's [start, end] repeats across its UTF-16 width.
+ *  Returns null unless chars.join('') === text (the correctness condition). */
+export function expandToUtf16(text: string, a: Alignment): Alignment | null {
+  if (a.chars.join('') !== text) return null;
+  const starts: number[] = [];
+  const ends: number[] = [];
+  for (let i = 0; i < a.chars.length; i++) {
+    const width = a.chars[i].length;
+    for (let k = 0; k < width; k++) {
+      const s = a.charStartTimesSec[i] ?? 0;
+      starts.push(s);
+      ends.push(a.charEndTimesSec[i] ?? s);
+    }
+  }
+  return { chars: Array.from(text), charStartTimesSec: starts, charEndTimesSec: ends };
+}
+
 /**
  * Turn a SpokenDoc + character alignment into per-sentence and per-word time
  * windows.
@@ -98,10 +116,18 @@ export function buildTimings(doc: SpokenDoc, alignment: Alignment): ReadAlongTim
   }
 
   // Length mismatch (e.g. a normalization slipped through upstream) → we can no
-  // longer trust char-index → time. Fall back to proportional, deriving the
-  // total from whatever timing we do have.
+  // longer trust char-index → time. Try to expand from code-point to UTF-16
+  // indexing first; if that succeeds, use measured timings. Otherwise fall back
+  // to proportional.
   if (chars.length !== doc.spokenText.length) {
-    return buildProportional(doc, maxOf(ends));
+    const expanded = expandToUtf16(doc.spokenText, { chars, charStartTimesSec: starts, charEndTimesSec: ends });
+    if (!expanded) return buildProportional(doc, maxOf(ends));
+    return buildMeasured(
+      doc,
+      expanded.charStartTimesSec,
+      expanded.charEndTimesSec,
+      doc.spokenText.length,
+    );
   }
 
   return buildMeasured(doc, starts, ends, n);
