@@ -57,3 +57,10 @@ class MockSpeechRecognition {
 window.SpeechRecognition = MockSpeechRecognition;
 // @ts-expect-error augmenting window for tests
 window.webkitSpeechRecognition = MockSpeechRecognition;
+
+// Scribe STT — reset the fake '@elevenlabs/client' between tests.
+import { __reset as resetFakeScribe } from './src/test/fakeScribeClient';
+
+afterEach(() => {
+  resetFakeScribe();
+});

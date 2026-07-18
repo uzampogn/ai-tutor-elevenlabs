@@ -397,6 +397,7 @@ export default function AppShell() {
           onSend={(override) => void sendMessage(override)}
           speaking={!!speakingContent}
           onNewChat={handleNewChat}
+          onStartListening={stopAudio}
         />
       </main>
 

@@ -17,6 +17,8 @@ interface InputDockProps {
   onSend: (override?: string) => void;
   speaking: boolean;
   onNewChat: () => void;
+  /** Pause TTS playback when a listening turn starts (forwarded to VoiceDock). */
+  onStartListening?: () => void;
 }
 
 export default function InputDock({
@@ -30,6 +32,7 @@ export default function InputDock({
   onSend,
   speaking,
   onNewChat,
+  onStartListening,
 }: InputDockProps) {
   // Session controls live by the input dock and are reachable in both modes:
   // the Voice/Text switch (selects orb vs. composer) + New chat (clears the session).
@@ -68,6 +71,7 @@ export default function InputDock({
           setListening={setListening}
           onSend={onSend}
           speaking={speaking}
+          onStartListening={onStartListening}
           controls={sessionControls}
         />
         <div className="composer-foot">
