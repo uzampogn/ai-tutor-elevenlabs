@@ -11,7 +11,7 @@
 //
 // Pure / framework-free / no DOM — same ethos as src/lib/parseAnswer.ts.
 
-import { parseAnswer } from '../parseAnswer';
+import { parseAnswer, parseBlocks } from '../parseAnswer';
 import { stripMarkdown } from './stripMarkdown';
 
 export type Emphasis = 'strong' | 'em' | undefined;
@@ -33,11 +33,21 @@ export interface SpokenSentence {
   region: 'body' | 'impact'; // body paragraphs vs the Business Impact card
 }
 
+export type DocBlockItem = { wordIds: number[] };
+export type DocBlock =
+  | { type: 'paragraph'; region: 'body' | 'impact'; wordIds: number[] }
+  | { type: 'ul'; region: 'body' | 'impact'; items: DocBlockItem[] }
+  | { type: 'ol'; region: 'body' | 'impact'; items: DocBlockItem[] }
+  | { type: 'code'; region: 'body' | 'impact'; raw: string }
+  | { type: 'image'; region: 'body' | 'impact'; alt: string };
+
 export interface SpokenDoc {
   /** The EXACT string sent to ElevenLabs. Equals stripMarkdown(fullAnswer). */
   spokenText: string;
   sentences: SpokenSentence[];
   words: SpokenWord[];
+  /** Block-structure overlay partitioning doc.words for rendering (Spec 09). */
+  blocks: DocBlock[];
 }
 
 // --- Word cursor (shared by the addressable render path) ---------------------
@@ -212,6 +222,87 @@ function scanWords(
   return words;
 }
 
+// --- Block overlay -----------------------------------------------------------
+
+function buildBlocks(
+  fullAnswer: string,
+  spokenText: string,
+  words: SpokenWord[],
+  sentences: SpokenSentence[],
+): DocBlock[] {
+  const out: DocBlock[] = [];
+  let cursor = 0; // forward char cursor into spokenText
+  let wordIdx = 0; // next unassigned word (words are in document order)
+
+  /** Locate a block's spoken form in spokenText from the cursor; advance on hit. */
+  const locate = (raw: string): { start: number; end: number } | null => {
+    const spoken = stripMarkdown(raw);
+    if (!spoken) return null;
+    const at = spokenText.indexOf(spoken, cursor);
+    if (at === -1) return null;
+    cursor = at + spoken.length;
+    return { start: at, end: at + spoken.length };
+  };
+
+  /** Consume, in order, the words fully inside [start, end). */
+  const takeWords = (start: number, end: number): number[] => {
+    const ids: number[] = [];
+    while (
+      wordIdx < words.length &&
+      words[wordIdx].charStart >= start &&
+      words[wordIdx].charEnd <= end
+    ) {
+      ids.push(words[wordIdx].id);
+      wordIdx += 1;
+    }
+    return ids;
+  };
+
+  const emit = (region: 'body' | 'impact', raw: string) => {
+    for (const block of parseBlocks(raw)) {
+      if (block.type === 'code') {
+        if (block.raw.trim()) out.push({ type: 'code', region, raw: block.raw });
+      } else if (block.type === 'image') {
+        out.push({ type: 'image', region, alt: block.alt });
+      } else if (block.type === 'paragraph') {
+        const loc = locate(block.text);
+        const wordIds = loc ? takeWords(loc.start, loc.end) : [];
+        if (wordIds.length) out.push({ type: 'paragraph', region, wordIds });
+      } else {
+        const items: DocBlockItem[] = [];
+        for (const item of block.items) {
+          const loc = locate(item);
+          const wordIds = loc ? takeWords(loc.start, loc.end) : [];
+          if (wordIds.length) items.push({ wordIds });
+        }
+        if (items.length) {
+          // block.type narrows to 'ul' | 'ol' here; branch explicitly so the
+          // pushed literal matches DocBlock's separate ul/ol variants.
+          if (block.type === 'ul') out.push({ type: 'ul', region, items });
+          else out.push({ type: 'ol', region, items });
+        }
+      }
+    }
+  };
+
+  const { body, impact } = parseAnswer(fullAnswer);
+  emit('body', body);
+  if (impact) emit('impact', impact);
+
+  // Degrade, never drop: any unassigned words land in trailing paragraphs.
+  if (wordIdx < words.length) {
+    const rest: Record<'body' | 'impact', number[]> = { body: [], impact: [] };
+    for (; wordIdx < words.length; wordIdx += 1) {
+      const w = words[wordIdx];
+      rest[sentences[w.sentenceId]?.region ?? 'body'].push(w.id);
+    }
+    if (rest.body.length) out.push({ type: 'paragraph', region: 'body', wordIds: rest.body });
+    if (rest.impact.length) out.push({ type: 'paragraph', region: 'impact', wordIds: rest.impact });
+  }
+
+  return out;
+}
+
 // --- Public API --------------------------------------------------------------
 
 /**
@@ -225,7 +316,7 @@ export function buildSpokenDoc(fullAnswer: string): SpokenDoc {
   const spokenText = stripMarkdown(fullAnswer ?? '');
 
   if (!spokenText) {
-    return { spokenText: '', sentences: [], words: [] };
+    return { spokenText: '', sentences: [], words: [], blocks: [] };
   }
 
   // Region split — body is the prefix, impact (if any) is the suffix.
@@ -300,5 +391,5 @@ export function buildSpokenDoc(fullAnswer: string): SpokenDoc {
     prevWord = raw;
   }
 
-  return { spokenText, sentences, words };
+  return { spokenText, sentences, words, blocks: buildBlocks(fullAnswer, spokenText, words, sentences) };
 }

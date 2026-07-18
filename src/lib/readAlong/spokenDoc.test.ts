@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildSpokenDoc } from './spokenDoc';
+import type { SpokenDoc, DocBlock } from './spokenDoc';
 import { stripMarkdown } from './stripMarkdown';
 
 // Representative answers spanning the surfaces the model must handle: plain
@@ -227,5 +228,63 @@ describe('emphasis overlay flanking (Spec 09)', () => {
     const byText = (t: string) => doc.words.find((w) => w.text === t)!;
     expect(byText('bold').emphasis).toBe('strong');
     expect(byText('soft').emphasis).toBe('em');
+  });
+});
+
+/** Flatten block word ids in document order. */
+function flatIds(doc: SpokenDoc): number[] {
+  const out: number[] = [];
+  for (const b of doc.blocks) {
+    if (b.type === 'paragraph') out.push(...b.wordIds);
+    else if (b.type === 'ul' || b.type === 'ol') for (const it of b.items) out.push(...it.wordIds);
+  }
+  return out;
+}
+
+const RCA_FIXTURES: Record<string, string> = {
+  heading: '## Key Takeaways\n\nModels improved a lot this year.',
+  codeFence: 'Here is how:\n\n```js\nconst x = 1;\n```\n\nThat prints one.',
+  inlineCode: 'Use the `claude-fable-5` model id for this.',
+  snakeCase: 'The field user_id maps to the auth_token record.',
+  bullets: 'Points:\n\n- Top level\n  - Nested here\n+ Plus item',
+  blockquote: '> Quoted line here.\n\nRegular paragraph.',
+  hrule: 'Before the rule.\n\n---\n\nAfter the rule.',
+  image: 'See this: works.\n\n![alt text](https://example.com/i.png)\n\nDone now.',
+  link: 'Read [the announcement](https://claude.com/blog/post) today.',
+  doubleUnder: 'This is __really bold__ text.',
+  emoji: 'Great results 🚀 this quarter.\n\n💼 Business Impact\n\nRevenue grew fast.',
+  ordered: 'Steps:\n\n1. First do this\n2. Then that',
+};
+
+describe('block overlay (Spec 09)', () => {
+  it('partitions words exactly, in order, for every fixture', () => {
+    for (const [name, md] of Object.entries(RCA_FIXTURES)) {
+      const doc = buildSpokenDoc(md);
+      expect(flatIds(doc), name).toEqual(doc.words.map((w) => w.id));
+    }
+  });
+
+  it('produces the expected block shapes', () => {
+    const doc = buildSpokenDoc(RCA_FIXTURES.codeFence);
+    expect(doc.blocks.map((b) => b.type)).toEqual(['paragraph', 'code', 'paragraph']);
+    const code = doc.blocks[1] as Extract<DocBlock, { type: 'code' }>;
+    expect(code.raw).toBe('const x = 1;');
+    const lists = buildSpokenDoc(RCA_FIXTURES.bullets).blocks;
+    expect(lists.map((b) => b.type)).toEqual(['paragraph', 'ul']);
+    expect((lists[1] as Extract<DocBlock, { type: 'ul' }>).items).toHaveLength(3);
+  });
+
+  it('tags impact-region blocks', () => {
+    const doc = buildSpokenDoc(RCA_FIXTURES.emoji);
+    const regions = doc.blocks.map((b) => b.region);
+    expect(regions).toEqual(['body', 'impact']);
+  });
+
+  it('never throws and keeps the partition on every streaming prefix', () => {
+    const full = Object.values(RCA_FIXTURES).join('\n\n');
+    for (let i = 0; i <= full.length; i++) {
+      const doc = buildSpokenDoc(full.slice(0, i));
+      expect(flatIds(doc)).toEqual(doc.words.map((w) => w.id));
+    }
   });
 });

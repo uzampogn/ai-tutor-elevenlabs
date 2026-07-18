@@ -54,7 +54,7 @@ function makeDoc(tokens: { text: string; sentenceId: number }[]): SpokenDoc {
 
   const spokenText = pieces.join('');
   const sentences = Array.from(sentenceMap.values()).sort((a, b) => a.id - b.id);
-  return { spokenText, sentences, words };
+  return { spokenText, sentences, words, blocks: [] };
 }
 
 /**
@@ -199,6 +199,7 @@ describe('buildTimings — monotonic & clamped', () => {
       spokenText: 'abcd',
       words: [{ id: 0, sentenceId: 0, text: 'abcd', charStart: 0, charEnd: 99, emphasis: undefined }],
       sentences: [{ id: 0, wordIds: [0], charStart: 0, charEnd: 99, region: 'body' }],
+      blocks: [],
     };
     const align = makeAlignment('abcd', 1); // N=4
     const t = buildTimings(doc, align);
@@ -275,7 +276,7 @@ describe('buildTimings — proportional fallback', () => {
 
 describe('buildTimings — empty / degenerate', () => {
   it('empty doc → empty timings', () => {
-    const doc: SpokenDoc = { spokenText: '', words: [], sentences: [] };
+    const doc: SpokenDoc = { spokenText: '', words: [], sentences: [], blocks: [] };
     const align = makeAlignment('abc', 1);
     expect(buildTimings(doc, align)).toEqual({ sentences: [], words: [], totalSec: 0 });
   });
