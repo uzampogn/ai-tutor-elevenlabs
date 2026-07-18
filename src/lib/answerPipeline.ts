@@ -2,7 +2,7 @@
  * Prompt assembly for the chat answer (spec/eval-harness): ONE code path
  * consumed by both the streaming route and the offline eval runner.
  */
-import { getGroundingContext } from '@/lib/scraper';
+import { getGroundingContext, buildGroundingContext } from '@/lib/scraper';
 import { retrieveArticles, type RetrievedArticle } from '@/lib/retrieval';
 
 export const CHAT_MODEL = 'claude-sonnet-4-6';
@@ -42,7 +42,22 @@ export async function prepareAnswerContext(messages: unknown): Promise<AnswerCon
     typeof lastUser?.content === 'string' ? lastUser.content : '',
   );
 
-  const articleContext = await getGroundingContext();
+  // `getGroundingContext` is a Next.js `unstable_cache` wrapper. Inside the Next
+  // runtime (prod /api/chat) it reads the Data Cache normally. Outside it — the
+  // offline eval runner under plain tsx — `unstable_cache` throws
+  // "Invariant: incrementalCache missing". Since this is the ONE shared pipeline
+  // path (spec/eval-harness §4), fall back to the uncached assembly in that case
+  // only, so the eval can exercise the exact prod prompt. Prod never hits this.
+  let articleContext: string;
+  try {
+    articleContext = await getGroundingContext();
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('incrementalCache missing')) {
+      articleContext = await buildGroundingContext();
+    } else {
+      throw err;
+    }
+  }
 
   const systemPrompt = `You are an engaging, knowledgeable AI news tutor. You teach people the latest developments from Anthropic, grounded in the Claude blog's most recent posts (provided below). You sound like a sharp, friendly expert — natural and conversational, never templated.
 
