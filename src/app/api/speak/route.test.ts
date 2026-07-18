@@ -216,3 +216,81 @@ describe('POST /api/speak — fail-soft', () => {
     expect(errSpy).toHaveBeenCalled();
   });
 });
+
+// --- chunkMeta (Spec 12 seam-drift instrumentation) --------------------------
+
+/** Expected max(character_end_times_seconds) that fakeElevenLabsBody produces
+ *  for a chunk of this length: characters.map((_, i) => i * 0.1 + 0.1). */
+function expectedAlignSec(chunkText: string): number {
+  const n = Array.from(chunkText).length;
+  return n > 0 ? (n - 1) * 0.1 + 0.1 : 0;
+}
+
+describe('POST /api/speak — chunkMeta', () => {
+  it('returns chunkMeta.count/charLengths/alignSecs for each of N>1 chunks', async () => {
+    const sentTexts: string[] = [];
+    fetchMock.mockImplementation((_url: string, init: RequestInit) => {
+      const sent = JSON.parse(init.body as string);
+      sentTexts.push(sent.text);
+      return Promise.resolve(okResponse(fakeElevenLabsBody(sent.text)));
+    });
+
+    // Build a >2000-char multi-sentence body (same shape as the stitching test).
+    let text = '';
+    for (let i = 0; i < 6; i++) {
+      text += 'This is sentence number ' + i + ' with some filler words. ';
+      text += 'word '.repeat(80) + 'end. ';
+    }
+    expect(text.length).toBeGreaterThan(MAX_CHARS);
+
+    const res = await POST(makeReq({ text }));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+
+    expect(sentTexts.length).toBeGreaterThan(1);
+    expect(json.chunkMeta).toBeDefined();
+    expect(json.chunkMeta.count).toBe(sentTexts.length);
+    expect(json.chunkMeta.charLengths).toEqual(sentTexts.map((t) => t.length));
+    expect(json.chunkMeta.alignSecs).toEqual(sentTexts.map(expectedAlignSec));
+  });
+
+  it('returns chunkMeta covering only the synthesized prefix when a later chunk fails', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    let call = 0;
+    const sentTexts: string[] = [];
+    fetchMock.mockImplementation((_url: string, init: RequestInit) => {
+      const sent = JSON.parse(init.body as string);
+      call += 1;
+      if (call === 1) {
+        sentTexts.push(sent.text);
+        return Promise.resolve(okResponse(fakeElevenLabsBody(sent.text)));
+      }
+      return Promise.resolve(errResponse(500, 'upstream boom'));
+    });
+
+    let text = '';
+    for (let i = 0; i < 6; i++) {
+      text += 'Sentence ' + i + ' filler. ' + 'word '.repeat(80) + 'end. ';
+    }
+    expect(text.length).toBeGreaterThan(MAX_CHARS);
+
+    const res = await POST(makeReq({ text }));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+
+    expect(json.chunkMeta.count).toBe(1);
+    expect(json.chunkMeta.charLengths).toEqual([sentTexts[0].length]);
+    expect(json.chunkMeta.alignSecs).toEqual([expectedAlignSec(sentTexts[0])]);
+    expect(errSpy).toHaveBeenCalled();
+  });
+
+  it('still returns 500 with no chunkMeta expected when the very first chunk fails', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    fetchMock.mockResolvedValue(errResponse(500, 'boom'));
+    const res = await POST(makeReq({ text: 'short text.' }));
+    expect(res.status).toBe(500);
+    const json = await res.json();
+    expect(json.chunkMeta).toBeUndefined();
+    expect(errSpy).toHaveBeenCalled();
+  });
+});
