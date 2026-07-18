@@ -57,6 +57,8 @@ function renderWords(doc: SpokenDoc, wordIds: number[], keyBase: string): ReactN
 export default function DocBlocks({ doc, region, streaming }: DocBlocksProps) {
   const blocks = doc.blocks.filter((b) => b.region === region);
   const caret = streaming ? <span className="caret" /> : null;
+  const lastBlock = blocks[blocks.length - 1];
+  const lastBlockIsWordless = lastBlock?.type === 'code' || lastBlock?.type === 'image';
 
   return (
     <>
@@ -91,6 +93,7 @@ export default function DocBlocks({ doc, region, streaming }: DocBlocksProps) {
         );
       })}
       {blocks.length === 0 && caret}
+      {lastBlockIsWordless && caret}
     </>
   );
 }

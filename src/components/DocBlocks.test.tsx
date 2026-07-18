@@ -56,4 +56,18 @@ describe('DocBlocks', () => {
     const off = render(<DocBlocks doc={doc} region="body" />);
     expect(off.container.querySelector('.caret')).toBeNull();
   });
+
+  it('renders the caret when streaming ends on a trailing code block', () => {
+    const doc = buildSpokenDoc('Before.\n\n```js\nconst x = 1;\n```');
+    expect(doc.blocks[doc.blocks.length - 1].type).toBe('code');
+    const { container } = render(<DocBlocks doc={doc} region="body" streaming />);
+    expect(container.querySelector('.caret')).not.toBeNull();
+    expect(container.querySelectorAll('.caret')).toHaveLength(1);
+  });
+
+  it('renders exactly one caret when streaming ends on a paragraph', () => {
+    const doc = buildSpokenDoc('Partial answer tex');
+    const { container } = render(<DocBlocks doc={doc} region="body" streaming />);
+    expect(container.querySelectorAll('.caret')).toHaveLength(1);
+  });
 });
