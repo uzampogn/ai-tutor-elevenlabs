@@ -52,14 +52,6 @@ async function main() {
   const dataset = await langfuse.dataset.get(EVAL_DATASET_NAME);
   console.log(`[eval] ${dataset.items.length} items · run ${runName} · judge+gen on live APIs`);
 
-  // kind lookup by question (metadata isn't passed to evaluators)
-  const kindByQuestion = new Map<string, EvalKind>(
-    dataset.items.map((i) => [
-      (i.input as { question: string }).question,
-      ((i.metadata as { kind?: EvalKind } | null)?.kind ?? 'single') as EvalKind,
-    ]),
-  );
-
   let failedCount = 0;
   const perItemScores: Record<string, number>[] = [];
 
@@ -72,7 +64,7 @@ async function main() {
     task: async (item): Promise<TaskOutput> => {
       const question = (item.input as { question: string }).question;
       const expected = (item.expectedOutput as { slugs: string[] } | null)?.slugs ?? [];
-      const kind = kindByQuestion.get(question) ?? 'single';
+      const kind = ((item.metadata as { kind?: EvalKind } | null)?.kind ?? 'single') as EvalKind;
       try {
         const messages = [{ role: 'user' as const, content: question }];
         const { system, retrieved } = await prepareAnswerContext(messages);
