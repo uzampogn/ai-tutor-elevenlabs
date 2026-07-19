@@ -6,6 +6,7 @@ Conversational agent that turns the latest [Claude blog](https://claude.com/blog
 
 - **Next.js 14** + **React 18** + **TypeScript 5**, **Tailwind CSS 3**
 - **@anthropic-ai/sdk** (explanations), **ElevenLabs** (TTS + timestamps; STT via Scribe v2 Realtime with Web Speech fallback), **Voyage AI** (embeddings for RAG retrieval → pgvector on Supabase; optional, off without `VOYAGE_API_KEY`)
+- **Langfuse** (tracing + evals; optional, off without `LANGFUSE_*` keys)
 - Tests: **Vitest** · Deployed on **Vercel**
 
 ## Layout
@@ -27,6 +28,8 @@ npm run typecheck   # tsc --noEmit
 npm run test:run    # vitest run
 ```
 
+`npm run eval` (live-API eval vs. the Langfuse `rag-golden` dataset) is **separate** from this gate — it spends real tokens and needs keys + a DB, so it's never part of `test:run`. Run it before merging changes that touch **retrieval, prompts, or citations** (see README → Evals & observability, `spec/eval-harness/`).
+
 ## Node
 
 Requires **Node 24+** (impeccable's CLI requires `>=24`). Pinned via `.nvmrc` — run `nvm use` in this directory.
@@ -35,6 +38,7 @@ Requires **Node 24+** (impeccable's CLI requires `>=24`). Pinned via `.nvmrc` �
 
 - **Don't run `next build` while `next dev` is live** — they share `.next/`; the prod build corrupts the dev runtime (HTTP 500, `MODULE_NOT_FOUND`). Stop dev first.
 - **Subagent dev → use a git worktree.** This repo shares one working tree across many active branches; isolate subagent work in a worktree with hard git rules.
+- **All worktrees live under `/Users/vkau/Personal-space/Projects/` named `ai-tutor-wt-<feature>`** — create them there, nowhere else.
 
 ## Design — Impeccable
 

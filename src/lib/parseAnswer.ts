@@ -59,6 +59,8 @@ function normalize(text: string): string {
   return text.replace(/\s+/g, ' ').trim().toLowerCase();
 }
 
+// TODO(rag-02): retire once retrieval has been on in prod for a while —
+// matchSources now only serves the retrieval-off fallback path (resolveSources).
 /**
  * Recover the source articles cited in an answer by matching article titles
  * against the answer text (case-insensitive, whitespace-normalized substring).
@@ -119,10 +121,15 @@ export function resolveSources(
 export type Block =
   | { type: 'paragraph'; text: string }
   | { type: 'ul'; items: string[] }
-  | { type: 'ol'; items: string[] };
+  | { type: 'ol'; items: string[] }
+  | { type: 'code'; raw: string }
+  | { type: 'image'; alt: string };
 
-const UL_LINE = /^[-*] /;
-const OL_LINE = /^\d+\. /;
+const UL_LINE = /^\s*[-*+] /;
+const OL_LINE = /^\s*\d+\. /;
+const HR_LINE = /^\s*[-*_]{3,}\s*$/;
+const IMAGE_LINE = /^\s*!\[([^\]]*)\]\([^)]*\)\s*$/;
+const FENCE_LINE = /^\s*```/;
 
 type LineKind = 'ul' | 'ol' | 'para';
 
@@ -132,18 +139,36 @@ function lineKind(line: string): LineKind {
   return 'para';
 }
 
+/** Split markdown into alternating prose / fenced-code segments (line-based). */
+function splitFences(markdown: string): Array<{ code: boolean; text: string }> {
+  const segments: Array<{ code: boolean; text: string }> = [];
+  let buf: string[] = [];
+  let inCode = false;
+  const flush = () => {
+    if (buf.length || inCode) segments.push({ code: inCode, text: buf.join('\n') });
+    buf = [];
+  };
+  for (const line of markdown.split('\n')) {
+    if (FENCE_LINE.test(line)) { flush(); inCode = !inCode; continue; }
+    buf.push(line);
+  }
+  // Unterminated fence while streaming: tail stays an (open) code segment.
+  if (buf.length) segments.push({ code: inCode, text: buf.join('\n') });
+  return segments;
+}
+
 /**
- * Split a markdown body into renderable blocks.
+ * Split a single prose segment (no fences) into renderable blocks.
  *
  * Chunks are separated by blank lines, but within each chunk we group
  * CONSECUTIVE lines by kind — so a label line immediately followed by bullets
  * (model skipped the blank line) still yields a `[paragraph, ul]` pair instead
  * of one mangled paragraph. Streaming-safe: a partial trailing line with no
- * confirmed list prefix simply lands in a paragraph run.
+ * confirmed list prefix simply lands in a paragraph run. Horizontal rules are
+ * dropped and image-only lines are lifted out as their own block; blockquote
+ * markers (`> `) are stripped from paragraph text.
  */
-export function parseBlocks(body: string): Block[] {
-  if (!body || !body.trim()) return [];
-
+function parseProseBlocks(body: string): Block[] {
   const chunks = body.split(/\n{2,}/);
   const blocks: Block[] = [];
 
@@ -160,12 +185,26 @@ export function parseBlocks(body: string): Block[] {
       } else if (run.kind === 'ol') {
         blocks.push({ type: 'ol', items: run.lines.map((l) => l.replace(OL_LINE, '')) });
       } else {
-        blocks.push({ type: 'paragraph', text: run.lines.join('\n').trim() });
+        blocks.push({
+          type: 'paragraph',
+          text: run.lines.map((l) => l.replace(/^\s*>\s+/, '')).join('\n').trim(),
+        });
       }
       run = null;
     };
 
     for (const line of lines) {
+      if (HR_LINE.test(line)) {
+        flush();
+        continue;
+      }
+      const img = IMAGE_LINE.exec(line);
+      if (img) {
+        flush();
+        blocks.push({ type: 'image', alt: img[1] });
+        continue;
+      }
+
       const kind = lineKind(line);
       if (run && run.kind === kind) {
         run.lines.push(line);
@@ -178,6 +217,69 @@ export function parseBlocks(body: string): Block[] {
   }
 
   return blocks;
+}
+
+/**
+ * Split a markdown body into renderable blocks.
+ *
+ * Wraps `parseProseBlocks`: the body is first split into alternating prose /
+ * fenced-code segments (`splitFences`), so fences containing blank lines
+ * don't get mangled by the blank-line chunking below them. An unterminated
+ * trailing fence (streaming mid-code-block) still yields an open `code`
+ * block. Empty code segments (e.g. an immediately re-opened fence) are
+ * skipped.
+ */
+export function parseBlocks(body: string): Block[] {
+  if (!body || !body.trim()) return [];
+
+  const blocks: Block[] = [];
+  for (const segment of splitFences(body)) {
+    if (segment.code) {
+      if (segment.text.trim().length === 0) continue;
+      blocks.push({ type: 'code', raw: segment.text });
+      continue;
+    }
+    blocks.push(...parseProseBlocks(segment.text));
+  }
+  return blocks;
+}
+
+// --- Inline citations (spec/rag-retrieval-citations 02) -------------------
+// Display side: markers are glued to the preceding word with sentinel brackets
+// (⟦n⟧, U+27E6/7 — never model-emitted) so a marker never becomes its own
+// word-run and read-along word counts stay aligned with the spoken doc. The
+// doc-driven renderer (DocBlocks, Spec 10) attaches the glued sentinel to the
+// SpokenWord it follows (see attachCitations in spokenDoc.ts). Speech
+// side: stripMarkdown deletes the same glued markers with the SAME guarded
+// pattern. Keep the two regexes identical.
+
+/** Matches one glued sentinel; capture group 1 = the source number. */
+export const CITATION_SENTINEL_RE = /⟦(\d{1,2})⟧/;
+
+/** Glue [n] markers to the preceding word: "claim [1]." → "claim⟦1⟧.". */
+export function glueCitations(text: string): string {
+  if (!text) return text;
+  let out = text;
+  let prev: string;
+  do {
+    prev = out;
+    out = out.replace(/(\S)[ \t]*\[(\d{1,2})\]/g, '$1⟦$2⟧');
+  } while (out !== prev); // loop handles adjacent markers "[1][2]"
+  return out;
+}
+
+/**
+ * Positional marker targets: marker [n] → result[n-1]. Holes (undefined) are
+ * preserved for unknown slugs so numbering never shifts; the renderer shows
+ * out-of-range / unresolvable markers as literal text.
+ */
+export function citationTargets(
+  slugs: string[] | undefined,
+  articles: Article[],
+): (Article | undefined)[] {
+  if (!slugs || slugs.length === 0) return [];
+  const bySlug = new Map(articles.map((a) => [articleSlug(a.url), a]));
+  return slugs.map((s) => bySlug.get(s));
 }
 
 export type InlineToken = { type: 'text' | 'strong' | 'em'; value: string };

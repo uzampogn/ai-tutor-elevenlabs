@@ -16,6 +16,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Eval harness: dataset.json + baseline.json are committed; last-run is not
+eval/last-run.json
+
 # Playwright MCP debug artifacts
 .playwright-mcp/
 
@@ -24,6 +27,9 @@ next-env.d.ts
 
 # Impeccable design tool (local install, not committed)
 .claude/skills/impeccable/
+
+# Langfuse AI skill (local install from github.com/langfuse/skills, not committed)
+.claude/skills/langfuse/
 .env*
 
 # Local worktrees + SDD scratch

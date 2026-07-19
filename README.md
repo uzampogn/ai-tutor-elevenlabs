@@ -166,6 +166,35 @@ Deploys to Vercel via GitHub Actions: **pull requests** get a preview URL commen
 
 ---
 
+## Evals & observability
+
+Answer quality is **measured, not vibed**. A Langfuse-backed harness replays a curated golden dataset through the *exact* production answer pipeline (`src/lib/answerPipeline.ts`) and scores every answer, so a prompt/retrieval/citation tweak that quietly degrades quality fails a gate instead of shipping. Full design: [`spec/eval-harness/spec.md`](./spec/eval-harness/spec.md) · managed-evaluator setup: [`spec/eval-harness/langfuse-setup.md`](./spec/eval-harness/langfuse-setup.md).
+
+**What it measures — three metric groups:**
+
+| Group | Metrics |
+|---|---|
+| **Retrieval** (deterministic) | recall@3, precision@3, MRR vs. expected source slugs; off-topic items invert (pass ⇔ retrieval returns empty, validating `SIM_FLOOR`) |
+| **Citation integrity** (deterministic, reuses `parseAnswer.ts`) | every `[n]` marker in-range, zero markers when nothing was retrieved, cited-source coverage, markers survive the read-aloud glue/strip round-trip |
+| **Answer quality** (LLM-as-judge, `claude-sonnet-4-6`) | groundedness, citation faithfulness, relevance, pedagogy — each 1–5 with a rationale |
+
+**Commands:**
+
+```bash
+npm run eval:seed     # generate candidate items from digest.questions[] → eval/dataset.json (merges; never clobbers hand-edits)
+npm run eval:push     # upload curated items to the Langfuse dataset (rag-golden)
+npm run eval          # run the harness live vs. the golden dataset → scores + baseline diff (exit 1 on regression)
+npm run eval:accept   # re-bless: copy the latest run's aggregates into eval/baseline.json (a deliberate, reviewable git diff)
+```
+
+**Baseline gate.** `eval/baseline.json` is committed. `npm run eval` prints a baseline-vs-current diff table and **exits non-zero if any metric drops below `baseline − tolerance`** (deterministic tolerance ≤0.02; judge dimensions 0.3 to absorb LLM noise). Run it **before merging changes that touch retrieval, prompts, or citations**; when a change legitimately moves the numbers, re-baseline with `npm run eval:accept` so the shift lands as a reviewable diff. `npm run eval` is a live-API run (real tokens, needs `ANTHROPIC_API_KEY` + a Postgres `DATABASE_URL` for retrieval) and is **never part of `npm run test:run`** — the offline `src/lib/eval/*` modules are unit-tested in the normal Vitest gate.
+
+> **Node 22 for eval scripts.** Run `eval:seed`/`eval` on **Node 22**, not 24: under Node 24 the pinned `@anthropic-ai/sdk` falls back to a bundled `node-fetch@2` whose gzip stream aborts requests (`ERR_STREAM_PREMATURE_CLOSE`); Node 22's native `fetch` works (spec.md §3).
+
+**Observability.** Every production chat turn is traced to Langfuse (trace `chat` → `retrieval` span + `generation` observation with token usage), and a **Faithfulness** LLM evaluator (project-scoped copy of the RAGAS template, judged by `claude-sonnet-4-6`) is configured to sample 20% of live `chat` traces via the active `faithfulness-prod-chat` evaluation rule — setup details and verification status in [`spec/eval-harness/langfuse-setup.md`](./spec/eval-harness/langfuse-setup.md). The `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_BASE_URL` env vars are **optional** — unset ⇒ tracing and evals are silent no-ops and the app behaves exactly as before.
+
+---
+
 ## Design
 
 The editorial **Aurora Mist** visual system — soft frosted-glass surfaces on a clean white canvas — is documented in [`ui-design-mockup/`](./ui-design-mockup/) (`AI News Tutor.html` is the visual source of truth; `SPEC.md` maps each screen to its components).

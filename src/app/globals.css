@@ -350,6 +350,7 @@ button { font-family: inherit; cursor: pointer; }
 .ai-list-item:last-child { margin-bottom: 0; }
 .ai-list-item strong { font-weight: 600; color: var(--ink); }
 .ai-list-item em { font-style: italic; }
+.ai-code { background: var(--panel-2, var(--panel)); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; overflow-x: auto; font-size: 0.85em; }
 .caret {
   display: inline-block; width: 2px; height: 1.05em; vertical-align: -0.18em;
   background: var(--accent); margin-left: 2px;
@@ -379,6 +380,8 @@ button { font-family: inherit; cursor: pointer; }
   font-weight: 450; text-wrap: pretty;
 }
 .impact-text strong { color: var(--ink); font-weight: 650; }
+.impact-text .ai-para { font-size: inherit; color: inherit; margin: 0; font-family: inherit; }
+.impact-text .ai-list { font-size: inherit; color: inherit; margin: 0; font-family: inherit; }
 
 /* sources */
 .sources { margin-top: 16px; }
@@ -400,6 +403,15 @@ button { font-family: inherit; cursor: pointer; }
 }
 .source-chip svg { flex: none; opacity: .7; }
 .source-chip-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Inline citation superscripts + numbered source chips (spec/rag-retrieval-citations 02) */
+.cite { font-size: .72em; line-height: 0; }
+.cite a { color: inherit; opacity: .65; text-decoration: none; }
+.cite a:hover, .cite a:focus-visible { opacity: 1; text-decoration: underline; }
+.source-chip-num {
+  flex: none; font-family: var(--mono); font-size: 11px;
+  font-variant-numeric: tabular-nums; opacity: .7;
+}
 
 .msg-actions { display: flex; gap: 6px; margin-top: 14px; }
 .act {

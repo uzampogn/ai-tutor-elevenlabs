@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseAnswer, matchSources, parseInline, parseBlocks, resolveSources, articleSlug } from './parseAnswer';
+import { parseAnswer, matchSources, parseInline, parseBlocks, resolveSources, articleSlug, glueCitations, citationTargets } from './parseAnswer';
 import type { Article } from './scraper';
 
 const article = (over: Partial<Article> = {}): Article => ({
@@ -150,6 +150,45 @@ describe('parseBlocks', () => {
   });
 });
 
+describe('parseBlocks extensions (Spec 09)', () => {
+  it('extracts fenced code (fences may contain blank lines)', () => {
+    const blocks = parseBlocks('Intro:\n\n```js\nconst a = 1;\n\nconst b = 2;\n```\n\nAfter.');
+    expect(blocks).toEqual([
+      { type: 'paragraph', text: 'Intro:' },
+      { type: 'code', raw: 'const a = 1;\n\nconst b = 2;' },
+      { type: 'paragraph', text: 'After.' },
+    ]);
+  });
+
+  it('treats an unterminated fence tail as an open code block', () => {
+    const blocks = parseBlocks('Text.\n\n```py\nprint(1)');
+    expect(blocks[1]).toEqual({ type: 'code', raw: 'print(1)' });
+  });
+
+  it('recognizes indented and + bullets', () => {
+    const blocks = parseBlocks('- top\n  - nested\n+ plus');
+    expect(blocks).toEqual([{ type: 'ul', items: ['top', 'nested', 'plus'] }]);
+  });
+
+  it('recognizes indented ordered items', () => {
+    expect(parseBlocks('1. one\n  2. two')).toEqual([{ type: 'ol', items: ['one', 'two'] }]);
+  });
+
+  it('strips blockquote markers into the paragraph', () => {
+    expect(parseBlocks('> quoted line\n> second')).toEqual([
+      { type: 'paragraph', text: 'quoted line\nsecond' },
+    ]);
+  });
+
+  it('drops horizontal rules and lifts image-only lines', () => {
+    expect(parseBlocks('Before.\n\n---\n\n![diagram](https://x/y.png)\n\nAfter.')).toEqual([
+      { type: 'paragraph', text: 'Before.' },
+      { type: 'image', alt: 'diagram' },
+      { type: 'paragraph', text: 'After.' },
+    ]);
+  });
+});
+
 describe('parseInline', () => {
   it('parses bold', () => {
     const toks = parseInline('hello **world**');
@@ -194,5 +233,35 @@ describe('resolveSources', () => {
     const answer = 'As covered in Title b, ...';
     expect(resolveSources(undefined, answer, articles).map((a) => a.title)).toEqual(['Title b']);
     expect(resolveSources(['ghost'], answer, articles).map((a) => a.title)).toEqual(['Title b']);
+  });
+});
+
+describe('glueCitations', () => {
+  it('glues a marker to the preceding word, eating the space', () => {
+    expect(glueCitations('A claim [1]. Next.')).toBe('A claim⟦1⟧. Next.');
+  });
+  it('handles adjacent markers', () => {
+    expect(glueCitations('Fast [1][2]. Done.')).toBe('Fast⟦1⟧⟦2⟧. Done.');
+  });
+  it('leaves a start-of-line marker as literal text', () => {
+    expect(glueCitations('[1] leads the line')).toBe('[1] leads the line');
+  });
+  it('ignores 3+ digit brackets and non-numeric brackets', () => {
+    expect(glueCitations('see [123] and [note]')).toBe('see [123] and [note]');
+  });
+});
+
+describe('citationTargets', () => {
+  const art = (slug: string): Article => ({
+    title: `Title ${slug}`, url: `https://claude.com/blog/${slug}`, pubDate: '',
+    description: '', body: '', summary: '', heroImage: '',
+  });
+  it('maps positionally and preserves holes for unknown slugs', () => {
+    const out = citationTargets(['ghost', 'b'], [art('a'), art('b')]);
+    expect(out[0]).toBeUndefined();
+    expect(out[1]?.title).toBe('Title b'); // [2] still points at source 2
+  });
+  it('returns [] without slugs', () => {
+    expect(citationTargets(undefined, [art('a')])).toEqual([]);
   });
 });

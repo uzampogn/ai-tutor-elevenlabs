@@ -4,13 +4,13 @@
 import type { Article } from '@/lib/types';
 import { LinkIcon } from './icons';
 
-export default function SourceChips({ sources }: { sources: Article[] }) {
+export default function SourceChips({ sources, numbered = false }: { sources: Article[]; numbered?: boolean }) {
   if (sources.length === 0) return null;
   return (
     <div className="sources">
       <div className="sources-label">Sources</div>
       <div className="sources-row">
-        {sources.map((article) => (
+        {sources.map((article, i) => (
           <a
             key={article.url}
             className="source-chip"
@@ -18,7 +18,7 @@ export default function SourceChips({ sources }: { sources: Article[] }) {
             target="_blank"
             rel="noopener noreferrer"
           >
-            <LinkIcon />
+            {numbered ? <span className="source-chip-num">{i + 1}</span> : <LinkIcon />}
             <span className="source-chip-title">{article.title}</span>
           </a>
         ))}

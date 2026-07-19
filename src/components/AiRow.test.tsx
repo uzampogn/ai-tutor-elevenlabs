@@ -5,6 +5,14 @@ import AiRow from './AiRow';
 import { buildSpokenDoc } from '@/lib/readAlong/spokenDoc';
 import type { Article } from '@/lib/types';
 
+// Doc-driven word span assertion (shape reused from DocBlocks.test.tsx): every
+// [data-w] in the rendered DOM must equal the corresponding doc.words entry.
+const wordsIn = (el: HTMLElement) =>
+  Array.from(el.querySelectorAll('[data-w]')).map((s) => ({
+    id: Number((s as HTMLElement).dataset.w),
+    text: s.textContent,
+  }));
+
 const article = (over: Partial<Article> = {}): Article => ({
   title: 'Claude Opus 4 launch',
   url: 'https://www.anthropic.com/news/claude-opus-4',
@@ -31,7 +39,7 @@ describe('AiRow', () => {
       <AiRow content={content} streaming={false} articles={[]} speaking={false} onReadAloud={() => {}} onStopAudio={() => {}} />,
     );
 
-    expect(hasText(container, 'p.impact-text', 'This reshapes enterprise budgets.')).toBe(true);
+    expect(hasText(container, '.impact-text', 'This reshapes enterprise budgets.')).toBe(true);
     // The ImpactCard label only appears when the card renders.
     expect(screen.getByText(/Business Impact/i)).toBeInTheDocument();
     expect(hasText(container, 'p.ai-para', 'Here is the main explanation of the topic.')).toBe(true);
@@ -103,9 +111,11 @@ describe('AiRow', () => {
 
   // --- Spec 01: addressable span coverage --------------------------------
 
-  it('wraps every spoken word in a [data-w] and every sentence in a [data-s]', () => {
+  it('wraps every spoken word in a [data-w] and every sentence in a [data-s] (doc-driven, markdown-heavy fixture)', () => {
     const content =
-      'Anthropic released a model. It scored well.\n\n💼 Business Impact\n\nBudgets shift fast.';
+      '## Key Takeaways\n\nAnthropic released a **model**. It scored well.\n\n' +
+      '- Fast rollout\n- Wide availability\n\n> A note worth reading.\n\n---\n\n' +
+      '💼 Business Impact\n\nBudgets shift fast.';
     const { container } = render(
       <AiRow content={content} streaming={false} articles={[]} speaking={false} onReadAloud={() => {}} onStopAudio={() => {}} />,
     );
@@ -116,15 +126,17 @@ describe('AiRow', () => {
     expect(wordSpans).toHaveLength(doc.words.length);
     expect(sentenceSpans).toHaveLength(doc.sentences.length);
 
-    // Each rendered data-w id corresponds 1:1 to a model word, with matching text.
-    doc.words.forEach((w) => {
-      const el = container.querySelector(`[data-w="${w.id}"]`);
-      expect(el).not.toBeNull();
-      expect(el?.textContent).toBe(w.text);
-    });
+    // The DOM word sequence equals doc.words exactly, in order (doc-driven by construction).
+    expect(wordsIn(container)).toEqual(doc.words.map((w) => ({ id: w.id, text: w.text })));
+
     doc.sentences.forEach((s) => {
       expect(container.querySelector(`[data-s="${s.id}"]`)).not.toBeNull();
     });
+
+    // Markdown structural markers are stripped, never leaked as literal text.
+    expect(container.textContent).not.toContain('##');
+    expect(container.textContent).not.toContain('>');
+    expect(container.textContent).not.toContain('---');
   });
 
   it('emits no [data-w] inside the impact label, source chips, or avatar', () => {
@@ -158,7 +170,7 @@ describe('AiRow', () => {
 
     // Block-level textContent matches a span-free render (e.g. paragraph prose).
     expect(hasText(container, 'p.ai-para', 'A bold claim and an italic aside.')).toBe(true);
-    expect(hasText(container, 'p.impact-text', 'It changes pricing.')).toBe(true);
+    expect(hasText(container, '.impact-text', 'It changes pricing.')).toBe(true);
 
     // Emphasis is preserved on the right word spans.
     const boldEl = container.querySelector('strong[data-w]');
@@ -184,7 +196,54 @@ describe('AiRow', () => {
       />,
     );
     const chips = screen.getAllByRole('link');
-    expect(chips.map((c) => c.textContent)).toEqual(['Beta', 'Alpha']);
+    // Chips are numbered when retrieval slugs are present (spec 02), so assert
+    // on the title span rather than the whole chip textContent.
+    expect(chips.map((c) => c.querySelector('.source-chip-title')?.textContent)).toEqual(['Beta', 'Alpha']);
+  });
+
+  describe('inline citations (spec/rag-retrieval-citations 02)', () => {
+    const articles = [
+      { title: 'Alpha', url: 'https://claude.com/blog/alpha', pubDate: '', description: '', body: '', summary: '', heroImage: '' },
+      { title: 'Beta', url: 'https://claude.com/blog/beta', pubDate: '', description: '', body: '', summary: '', heroImage: '' },
+    ];
+    const baseProps = {
+      streaming: false, articles, speaking: false,
+      onReadAloud: () => {}, onStopAudio: () => {},
+    };
+
+    it('renders [n] as a superscript link to the nth retrieved source', () => {
+      const { container } = render(
+        <AiRow {...baseProps} content="One two [2]." sourceSlugs={['alpha', 'beta']} />,
+      );
+      const sup = container.querySelector('sup.cite a') as HTMLAnchorElement;
+      expect(sup).not.toBeNull();
+      expect(sup.getAttribute('href')).toBe('https://claude.com/blog/beta');
+      expect(sup.textContent).toBe('[2]');
+    });
+
+    it('keeps read-along word spans aligned (marker adds no [data-w] span)', () => {
+      const { container } = render(
+        <AiRow {...baseProps} content="One two [1]. Three four." sourceSlugs={['alpha']} />,
+      );
+      // stripMarkdown('One two [1]. Three four.') = 'One two. Three four.' → 4 words.
+      expect(container.querySelectorAll('[data-w]')).toHaveLength(4);
+    });
+
+    it('renders an out-of-range marker as literal text', () => {
+      const { container } = render(
+        <AiRow {...baseProps} content="Claim [7] here." sourceSlugs={['alpha']} />,
+      );
+      expect(container.querySelector('sup.cite')).toBeNull();
+      expect(container.textContent).toContain('[7]');
+    });
+
+    it('numbers the source chips when retrieval slugs are present', () => {
+      const { container } = render(
+        <AiRow {...baseProps} content="Grounded answer [1]." sourceSlugs={['alpha', 'beta']} />,
+      );
+      const nums = Array.from(container.querySelectorAll('.source-chip-num')).map((n) => n.textContent);
+      expect(nums).toEqual(['1', '2']);
+    });
   });
 
   it('renders a streaming partial answer with a caret and without throwing', () => {

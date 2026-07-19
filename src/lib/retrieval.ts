@@ -6,11 +6,11 @@
  */
 import * as db from './db';
 import { embedTexts } from './embeddings';
+import { RETRIEVAL_K, SIM_FLOOR } from './retrievalConfig';
 
-export const RETRIEVAL_K = 3;
-// Cosine-similarity floor so off-topic questions ("hello!") retrieve nothing.
-// Starting guess — tune against real questions before raising/lowering.
-export const SIM_FLOOR = 0.35;
+// Re-exported so `@/lib/retrieval` remains the public home of these constants;
+// definitions live in the dependency-free `retrievalConfig` leaf module.
+export { RETRIEVAL_K, SIM_FLOOR };
 // The chat stream must not wait long for Voyage; on timeout we degrade.
 const QUERY_EMBED_TIMEOUT_MS = 1_500;
 // Sanity cap on the embedded question (Voyage input, not a UI limit).
