@@ -160,24 +160,23 @@ async function main() {
     ? JSON.parse(readFileSync(BASELINE_PATH, 'utf8'))
     : null;
 
-  // Cheap mitigation (spec §5 notes): diffAgainstBaseline silently drops any
-  // baseline metric absent from the current aggregates, so a metric that stops
-  // being emitted would never trip the gate. Surface it as a warning; does NOT
-  // change exit semantics.
-  if (baseline) {
-    const dropped = Object.keys(baseline.metrics).filter((m) => !(m in aggregates));
-    if (dropped.length > 0) {
-      console.warn(`[eval] WARNING: baseline metric(s) absent from this run (not gated): ${dropped.join(', ')}`);
-    }
-  }
-
   const { rows, failed } = diffAgainstBaseline(baseline, aggregates);
   console.log('\n' + formatDiffTable(rows));
   if (!baseline) {
     console.log('\n[eval] no baseline yet — run `npm run eval:accept` to bless this run');
     process.exit(0);
   }
-  if (failed) {
+
+  // diffAgainstBaseline silently drops any baseline metric absent from the
+  // current aggregates, so a metric that stops being emitted would never trip
+  // the gate. A missing metric IS a regression — surface it and fail the gate
+  // (exit 1), alongside the tolerance-based regression check below.
+  const dropped = Object.keys(baseline.metrics).filter((m) => !(m in aggregates));
+  if (dropped.length > 0) {
+    console.error(`[eval] baseline metric(s) absent from this run (no longer emitted — treated as a regression): ${dropped.join(', ')}`);
+  }
+
+  if (failed || dropped.length > 0) {
     console.error('\n[eval] REGRESSION vs baseline ' + baseline.runName + ' — fix or explicitly re-bless with npm run eval:accept');
     process.exit(1);
   }

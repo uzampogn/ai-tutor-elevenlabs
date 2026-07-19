@@ -1,6 +1,12 @@
 import { NextRequest } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
-import { startObservation, LangfuseOtelSpanAttributes } from '@langfuse/tracing';
+import {
+  startObservation,
+  LangfuseOtelSpanAttributes,
+  type LangfuseSpan,
+  type LangfuseRetriever,
+  type LangfuseGeneration,
+} from '@langfuse/tracing';
 import { prepareAnswerContext, CHAT_MODEL, CHAT_MAX_TOKENS } from '@/lib/answerPipeline';
 import { RETRIEVAL_K, SIM_FLOOR } from '@/lib/retrievalConfig';
 import { flushLangfuse } from '@/lib/langfuse';
@@ -15,11 +21,25 @@ export async function POST(req: NextRequest) {
     : undefined;
   const question = typeof lastUser?.content === 'string' ? lastUser.content : '';
 
-  const root = startObservation('chat', { input: { question } });
-  // Set the trace-level name (v5 OTel keeps observation name and trace name separate;
-  // Task 12's managed evaluator filters traces by name = 'chat'). Safe no-op on non-recording spans.
-  root.otelSpan.setAttribute(LangfuseOtelSpanAttributes.TRACE_NAME, 'chat');
-  const retrievalSpan = root.startObservation('retrieval', { input: { question } }, { asType: 'retriever' });
+  // Pre-stream span setup is the one spot where tracing runs synchronously on
+  // the chat hot path. A synchronous SDK throw here must degrade to "no tracing"
+  // rather than surface to the client, upholding the "tracing never throws into
+  // the chat path" invariant. Nullable refs + optional-chaining in the finalize
+  // paths below keep the chat path byte-identical when any of this fails.
+  let root: LangfuseSpan | null = null;
+  let retrievalSpan: LangfuseRetriever | null = null;
+  let generation: LangfuseGeneration | null = null;
+  try {
+    root = startObservation('chat', { input: { question } });
+    // Set the trace-level name (v5 OTel keeps observation name and trace name separate;
+    // Task 12's managed evaluator filters traces by name = 'chat'). Safe no-op on non-recording spans.
+    root.otelSpan.setAttribute(LangfuseOtelSpanAttributes.TRACE_NAME, 'chat');
+    retrievalSpan = root.startObservation('retrieval', { input: { question } }, { asType: 'retriever' });
+  } catch (traceErr) {
+    console.warn('[langfuse] trace setup failed:', traceErr);
+    root = null;
+    retrievalSpan = null;
+  }
 
   let system: Awaited<ReturnType<typeof prepareAnswerContext>>['system'];
   let retrieved: Awaited<ReturnType<typeof prepareAnswerContext>>['retrieved'];
@@ -29,8 +49,8 @@ export async function POST(req: NextRequest) {
     // Retrieval/context prep failed: end the open spans and flush so the trace isn't
     // dangling, then re-throw to preserve the exact client-visible failure (same status/body).
     try {
-      retrievalSpan.end();
-      root.end();
+      retrievalSpan?.end();
+      root?.end();
       await flushLangfuse();
     } catch (traceErr) {
       console.warn('[langfuse] trace finalize failed:', traceErr);
@@ -38,18 +58,28 @@ export async function POST(req: NextRequest) {
     throw err;
   }
 
-  retrievalSpan
-    .update({
-      output: { slugs: retrieved.map((r) => r.slug), similarities: retrieved.map((r) => r.similarity) },
-      metadata: { k: RETRIEVAL_K, simFloor: SIM_FLOOR },
-    })
-    .end();
+  // Same invariant as the setup block above: finalizing the retrieval span and
+  // opening the generation span run synchronously before the stream, so guard
+  // them too. On failure `generation` stays null and the stream finalize below
+  // (optional-chained) simply skips its update.
+  try {
+    retrievalSpan
+      ?.update({
+        output: { slugs: retrieved.map((r) => r.slug), similarities: retrieved.map((r) => r.similarity) },
+        metadata: { k: RETRIEVAL_K, simFloor: SIM_FLOOR },
+      })
+      .end();
 
-  const generation = root.startObservation(
-    'generation',
-    { model: CHAT_MODEL, input: { question } },
-    { asType: 'generation' },
-  );
+    generation =
+      root?.startObservation(
+        'generation',
+        { model: CHAT_MODEL, input: { question } },
+        { asType: 'generation' },
+      ) ?? null;
+  } catch (traceErr) {
+    console.warn('[langfuse] trace setup failed:', traceErr);
+    generation = null;
+  }
 
   const encoder = new TextEncoder();
   let answerText = '';
@@ -90,7 +120,7 @@ export async function POST(req: NextRequest) {
       } finally {
         try {
           generation
-            .update({
+            ?.update({
               output: answerText,
               usageDetails: { input: usage.input ?? 0, output: usage.output ?? 0, cache_read_input_tokens: usage.cacheRead ?? 0 },
             })
@@ -100,7 +130,7 @@ export async function POST(req: NextRequest) {
           // carry the answer + source slugs (so trace-level evaluators can read it).
           const traceOutput = { answer: answerText, sources: retrieved.map((r) => r.slug) };
           root
-            .update({ output: traceOutput })
+            ?.update({ output: traceOutput })
             .setTraceIO({ input: { question }, output: traceOutput })
             .end();
           await flushLangfuse(); // stream is still open ⇒ serverless fn still alive; Next 14 has no after()

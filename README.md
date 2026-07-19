@@ -189,7 +189,7 @@ npm run eval:accept   # re-bless: copy the latest run's aggregates into eval/bas
 
 > **Node 22 for eval scripts.** Run `eval:seed`/`eval` on **Node 22**, not 24: under Node 24 the pinned `@anthropic-ai/sdk` falls back to a bundled `node-fetch@2` whose gzip stream aborts requests (`ERR_STREAM_PREMATURE_CLOSE`); Node 22's native `fetch` works (spec.md §3).
 
-**Observability.** Every production chat turn is traced to Langfuse (trace `chat` → `retrieval` span + `generation` observation with token usage), and a **Faithfulness** LLM evaluator (project-scoped copy of the RAGAS template, judged by `claude-sonnet-4-6`) samples 20% of live `chat` traces via the active `faithfulness-prod-chat` evaluation rule — setup details and verification status in [`spec/eval-harness/langfuse-setup.md`](./spec/eval-harness/langfuse-setup.md). The `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_BASE_URL` env vars are **optional** — unset ⇒ tracing and evals are silent no-ops and the app behaves exactly as before.
+**Observability.** Every production chat turn is traced to Langfuse (trace `chat` → `retrieval` span + `generation` observation with token usage), and a **Faithfulness** LLM evaluator (project-scoped copy of the RAGAS template, judged by `claude-sonnet-4-6`) is configured to sample 20% of live `chat` traces via the active `faithfulness-prod-chat` evaluation rule — setup details and verification status in [`spec/eval-harness/langfuse-setup.md`](./spec/eval-harness/langfuse-setup.md). The `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_BASE_URL` env vars are **optional** — unset ⇒ tracing and evals are silent no-ops and the app behaves exactly as before.
 
 ---
 

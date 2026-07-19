@@ -11,9 +11,9 @@ One-time configuration for the managed evaluator that scores sampled production
 > exists and how to reproduce/verify it.
 >
 > **UI labels drift.** Langfuse's UI wording does not always match the API/SDK
-> field names (per the langfuse skill's warning). Labels below marked _(approx.)_
-> are best-effort; trust the on-screen wording if it differs, and the API field
-> names in §3b are exact.
+> field names (per the langfuse skill's warning). Where the two differ, the
+> exact API field names, ids, and payload values recorded in §3 are the source
+> of truth; treat any on-screen UI label as a best-effort approximation of them.
 
 ## 1. Project + keys
 
