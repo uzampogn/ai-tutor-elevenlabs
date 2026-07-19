@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.40.0",
+    "@elevenlabs/client": "^1.15.1",
     "fast-xml-parser": "^4.3.6",
     "next": "^14.2.35",
     "node-html-parser": "^7.1.0",

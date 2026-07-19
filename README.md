@@ -71,7 +71,7 @@ It's built to be unobtrusive and accessible: highlighting toggles CSS classes on
 | Framework | Next.js 14 (App Router), TypeScript |
 | AI | Anthropic Claude — `claude-sonnet-4-6` (streamed) |
 | Voice output | ElevenLabs TTS — `eleven_turbo_v2`, timestamped `/with-timestamps` |
-| Voice input | Web Speech API (browser-native, Chrome/Edge) |
+| Voice input | ElevenLabs Scribe v2 Realtime (`scribe_v2_realtime`, WebSocket, server VAD) with browser Web Speech API fallback |
 | Storage | Supabase Postgres (transaction pooler) — durable KB of articles + summaries |
 | Design | "Aurora Mist" frosted-glass design system (custom CSS + Tailwind) |
 | Tests | Vitest + Testing Library (jsdom) |
@@ -109,7 +109,9 @@ VOYAGE_API_KEY=...                         # optional; enables RAG retrieval (un
 | `DATABASE_URL` (or `POSTGRES_URL`) | prod | Supabase Postgres connection string — the **transaction pooler** (host `...pooler.supabase.com`, port `6543`), not the direct 5432 connection (IPv6-only, unreachable from Vercel functions). The [Supabase Vercel integration](https://vercel.com/marketplace/supabase) auto-provisions `POSTGRES_URL`; the app reads `DATABASE_URL \|\| POSTGRES_URL`, so no manual alias is needed. Optional locally — without it the app live-scrapes every request. |
 | `VOYAGE_API_KEY` | no | [dash.voyageai.com](https://dash.voyageai.com) — enables RAG retrieval (embeds articles with `voyage-3.5-lite` → pgvector). Unset ⇒ retrieval is off and chat behaves exactly as before (summaries-only grounding, title-match source chips). |
 
-Voice **input** uses the browser-native Web Speech API — works in Chrome/Edge, no key needed.
+Voice **input** uses ElevenLabs Scribe v2 Realtime (needs `ELEVENLABS_API_KEY`; tokens
+are minted server-side at `/api/stt-token`). Without a key it falls back to the
+browser-native Web Speech API (Chrome/Edge).
 
 ### Scripts
 

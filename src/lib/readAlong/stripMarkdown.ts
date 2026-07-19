@@ -8,8 +8,10 @@ export function stripMarkdown(text: string): string {
     .replace(/```[\s\S]*?```/g, '')
     .replace(/`[^`]*`/g, (m) => m.replace(/`/g, ''))
     .replace(/^#{1,6}\s+/gm, '')
-    .replace(/(\*\*|__)([\s\S]*?)\1/g, '$2')
-    .replace(/(\*|_)([\s\S]*?)\1/g, '$2')
+    .replace(/\*\*(?!\s)([^*\n]*?\S)\*\*/g, '$1')
+    .replace(/(?<!\w)__(?!\s)([^_\n]*?\S)__(?!\w)/g, '$1')
+    .replace(/(?<![\w*])\*(?!\s)([^*\n]*?\S)\*(?![\w*])/g, '$1')
+    .replace(/(?<!\w)_(?!\s)([^_\n]*?\S)_(?!\w)/g, '$1')
     .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
     .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1');
 

@@ -570,3 +570,71 @@ describe('useReadAlong — isAutoScrolling flag (for Spec 06)', () => {
     expect(autoRef.current).toBe(false);
   });
 });
+
+// ── Spec 10 — matches spans by `data-s` id, not DOM position ───────────────
+// With block-structured rendering (DocBlocks) a sentence's timing-array index
+// no longer necessarily equals its span's DOM position: e.g. a sentence may be
+// narrated (has a timing window) but not wrapped in its own `[data-s]` span
+// (list items, future filtered regions). `timings` below is contiguous
+// (ids 0, 1, 2 — id 1 IS a real timing window) but the DOM only renders spans
+// for ids 0 and 2 — a deliberate gap. The active window at t=2.5 is array
+// index 2; position-based mapping (`k === i`) would try to mark spans[2],
+// which doesn't exist (spans.length is 2), so nothing goes active and both
+// rendered spans wrongly fall to 's-read'. Id-based mapping must instead mark
+// the span whose `data-s` equals the active sentence's id (2), regardless of
+// its DOM position (1).
+const gapTimings: ReadAlongTimings = {
+  sentences: [
+    { id: 0, startSec: 0, endSec: 1 },
+    { id: 1, startSec: 1, endSec: 2 },
+    { id: 2, startSec: 2, endSec: 3 },
+  ],
+  words: [],
+  totalSec: 3,
+};
+
+function GapHarness({ audio }: { audio: HTMLAudioElement | null }) {
+  const rowRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [, force] = useState(0);
+
+  useEffect(() => {
+    force((v) => v + 1);
+  }, []);
+
+  useReadAlong({
+    active: true,
+    audio,
+    timings: gapTimings,
+    rowEl: rowRef.current,
+    scrollEl: scrollRef.current,
+    granularity: 'sentence',
+  });
+
+  return (
+    <div className="scroll" ref={scrollRef} data-testid="scroll">
+      <div className="row row-ai" ref={rowRef} data-testid="row">
+        <span className="s" data-s={0}>
+          Zero.
+        </span>{' '}
+        <span className="s" data-s={2}>
+          Two.
+        </span>
+      </div>
+    </div>
+  );
+}
+
+describe('useReadAlong — matches spans by data-s id (not DOM position)', () => {
+  it('id 2 (DOM position 1) goes active, id 0 goes read, when sentence id 1 has no span', () => {
+    const audio = new FakeAudio() as unknown as HTMLAudioElement;
+    const fake = audio as unknown as FakeAudio;
+    render(<GapHarness audio={audio} />);
+
+    fake.currentTime = 2.5; // inside sentence id 2's window; array index 2
+    act(() => fake.firePlay());
+
+    expect(classesOf(2)).toEqual(['s-active']);
+    expect(classesOf(0)).toEqual(['s-read']);
+  });
+});
