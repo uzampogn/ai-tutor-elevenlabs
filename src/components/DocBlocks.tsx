@@ -15,7 +15,7 @@ interface DocBlocksProps {
   streaming?: boolean;
   /**
    * Positional citation targets ([n] → citeTargets[n-1]). When a word carries
-   * citation numbers (see buildCitationOverlay), each renders as a superscript
+   * citation numbers (see attachCitations), each renders as a superscript
    * link after the word span. Sentinels are NOT spoken words, so they never add
    * a [data-w] span and read-along alignment is preserved. Unresolvable /
    * out-of-range markers render as literal "[n]".

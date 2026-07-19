@@ -249,7 +249,7 @@ export function parseBlocks(body: string): Block[] {
 // (⟦n⟧, U+27E6/7 — never model-emitted) so a marker never becomes its own
 // word-run and read-along word counts stay aligned with the spoken doc. The
 // doc-driven renderer (DocBlocks, Spec 10) attaches the glued sentinel to the
-// SpokenWord it follows (see buildCitationOverlay in spokenDoc.ts). Speech
+// SpokenWord it follows (see attachCitations in spokenDoc.ts). Speech
 // side: stripMarkdown deletes the same glued markers with the SAME guarded
 // pattern. Keep the two regexes identical.
 

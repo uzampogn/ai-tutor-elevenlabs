@@ -300,7 +300,12 @@ function buildBlocks(
  * modified — the audio/alignment invariants are untouched.
  */
 function attachCitations(fullAnswer: string, spokenText: string, words: SpokenWord[]): void {
-  const glued = stripMarkdown(glueCitations(fullAnswer ?? ''));
+  // Cheap short-circuit: no '[' means no possible [n] markers, so glueCitations
+  // is a no-op and the recompute would equal spokenText anyway — skip the
+  // second stripMarkdown pass entirely.
+  if (!fullAnswer || !fullAnswer.includes('[')) return;
+
+  const glued = stripMarkdown(glueCitations(fullAnswer));
   if (glued === spokenText) return; // no glued markers survived
 
   const OPEN = 0x27e6; // ⟦
