@@ -288,3 +288,28 @@ describe('block overlay (Spec 09)', () => {
     }
   });
 });
+
+describe('buildSpokenDoc — citation markers are invisible (alignment invariant)', () => {
+  it('marked and unmarked answers produce identical spoken docs', () => {
+    const marked = buildSpokenDoc('Claude shipped it [1]. Fast [2][3]. Done.');
+    const clean = buildSpokenDoc('Claude shipped it. Fast. Done.');
+    expect(marked.spokenText).toBe(clean.spokenText);
+    expect(marked.words.length).toBe(clean.words.length);
+  });
+
+  it('attaches glued markers to the word they follow (citation overlay)', () => {
+    const doc = buildSpokenDoc('Claude shipped it [1]. Fast [2][3]. Done.');
+    // [1] glued to "it." → source 1; [2][3] glued to "Fast." → sources 2,3.
+    const cited = doc.words.filter((w) => w.citations && w.citations.length > 0);
+    expect(cited.map((w) => [w.text, w.citations])).toEqual([
+      ['it.', [1]],
+      ['Fast.', [2, 3]],
+    ]);
+  });
+
+  it('leaves a start-of-line marker unattached (kept literal both sides)', () => {
+    const doc = buildSpokenDoc('[1] leads the line.');
+    expect(doc.words.every((w) => !w.citations || w.citations.length === 0)).toBe(true);
+    expect(doc.spokenText).toBe('[1] leads the line.');
+  });
+});

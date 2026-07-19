@@ -11,7 +11,7 @@
 //
 // Pure / framework-free / no DOM — same ethos as src/lib/parseAnswer.ts.
 
-import { parseAnswer, parseBlocks } from '../parseAnswer';
+import { parseAnswer, parseBlocks, glueCitations } from '../parseAnswer';
 import { stripMarkdown } from './stripMarkdown';
 
 export type Emphasis = 'strong' | 'em' | undefined;
@@ -23,6 +23,13 @@ export interface SpokenWord {
   charStart: number; // inclusive offset into SpokenDoc.spokenText
   charEnd: number; // exclusive
   emphasis: Emphasis; // markdown emphasis to preserve when rendering
+  /**
+   * Inline citation source numbers ([n]) glued to this word by the model
+   * (spec/rag-retrieval-citations 02). Undefined when the word carries none.
+   * These are NOT part of spokenText (stripped for TTS) — DocBlocks renders
+   * them as superscript links after the word span.
+   */
+  citations?: number[];
 }
 
 export interface SpokenSentence {
@@ -278,6 +285,64 @@ function buildBlocks(
   return out;
 }
 
+// --- Inline citation overlay -------------------------------------------------
+
+/**
+ * Attach inline citation markers ([n]) to the words they follow.
+ *
+ * glueCitations glues a marker to the preceding word as a sentinel
+ * ("claim [1]" → "claim⟦1⟧"). That sentinel form survives stripMarkdown (which
+ * only deletes the RAW "[n]" with the SAME guard), so
+ *   stripMarkdown(glueCitations(fullAnswer))
+ * equals spokenText with ⟦n⟧ sentinels inserted exactly where the markers sat.
+ * We walk the two strings in lockstep: each inserted sentinel names the word
+ * that owns the character immediately before it. spokenText itself is never
+ * modified — the audio/alignment invariants are untouched.
+ */
+function attachCitations(fullAnswer: string, spokenText: string, words: SpokenWord[]): void {
+  // Cheap short-circuit: no '[' means no possible [n] markers, so glueCitations
+  // is a no-op and the recompute would equal spokenText anyway — skip the
+  // second stripMarkdown pass entirely.
+  if (!fullAnswer || !fullAnswer.includes('[')) return;
+
+  const glued = stripMarkdown(glueCitations(fullAnswer));
+  if (glued === spokenText) return; // no glued markers survived
+
+  const OPEN = 0x27e6; // ⟦
+  const CLOSE = 0x27e7; // ⟧
+  let i = 0; // cursor into spokenText
+  let j = 0; // cursor into glued
+  let w = 0; // word pointer (words are document-ordered; positions increase)
+
+  const attachAt = (pos: number, n: number) => {
+    if (pos < 0) return; // start-of-line marker (never glued) → no owner
+    while (w < words.length && words[w].charEnd <= pos) w += 1;
+    const word = words[w];
+    if (!word || word.charStart > pos) return; // pos in a gap → skip
+    (word.citations ??= []).push(n);
+  };
+
+  while (j < glued.length && i <= spokenText.length) {
+    if (glued.charCodeAt(j) === OPEN) {
+      // Read the digits of a ⟦n⟧ sentinel (never present in spokenText).
+      let k = j + 1;
+      let digits = '';
+      while (k < glued.length && glued[k] >= '0' && glued[k] <= '9') {
+        digits += glued[k];
+        k += 1;
+      }
+      if (digits && glued.charCodeAt(k) === CLOSE) {
+        attachAt(i - 1, Number(digits));
+        j = k + 1; // skip the whole sentinel; spokenText cursor stays put
+        continue;
+      }
+    }
+    if (glued[j] !== spokenText[i]) break; // desync guard — stop safely
+    i += 1;
+    j += 1;
+  }
+}
+
 // --- Public API --------------------------------------------------------------
 
 /**
@@ -365,6 +430,8 @@ export function buildSpokenDoc(fullAnswer: string): SpokenDoc {
 
     prevWord = raw;
   }
+
+  attachCitations(fullAnswer ?? '', spokenText, words);
 
   return { spokenText, sentences, words, blocks: buildBlocks(fullAnswer, spokenText, words, sentences) };
 }

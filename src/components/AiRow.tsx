@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import type { Article } from '@/lib/types';
-import { parseAnswer, resolveSources } from '@/lib/parseAnswer';
+import { parseAnswer, resolveSources, citationTargets } from '@/lib/parseAnswer';
 import { buildSpokenDoc } from '@/lib/readAlong/spokenDoc';
 import DocBlocks from './DocBlocks';
 import ImpactCard from './ImpactCard';
@@ -34,6 +34,10 @@ export default function AiRow({ content, streaming, articles, speaking, rowRef, 
 
   const { impact } = parseAnswer(content);
   const sources = resolveSources(sourceSlugs, content, articles);
+  // Positional citation targets ([n] → citeTargets[n-1]). The glued sentinels
+  // themselves live inside the SpokenDoc (buildSpokenDoc → citation overlay);
+  // DocBlocks renders them as superscript links against these targets.
+  const citeTargets = citationTargets(sourceSlugs, articles);
 
   // Single source of truth for read-along: one tokenization drives both the TTS
   // string (later specs) and the addressable spans rendered below via
@@ -68,11 +72,11 @@ export default function AiRow({ content, streaming, articles, speaking, rowRef, 
           </div>
         )}
 
-        <DocBlocks doc={doc} region="body" streaming={streaming && impact === null} />
+        <DocBlocks doc={doc} region="body" streaming={streaming && impact === null} citeTargets={citeTargets} />
 
-        {impact !== null && impact.length > 0 && <ImpactCard doc={doc} />}
+        {impact !== null && impact.length > 0 && <ImpactCard doc={doc} citeTargets={citeTargets} />}
 
-        <SourceChips sources={sources} />
+        <SourceChips sources={sources} numbered={Boolean(sourceSlugs?.length)} />
 
         {!streaming && content.trim().length > 0 && (
           <div className="msg-actions">

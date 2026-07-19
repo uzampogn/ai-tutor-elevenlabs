@@ -196,7 +196,54 @@ describe('AiRow', () => {
       />,
     );
     const chips = screen.getAllByRole('link');
-    expect(chips.map((c) => c.textContent)).toEqual(['Beta', 'Alpha']);
+    // Chips are numbered when retrieval slugs are present (spec 02), so assert
+    // on the title span rather than the whole chip textContent.
+    expect(chips.map((c) => c.querySelector('.source-chip-title')?.textContent)).toEqual(['Beta', 'Alpha']);
+  });
+
+  describe('inline citations (spec/rag-retrieval-citations 02)', () => {
+    const articles = [
+      { title: 'Alpha', url: 'https://claude.com/blog/alpha', pubDate: '', description: '', body: '', summary: '', heroImage: '' },
+      { title: 'Beta', url: 'https://claude.com/blog/beta', pubDate: '', description: '', body: '', summary: '', heroImage: '' },
+    ];
+    const baseProps = {
+      streaming: false, articles, speaking: false,
+      onReadAloud: () => {}, onStopAudio: () => {},
+    };
+
+    it('renders [n] as a superscript link to the nth retrieved source', () => {
+      const { container } = render(
+        <AiRow {...baseProps} content="One two [2]." sourceSlugs={['alpha', 'beta']} />,
+      );
+      const sup = container.querySelector('sup.cite a') as HTMLAnchorElement;
+      expect(sup).not.toBeNull();
+      expect(sup.getAttribute('href')).toBe('https://claude.com/blog/beta');
+      expect(sup.textContent).toBe('[2]');
+    });
+
+    it('keeps read-along word spans aligned (marker adds no [data-w] span)', () => {
+      const { container } = render(
+        <AiRow {...baseProps} content="One two [1]. Three four." sourceSlugs={['alpha']} />,
+      );
+      // stripMarkdown('One two [1]. Three four.') = 'One two. Three four.' → 4 words.
+      expect(container.querySelectorAll('[data-w]')).toHaveLength(4);
+    });
+
+    it('renders an out-of-range marker as literal text', () => {
+      const { container } = render(
+        <AiRow {...baseProps} content="Claim [7] here." sourceSlugs={['alpha']} />,
+      );
+      expect(container.querySelector('sup.cite')).toBeNull();
+      expect(container.textContent).toContain('[7]');
+    });
+
+    it('numbers the source chips when retrieval slugs are present', () => {
+      const { container } = render(
+        <AiRow {...baseProps} content="Grounded answer [1]." sourceSlugs={['alpha', 'beta']} />,
+      );
+      const nums = Array.from(container.querySelectorAll('.source-chip-num')).map((n) => n.textContent);
+      expect(nums).toEqual(['1', '2']);
+    });
   });
 
   it('renders a streaming partial answer with a caret and without throwing', () => {

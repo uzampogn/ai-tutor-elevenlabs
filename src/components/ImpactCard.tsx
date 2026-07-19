@@ -4,20 +4,23 @@
 // is NOT a spoken word and stays span-free).
 
 import DocBlocks from './DocBlocks';
+import type { Article } from '@/lib/types';
 import type { SpokenDoc } from '@/lib/readAlong/spokenDoc';
 
 interface ImpactCardProps {
   doc: SpokenDoc;
+  /** Positional citation targets, forwarded to DocBlocks for [n] superscripts. */
+  citeTargets?: (Article | undefined)[];
 }
 
-export default function ImpactCard({ doc }: ImpactCardProps) {
+export default function ImpactCard({ doc, citeTargets }: ImpactCardProps) {
   return (
     <div className="impact">
       <div className="impact-label">
         <span aria-hidden="true">💼</span> Business Impact
       </div>
       <div className="impact-text">
-        <DocBlocks doc={doc} region="impact" />
+        <DocBlocks doc={doc} region="impact" citeTargets={citeTargets} />
       </div>
     </div>
   );

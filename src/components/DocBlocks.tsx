@@ -5,6 +5,7 @@
 
 import { Fragment } from 'react';
 import type { ReactNode } from 'react';
+import type { Article } from '@/lib/types';
 import type { DocBlock, SpokenDoc, SpokenWord } from '@/lib/readAlong/spokenDoc';
 
 interface DocBlocksProps {
@@ -12,10 +13,42 @@ interface DocBlocksProps {
   region: 'body' | 'impact';
   /** Append the streaming caret after the region's last rendered word. */
   streaming?: boolean;
+  /**
+   * Positional citation targets ([n] → citeTargets[n-1]). When a word carries
+   * citation numbers (see attachCitations), each renders as a superscript
+   * link after the word span. Sentinels are NOT spoken words, so they never add
+   * a [data-w] span and read-along alignment is preserved. Unresolvable /
+   * out-of-range markers render as literal "[n]".
+   */
+  citeTargets?: (Article | undefined)[];
+}
+
+/** Superscript source links for a word's glued citation markers (if any). */
+function renderCitations(
+  w: SpokenWord,
+  citeTargets: (Article | undefined)[] | undefined,
+): ReactNode {
+  if (!w.citations || w.citations.length === 0) return null;
+  return w.citations.map((n, ci) => {
+    const target = citeTargets?.[n - 1];
+    if (!target) return <Fragment key={`c${ci}`}>[{n}]</Fragment>;
+    return (
+      <sup key={`c${ci}`} className="cite">
+        <a href={target.url} target="_blank" rel="noopener noreferrer" title={target.title}>
+          [{n}]
+        </a>
+      </sup>
+    );
+  });
 }
 
 /** Render one item's words: sentence-grouped spans, gaps from spokenText. */
-function renderWords(doc: SpokenDoc, wordIds: number[], keyBase: string): ReactNode[] {
+function renderWords(
+  doc: SpokenDoc,
+  wordIds: number[],
+  keyBase: string,
+  citeTargets: (Article | undefined)[] | undefined,
+): ReactNode[] {
   const words = wordIds.map((id) => doc.words[id]).filter(Boolean) as SpokenWord[];
   // Group contiguous same-sentence words (ids are document-ordered).
   const groups: SpokenWord[][] = [];
@@ -45,6 +78,7 @@ function renderWords(doc: SpokenDoc, wordIds: number[], keyBase: string): ReactN
               <Tag className="w" data-w={w.id}>
                 {text}
               </Tag>
+              {renderCitations(w, citeTargets)}
             </Fragment>
           );
         })}
@@ -54,7 +88,7 @@ function renderWords(doc: SpokenDoc, wordIds: number[], keyBase: string): ReactN
   return out;
 }
 
-export default function DocBlocks({ doc, region, streaming }: DocBlocksProps) {
+export default function DocBlocks({ doc, region, streaming, citeTargets }: DocBlocksProps) {
   const blocks = doc.blocks.filter((b) => b.region === region);
   const caret = streaming ? <span className="caret" /> : null;
   const lastBlock = blocks[blocks.length - 1];
@@ -77,7 +111,7 @@ export default function DocBlocks({ doc, region, streaming }: DocBlocksProps) {
         if (block.type === 'paragraph') {
           return (
             <p key={i} className="ai-para">
-              {renderWords(doc, block.wordIds, `b${i}`)}
+              {renderWords(doc, block.wordIds, `b${i}`, citeTargets)}
               {isLast && caret}
             </p>
           );
@@ -87,7 +121,7 @@ export default function DocBlocks({ doc, region, streaming }: DocBlocksProps) {
           <List key={i} className="ai-list">
             {block.items.map((item, j) => (
               <li key={j} className="ai-list-item">
-                {renderWords(doc, item.wordIds, `b${i}-i${j}`)}
+                {renderWords(doc, item.wordIds, `b${i}-i${j}`, citeTargets)}
                 {isLast && j === block.items.length - 1 && caret}
               </li>
             ))}
