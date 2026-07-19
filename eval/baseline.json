@@ -1,0 +1,50 @@
+{
+  "runName": "eval-ef0f9db-1784398197360",
+  "acceptedAt": "ef0f9db",
+  "metrics": {
+    "retrieval.offtopic_pass": {
+      "value": 0.25,
+      "tolerance": 0.02
+    },
+    "citations.in_range": {
+      "value": 1,
+      "tolerance": 0.02
+    },
+    "citations.glue_roundtrip": {
+      "value": 1,
+      "tolerance": 0.02
+    },
+    "citations.coverage": {
+      "value": 0.5200000000000001,
+      "tolerance": 0.02
+    },
+    "judge.groundedness": {
+      "value": 4.769230769230769,
+      "tolerance": 0.3
+    },
+    "judge.citation_faithfulness": {
+      "value": 4.730769230769231,
+      "tolerance": 0.3
+    },
+    "judge.relevance": {
+      "value": 4.730769230769231,
+      "tolerance": 0.3
+    },
+    "judge.pedagogy": {
+      "value": 4.8076923076923075,
+      "tolerance": 0.3
+    },
+    "retrieval.recall": {
+      "value": 0.9545454545454546,
+      "tolerance": 0.02
+    },
+    "retrieval.precision": {
+      "value": 0.4848484848484849,
+      "tolerance": 0.02
+    },
+    "retrieval.mrr": {
+      "value": 0.9090909090909091,
+      "tolerance": 0.02
+    }
+  }
+}
