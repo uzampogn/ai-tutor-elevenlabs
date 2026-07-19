@@ -1,6 +1,6 @@
 # Eval Harness / Quality Scoring — Langfuse-backed (backlog #9)
 
-**Status:** Spec approved, awaiting implementation plan
+**Status:** Implemented (see plan.md)
 **Origin:** `spec/00_feature_backlog.md` item 9 — "Answers stay reliably good and don't silently regress as the app grows — quality is measured, not vibed." Intermediate signal: eval-driven development.
 **Branch:** builds on top of `feat/rag-02-inline-citations` (citation metrics score exactly what that branch produces)
 **Touch surface:**

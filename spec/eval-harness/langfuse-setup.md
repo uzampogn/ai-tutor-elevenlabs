@@ -3,13 +3,12 @@
 One-time configuration for the managed evaluator that scores sampled production
 `/api/chat` traces (spec/eval-harness §6). SDK/keys setup lives in `.env.example`.
 
-> **What was automated vs. what remains a human step.** This project was set up
-> headless (no browser). The Anthropic **LLM connection** — the only piece the
-> Langfuse public API lets us write safely — was created programmatically via the
-> CLI (§2 below). The **evaluator + evaluation rule** (which decide *what* gets
-> sampled and *how* variables map) are documented here as one-time steps; do them
-> in the UI (recommended, matches this doc) or via the CLI commands in §3b. They
-> were **not** executed automatically.
+> **What was automated.** This project was set up headless (no browser). All
+> three pieces were created programmatically via the Langfuse public API: the
+> Anthropic **LLM connection** (§2), the project-scoped **Faithfulness
+> evaluator**, and the **evaluation rule** that samples live `chat` observations
+> (§3). Nothing remains to click in the UI; the sections below document what
+> exists and how to reproduce/verify it.
 >
 > **UI labels drift.** Langfuse's UI wording does not always match the API/SDK
 > field names (per the langfuse skill's warning). Labels below marked _(approx.)_
@@ -52,60 +51,73 @@ npx langfuse-cli --env .env.local api llm-connections list
   (`--custom-models`/UI "Custom models") or type the id explicitly in the
   evaluator's model field.
 
-## 3. Groundedness evaluator on sampled prod traces — ⏳ one-time human step
+## 3. Faithfulness evaluator on sampled prod traces — ✅ done programmatically
 
-### 3a. Via the UI (recommended)
+Created 2026-07-19 via the public **unstable** API surface
+(`POST /api/public/unstable/evaluators`, `POST /api/public/unstable/evaluation-rules`).
+What exists now:
 
-- **Evaluators → New evaluator → from a template.** There is **no template named
-  literally "Groundedness"** in the managed catalog. The RAG groundedness metric
-  is the RAGAS **`Faithfulness`** template (variables `context`, `answer`; scores
-  0–1 NUMERIC) — it measures whether the answer's claims are supported by the
-  retrieved context, which is exactly "groundedness". _(Alternative:_ the
-  `Hallucination` template, variables `query`, `generation`, is the inverse
-  framing if you prefer that.) This deviation from the brief's "Groundedness"
-  wording is because the catalog exposes the RAGAS names.
-- **Target:** _(approx. UI label)_ **Traces** (live production traces), filtered
-  to **`name = chat`**. Confirmed present: prod traces named `chat` exist (e.g.
-  `0a66f9d957c09fd1247718f3431b7461`, `a94cd71d194d5cea56b067cd5c800026`), with
-  `input.question` and `output.answer` set at trace level.
-- **Sampling:** start at **10%** (raise toward 20% once daily volume is known).
-- **Variable mapping** (map each template variable to a trace/observation field):
-  - `answer` → trace **`output.answer`** (the final answer text; set via
-    `setTraceIO`, verified populated on prod traces).
-  - `context` → the **`retrieval`** observation's **`output.slugs`** (the
-    retrieved source slugs; the retriever observation also carries
-    `output.similarities`). _If the template scores better on full text than on
-    slug ids,_ map `context` to the **`generation`** observation's input instead
-    (the retrieved article bodies are in the generation's prompt) — pick whichever
-    the template accepts. Trace-level `output.sources` is an equivalent slug list.
-- **Model:** the **`anthropic`** connection from §2, model **`claude-sonnet-4-6`**.
-- **Save**, then send one live chat turn and confirm a `Faithfulness` score
-  appears on a fresh `chat` trace within a few minutes.
+- **Evaluator `Faithfulness`** — id `cmrr2ckj30x4mad0cojsmdtbv`, **scope
+  `project`**, version 1, type `llm_as_judge`, variables `context` + `answer`,
+  NUMERIC 0–1 output (score + one-sentence reasoning), model
+  **`claude-sonnet-4-6`** on the **`anthropic`** connection from §2.
+  - Why "Faithfulness", not "Groundedness": there is **no managed template named
+    "Groundedness"**; the RAGAS **`Faithfulness`** template (claims-supported-by-
+    context) *is* the groundedness metric.
+  - Why project-scoped instead of the managed template: referencing the managed
+    `Faithfulness` (scope `managed`, `modelConfig: null`) in a rule fails with
+    `422 evaluator_preflight_failed` — *"No valid LLM model found … No default
+    model or custom model configured for project"* — because managed evaluators
+    resolve to the **project default evaluation model**, which can only be set in
+    the UI and is unset here. The project-scoped copy uses the managed template's
+    exact prompt + output definition (v2) with an **explicit
+    `modelConfig: {provider: "anthropic", model: "claude-sonnet-4-6"}`**, which
+    passes preflight against the §2 connection.
+- **Evaluation rule `faithfulness-prod-chat`** — id `cmrr2ctud0y0wad0je3ixdrtm`,
+  `enabled: true`, `status: active`:
+  - **Target `observation`** (the API's live-ingestion equivalent of the UI's
+    "traces" target), **filter** `name any of ["chat"]` → matches the root `chat`
+    span of every prod trace (child spans are named `retrieval`/`generation`, so
+    exactly one observation per chat turn matches).
+  - **Sampling `0.2`** (20% — upper end of the planned 10–20% band, chosen for
+    faster verification at current low trace volume; lower it if volume grows).
+  - **Variable mapping** (the unstable API can only map from the *matched*
+    observation's own `input`/`output`/`metadata` — it cannot reach sibling
+    observations, so both variables come from the `chat` span's output object
+    `{answer, sources}`):
+    - `answer` → `output` + jsonPath `$.answer` (final answer text).
+    - `context` → `output` + jsonPath `$.sources` (retrieved source slugs; the
+      full article bodies live only in the generation prompt, which a rule
+      matched on the `chat` span cannot reference — a slug list is the best
+      single-observation context available, and is the same deviation the UI
+      route would have needed).
 
-### 3b. Via the CLI (alternative to the UI — NOT executed during setup)
-
-The public API exposes evaluator config under the **unstable** surface
-(`unstable-evaluators`, `unstable-evaluation-rules`). Setup did **not** run these
-(only the LLM-connection write in §2 was authorized), but they are the
-programmatic equivalent of §3a. Discover exact args first:
+Reproduce/verify:
 
 ```bash
-npx langfuse-cli --env .env.local api unstable-evaluators --help
-npx langfuse-cli --env .env.local api unstable-evaluation-rules create --help
+# inspect the evaluator + rule
+npx langfuse-cli --env .env.local api unstable-evaluators list
+npx langfuse-cli --env .env.local api unstable-evaluation-rules list
+
+# check for Faithfulness scores on prod traces
+npx langfuse-cli --env .env.local api scores list --name Faithfulness
 ```
 
-Notes for whoever runs these:
-- `Faithfulness` already exists as a **managed** evaluator (scope `managed`,
-  variables `context`, `answer`) — you likely only need an **evaluation rule**
-  that references it by `name=Faithfulness` + `scope=managed`, not a new
-  evaluator.
-- The rule's **`target`** field is **`observation`** or `experiment` (API
-  wording) — the UI's "Traces" option maps to observation-scoped live sampling;
-  filter to root observations named `chat`. This is the UI-vs-API label drift
-  called out above.
-- For `llm_as_judge` rules every template variable must be mapped exactly once
-  (`context`, `answer`), or the API returns `400 missing_variable_mapping`.
-- At most 50 active rules per project.
+The exact create payloads are in the git history of this file's authoring task
+(task-12 final report) — rediscover request shapes any time with
+`npx langfuse-cli api unstable-evaluation-rules create --help`.
+
+> **Verification status (2026-07-19).** After rule creation, 5 live chat turns
+> were sent (traces `526ddfdc…`, `c592847b…`, `edeab18e…`, `46f786fe…`,
+> `e77c13ec…`, all ingested with `chat`/`retrieval`/`generation` observations
+> and generation output tokens > 0). **No `Faithfulness` score had appeared
+> 12+ hours later** — at 20% sampling the chance all 5 miss is 0.8⁵ ≈ 33%, and
+> the rule reports healthy (`status: active`, `pausedReason: null`; creation
+> preflight ran the judge model successfully). Most likely the sampling
+> lottery; the first score should appear organically as prod traffic flows. If
+> none shows after ~20 more traces, re-run the commands above and inspect the
+> rule for a paused/error state (a silent per-execution failure — e.g. the
+> jsonPath mapping — would not be visible in the rule status).
 
 ## 4. Where things live in the UI
 
@@ -116,8 +128,9 @@ Notes for whoever runs these:
 - **Datasets → `rag-golden`:** the golden items (26 curated) + one experiment run
   per `npm run eval` (`eval-<git-sha>-<n>`), with per-item scores + judge
   rationales.
-- **Scores:** the managed `Faithfulness` evaluator's groundedness scores on
-  sampled prod traces; offline runs' four judge dimensions on dataset-run items.
+- **Scores:** the `Faithfulness` evaluator's (project-scoped, §3) groundedness
+  scores on sampled prod traces (20% of `chat` observations); offline runs' four
+  judge dimensions on dataset-run items.
 - **Project settings → LLM connections:** the `anthropic` connection from §2.
 
 ---
@@ -129,5 +142,7 @@ Notes for whoever runs these:
 | Discover API surface | `langfuse-cli api __schema` + `<resource> --help` | Found `llm-connections`, `unstable-evaluators`, `unstable-evaluation-rules` |
 | Verify prod traces named `chat` | `traces list --name chat` | ✅ present, `input.question` + `output.answer` populated |
 | Read managed template catalog | `unstable-evaluators list` | No "Groundedness"; `Faithfulness` (`context`,`answer`) is the match |
-| Upsert Anthropic LLM connection | `llm-connections put` (only write) | ✅ HTTP 201, id `cmrqm42gw0ujcad0iq1t78wh0` |
-| Evaluator + evaluation rule | — | ⏳ left as one-time UI/CLI step (§3) |
+| Upsert Anthropic LLM connection | `llm-connections put` | ✅ HTTP 201, id `cmrqm42gw0ujcad0iq1t78wh0` |
+| Rule on managed `Faithfulness` | `POST unstable/evaluation-rules` | ❌ 422 `evaluator_preflight_failed` (no project default eval model — UI-only setting) |
+| Project-scoped `Faithfulness` evaluator | `POST unstable/evaluators` | ✅ HTTP 200, id `cmrr2ckj30x4mad0cojsmdtbv`, model `claude-sonnet-4-6` via `anthropic` connection |
+| Rule `faithfulness-prod-chat` | `POST unstable/evaluation-rules` | ✅ HTTP 200, id `cmrr2ctud0y0wad0je3ixdrtm`, active, 20% sampling, filter `name any of ["chat"]` |
