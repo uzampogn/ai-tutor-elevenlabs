@@ -11,7 +11,7 @@
 //
 // Pure / framework-free / no DOM — same ethos as src/lib/parseAnswer.ts.
 
-import { parseAnswer } from '../parseAnswer';
+import { parseAnswer, parseBlocks, glueCitations } from '../parseAnswer';
 import { stripMarkdown } from './stripMarkdown';
 
 export type Emphasis = 'strong' | 'em' | undefined;
@@ -23,6 +23,13 @@ export interface SpokenWord {
   charStart: number; // inclusive offset into SpokenDoc.spokenText
   charEnd: number; // exclusive
   emphasis: Emphasis; // markdown emphasis to preserve when rendering
+  /**
+   * Inline citation source numbers ([n]) glued to this word by the model
+   * (spec/rag-retrieval-citations 02). Undefined when the word carries none.
+   * These are NOT part of spokenText (stripped for TTS) — DocBlocks renders
+   * them as superscript links after the word span.
+   */
+  citations?: number[];
 }
 
 export interface SpokenSentence {
@@ -33,42 +40,29 @@ export interface SpokenSentence {
   region: 'body' | 'impact'; // body paragraphs vs the Business Impact card
 }
 
+export type DocBlockItem = { wordIds: number[] };
+export type DocBlock =
+  | { type: 'paragraph'; region: 'body' | 'impact'; wordIds: number[] }
+  | { type: 'ul'; region: 'body' | 'impact'; items: DocBlockItem[] }
+  | { type: 'ol'; region: 'body' | 'impact'; items: DocBlockItem[] }
+  | { type: 'code'; region: 'body' | 'impact'; raw: string }
+  | { type: 'image'; region: 'body' | 'impact'; alt: string };
+
 export interface SpokenDoc {
   /** The EXACT string sent to ElevenLabs. Equals stripMarkdown(fullAnswer). */
   spokenText: string;
   sentences: SpokenSentence[];
   words: SpokenWord[];
-}
-
-// --- Word cursor (shared by the addressable render path) ---------------------
-
-export interface WordCursor {
-  /** Consume and return the next word in this region, or null if exhausted. */
-  next(): SpokenWord | null;
-}
-
-/**
- * Build a cursor over a region's words (body or impact), in document order.
- *
- * A region is rendered from the SAME text that produced its slice of doc.words,
- * so the visible word sequence matches doc.words 1:1. The cursor hands out the
- * next word each time the renderer emits a non-whitespace run, letting the
- * components wrap words in <span data-w> and group them under <span data-s>
- * without needing to know character offsets.
- */
-export function makeWordCursor(words: SpokenWord[]): WordCursor {
-  let i = 0;
-  return {
-    next() {
-      return i < words.length ? words[i++] : null;
-    },
-  };
+  /** Block-structure overlay partitioning doc.words for rendering (Spec 09). */
+  blocks: DocBlock[];
 }
 
 // --- Emphasis overlay --------------------------------------------------------
 
 // Same precedence as parseInline: **bold**/__bold__ first, then *em*/_em_.
-const EMPHASIS_PATTERN = /(\*\*([^*]+?)\*\*)|(__([^_]+?)__)|(\*([^*]+?)\*)|(_([^_]+?)_)/g;
+// Flanking-aware: intra-word delimiters don't trigger emphasis (e.g., snake_case).
+const EMPHASIS_PATTERN =
+  /(\*\*(?!\s)([^*\n]*?\S)\*\*)|(?<!\w)(__(?!\s)([^_\n]*?\S)__)(?!\w)|(?<![\w*])(\*(?!\s)([^*\n]*?\S)\*)(?![\w*])|(?<!\w)(_(?!\s)([^_\n]*?\S)_)(?!\w)/g;
 
 /**
  * Build a per-character emphasis overlay aligned to spokenText.
@@ -210,6 +204,145 @@ function scanWords(
   return words;
 }
 
+// --- Block overlay -----------------------------------------------------------
+
+function buildBlocks(
+  fullAnswer: string,
+  spokenText: string,
+  words: SpokenWord[],
+  sentences: SpokenSentence[],
+): DocBlock[] {
+  const out: DocBlock[] = [];
+  let cursor = 0; // forward char cursor into spokenText
+  let wordIdx = 0; // next unassigned word (words are in document order)
+
+  /** Locate a block's spoken form in spokenText from the cursor; advance on hit. */
+  const locate = (raw: string): { start: number; end: number } | null => {
+    const spoken = stripMarkdown(raw);
+    if (!spoken) return null;
+    const at = spokenText.indexOf(spoken, cursor);
+    if (at === -1) return null;
+    cursor = at + spoken.length;
+    return { start: at, end: at + spoken.length };
+  };
+
+  /** Consume, in order, the words fully inside [start, end). */
+  const takeWords = (start: number, end: number): number[] => {
+    const ids: number[] = [];
+    while (
+      wordIdx < words.length &&
+      words[wordIdx].charStart >= start &&
+      words[wordIdx].charEnd <= end
+    ) {
+      ids.push(words[wordIdx].id);
+      wordIdx += 1;
+    }
+    return ids;
+  };
+
+  const emit = (region: 'body' | 'impact', raw: string) => {
+    for (const block of parseBlocks(raw)) {
+      if (block.type === 'code') {
+        if (block.raw.trim()) out.push({ type: 'code', region, raw: block.raw });
+      } else if (block.type === 'image') {
+        out.push({ type: 'image', region, alt: block.alt });
+      } else if (block.type === 'paragraph') {
+        const loc = locate(block.text);
+        const wordIds = loc ? takeWords(loc.start, loc.end) : [];
+        if (wordIds.length) out.push({ type: 'paragraph', region, wordIds });
+      } else {
+        const items: DocBlockItem[] = [];
+        for (const item of block.items) {
+          const loc = locate(item);
+          const wordIds = loc ? takeWords(loc.start, loc.end) : [];
+          if (wordIds.length) items.push({ wordIds });
+        }
+        if (items.length) {
+          // block.type narrows to 'ul' | 'ol' here; branch explicitly so the
+          // pushed literal matches DocBlock's separate ul/ol variants.
+          if (block.type === 'ul') out.push({ type: 'ul', region, items });
+          else out.push({ type: 'ol', region, items });
+        }
+      }
+    }
+  };
+
+  const { body, impact } = parseAnswer(fullAnswer);
+  emit('body', body);
+  if (impact) emit('impact', impact);
+
+  // Degrade, never drop: any unassigned words land in trailing paragraphs.
+  if (wordIdx < words.length) {
+    const rest: Record<'body' | 'impact', number[]> = { body: [], impact: [] };
+    for (; wordIdx < words.length; wordIdx += 1) {
+      const w = words[wordIdx];
+      rest[sentences[w.sentenceId]?.region ?? 'body'].push(w.id);
+    }
+    if (rest.body.length) out.push({ type: 'paragraph', region: 'body', wordIds: rest.body });
+    if (rest.impact.length) out.push({ type: 'paragraph', region: 'impact', wordIds: rest.impact });
+  }
+
+  return out;
+}
+
+// --- Inline citation overlay -------------------------------------------------
+
+/**
+ * Attach inline citation markers ([n]) to the words they follow.
+ *
+ * glueCitations glues a marker to the preceding word as a sentinel
+ * ("claim [1]" → "claim⟦1⟧"). That sentinel form survives stripMarkdown (which
+ * only deletes the RAW "[n]" with the SAME guard), so
+ *   stripMarkdown(glueCitations(fullAnswer))
+ * equals spokenText with ⟦n⟧ sentinels inserted exactly where the markers sat.
+ * We walk the two strings in lockstep: each inserted sentinel names the word
+ * that owns the character immediately before it. spokenText itself is never
+ * modified — the audio/alignment invariants are untouched.
+ */
+function attachCitations(fullAnswer: string, spokenText: string, words: SpokenWord[]): void {
+  // Cheap short-circuit: no '[' means no possible [n] markers, so glueCitations
+  // is a no-op and the recompute would equal spokenText anyway — skip the
+  // second stripMarkdown pass entirely.
+  if (!fullAnswer || !fullAnswer.includes('[')) return;
+
+  const glued = stripMarkdown(glueCitations(fullAnswer));
+  if (glued === spokenText) return; // no glued markers survived
+
+  const OPEN = 0x27e6; // ⟦
+  const CLOSE = 0x27e7; // ⟧
+  let i = 0; // cursor into spokenText
+  let j = 0; // cursor into glued
+  let w = 0; // word pointer (words are document-ordered; positions increase)
+
+  const attachAt = (pos: number, n: number) => {
+    if (pos < 0) return; // start-of-line marker (never glued) → no owner
+    while (w < words.length && words[w].charEnd <= pos) w += 1;
+    const word = words[w];
+    if (!word || word.charStart > pos) return; // pos in a gap → skip
+    (word.citations ??= []).push(n);
+  };
+
+  while (j < glued.length && i <= spokenText.length) {
+    if (glued.charCodeAt(j) === OPEN) {
+      // Read the digits of a ⟦n⟧ sentinel (never present in spokenText).
+      let k = j + 1;
+      let digits = '';
+      while (k < glued.length && glued[k] >= '0' && glued[k] <= '9') {
+        digits += glued[k];
+        k += 1;
+      }
+      if (digits && glued.charCodeAt(k) === CLOSE) {
+        attachAt(i - 1, Number(digits));
+        j = k + 1; // skip the whole sentinel; spokenText cursor stays put
+        continue;
+      }
+    }
+    if (glued[j] !== spokenText[i]) break; // desync guard — stop safely
+    i += 1;
+    j += 1;
+  }
+}
+
 // --- Public API --------------------------------------------------------------
 
 /**
@@ -223,7 +356,7 @@ export function buildSpokenDoc(fullAnswer: string): SpokenDoc {
   const spokenText = stripMarkdown(fullAnswer ?? '');
 
   if (!spokenText) {
-    return { spokenText: '', sentences: [], words: [] };
+    return { spokenText: '', sentences: [], words: [], blocks: [] };
   }
 
   // Region split — body is the prefix, impact (if any) is the suffix.
@@ -298,5 +431,7 @@ export function buildSpokenDoc(fullAnswer: string): SpokenDoc {
     prevWord = raw;
   }
 
-  return { spokenText, sentences, words };
+  attachCitations(fullAnswer ?? '', spokenText, words);
+
+  return { spokenText, sentences, words, blocks: buildBlocks(fullAnswer, spokenText, words, sentences) };
 }

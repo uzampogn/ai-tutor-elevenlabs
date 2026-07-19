@@ -70,6 +70,8 @@ export async function POST(req: NextRequest) {
 
   const audioParts: Uint8Array[] = [];
   const perChunkAlignments: ChunkAlignment[] = [];
+  const charLengths: number[] = [];
+  const alignSecs: number[] = [];
 
   for (let i = 0; i < chunks.length; i++) {
     const chunk = chunks[i];
@@ -111,6 +113,10 @@ export async function POST(req: NextRequest) {
         toChunkAlignment(data.normalized_alignment),
       );
       perChunkAlignments.push(reconciled);
+      charLengths.push(chunk.length);
+      alignSecs.push(
+        reconciled.charEndTimesSec.length ? Math.max(...reconciled.charEndTimesSec) : 0,
+      );
     } catch (err) {
       console.error(`[speak] fetch failed (chunk ${i}):`, err);
       // Fail-soft: return the partial stitched result for prior chunks.
@@ -139,8 +145,15 @@ export async function POST(req: NextRequest) {
 
   const alignment = stitchAlignments(perChunkAlignments);
 
+  const chunkMeta = {
+    count: perChunkAlignments.length,
+    charLengths,
+    alignSecs,
+  };
+  console.log('[speak] chunks:', JSON.stringify(chunkMeta));
+
   return NextResponse.json(
-    { audioBase64, alignment },
+    { audioBase64, alignment, chunkMeta },
     { headers: { 'Cache-Control': 'no-store' } },
   );
 }

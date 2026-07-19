@@ -4,6 +4,20 @@ import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import VoiceDock from './VoiceDock';
 
+// Pin these legacy tests to the Web Speech engine: they assert engine-level
+// behavior (sync setListening, injected SpeechRecognition instances, the
+// unsupported message) that useVoiceInput now routes to Scribe first.
+// Scribe-path integration lives in VoiceDock.scribe.test.tsx.
+vi.mock('./useVoiceInput', async () => {
+  const { useSpeechRecognition } = await import('./useSpeechRecognition');
+  return {
+    useVoiceInput: (opts: Parameters<typeof useSpeechRecognition>[0]) => ({
+      ...useSpeechRecognition(opts),
+      engine: 'webspeech' as const,
+    }),
+  };
+});
+
 function renderVoiceDock(overrides: Partial<React.ComponentProps<typeof VoiceDock>> = {}) {
   const props: React.ComponentProps<typeof VoiceDock> = {
     input: '',

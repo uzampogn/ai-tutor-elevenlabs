@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from 'react';
 import type { Article } from '@/lib/types';
-import { parseAnswer, resolveSources, parseBlocks, glueCitations, citationTargets } from '@/lib/parseAnswer';
-import { buildSpokenDoc, makeWordCursor } from '@/lib/readAlong/spokenDoc';
-import InlineMarkdown from './InlineMarkdown';
+import { parseAnswer, resolveSources, citationTargets } from '@/lib/parseAnswer';
+import { buildSpokenDoc } from '@/lib/readAlong/spokenDoc';
+import DocBlocks from './DocBlocks';
 import ImpactCard from './ImpactCard';
 import SourceChips from './SourceChips';
 import { CopyIcon, SoundIcon, LikeIcon } from './icons';
@@ -32,29 +32,18 @@ export default function AiRow({ content, streaming, articles, speaking, rowRef, 
   const [copied, setCopied] = useState(false);
   const [liked, setLiked] = useState(false);
 
-  const { body, impact } = parseAnswer(glueCitations(content));
+  const { impact } = parseAnswer(content);
   const sources = resolveSources(sourceSlugs, content, articles);
+  // Positional citation targets ([n] → citeTargets[n-1]). The glued sentinels
+  // themselves live inside the SpokenDoc (buildSpokenDoc → citation overlay);
+  // DocBlocks renders them as superscript links against these targets.
   const citeTargets = citationTargets(sourceSlugs, articles);
 
-  const blocks = parseBlocks(body);
-
   // Single source of truth for read-along: one tokenization drives both the TTS
-  // string (later specs) and the addressable spans below. Built once per
-  // message; partial/streaming content is tolerated (never throws).
+  // string (later specs) and the addressable spans rendered below via
+  // DocBlocks. Built once per message; partial/streaming content is tolerated
+  // (never throws).
   const doc = useMemo(() => buildSpokenDoc(content), [content]);
-  const bodyWords = useMemo(
-    () => doc.words.filter((w) => doc.sentences[w.sentenceId]?.region === 'body'),
-    [doc],
-  );
-  const impactWords = useMemo(
-    () => doc.words.filter((w) => doc.sentences[w.sentenceId]?.region === 'impact'),
-    [doc],
-  );
-  // Body blocks render in document order, consuming the shared body cursor in
-  // order (React renders children top-to-bottom), so word ids line up 1:1 with
-  // doc.words. The impact card consumes its own cursor.
-  const bodyCursor = makeWordCursor(bodyWords);
-  const impactCursor = makeWordCursor(impactWords);
 
   function handleCopy() {
     navigator.clipboard?.writeText(content).then(
@@ -83,47 +72,9 @@ export default function AiRow({ content, streaming, articles, speaking, rowRef, 
           </div>
         )}
 
-        {blocks.map((block, i) => {
-          const isLast = i === blocks.length - 1;
-          if (block.type === 'ul') {
-            return (
-              <ul key={i} className="ai-list">
-                {block.items.map((item, j) => {
-                  const isLastItem = j === block.items.length - 1;
-                  return (
-                    <li key={j} className="ai-list-item">
-                      <InlineMarkdown text={item} cursor={bodyCursor} citeTargets={citeTargets} />
-                      {streaming && impact === null && isLast && isLastItem && <span className="caret" />}
-                    </li>
-                  );
-                })}
-              </ul>
-            );
-          }
-          if (block.type === 'ol') {
-            return (
-              <ol key={i} className="ai-list">
-                {block.items.map((item, j) => {
-                  const isLastItem = j === block.items.length - 1;
-                  return (
-                    <li key={j} className="ai-list-item">
-                      <InlineMarkdown text={item} cursor={bodyCursor} citeTargets={citeTargets} />
-                      {streaming && impact === null && isLast && isLastItem && <span className="caret" />}
-                    </li>
-                  );
-                })}
-              </ol>
-            );
-          }
-          return (
-            <p key={i} className="ai-para">
-              <InlineMarkdown text={block.text} cursor={bodyCursor} citeTargets={citeTargets} />
-              {streaming && impact === null && isLast && <span className="caret" />}
-            </p>
-          );
-        })}
+        <DocBlocks doc={doc} region="body" streaming={streaming && impact === null} citeTargets={citeTargets} />
 
-        {impact !== null && impact.length > 0 && <ImpactCard text={impact} cursor={impactCursor} citeTargets={citeTargets} />}
+        {impact !== null && impact.length > 0 && <ImpactCard doc={doc} citeTargets={citeTargets} />}
 
         <SourceChips sources={sources} numbered={Boolean(sourceSlugs?.length)} />
 

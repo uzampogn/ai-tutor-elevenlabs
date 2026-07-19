@@ -111,20 +111,26 @@ export function useReadAlong({
 
     const sentences = timings.sentences;
     const spans = Array.from(rowEl.querySelectorAll<HTMLElement>('[data-s]'));
+    // Parallel to `spans` — each span's sentence id, read once up front. Block-
+    // structured rendering (DocBlocks) means a span's DOM position no longer
+    // always equals its sentence id (list items, future filtered regions), so
+    // matching must go by id, not position.
+    const spanIds = spans.map((el) => Number(el.dataset.s));
 
     /** Clear every read-along class from this row's sentence spans. */
     function clearClasses() {
       for (const span of spans) span.classList.remove('s-active', 's-read');
     }
 
-    /** Reflect active sentence index `i` onto the spans (idempotent per frame). */
-    function applyIndex(i: number) {
+    /** Reflect active sentence id `activeId` onto the spans by `data-s` match. */
+    function applyIndex(activeId: number) {
       for (let k = 0; k < spans.length; k++) {
+        const sid = spanIds[k];
         const span = spans[k];
-        if (k === i) {
+        if (sid === activeId) {
           span.classList.add('s-active');
           span.classList.remove('s-read');
-        } else if (k < i) {
+        } else if (sid < activeId) {
           span.classList.add('s-read');
           span.classList.remove('s-active');
         } else {
@@ -163,11 +169,11 @@ export function useReadAlong({
 
     /**
      * The band primitive — the ONE code path both scroll-to-start and follow
-     * route through. Measures span `i`'s top within the scroll viewport; if it
+     * route through. Measures `span`'s top within the scroll viewport; if it
      * lands outside the band, scrolls so it sits at `topFraction`. Otherwise
      * does nothing (no jitter). At most one `scrollTo` per call.
      *
-     * @param i           sentence index to place.
+     * @param span        the span element to place.
      * @param topFraction where the span lands when we DO scroll (band's top).
      * @param bottomFraction lower edge of the "leave it alone" band.
      * @param reduceFloor when reduced-motion is on, only correct if the span has
@@ -178,14 +184,13 @@ export function useReadAlong({
      *        zero-height jsdom layout still produces the scroll Spec 04 asserts).
      */
     function scrollSpanIntoBand(
-      i: number,
+      span: HTMLElement | undefined,
       topFraction: number,
       bottomFraction: number,
       reduceFloor: number,
       always = false,
     ) {
       if (!scrollEl) return;
-      const span = spans[i];
       if (!span) return;
 
       const reduce = prefersReducedMotion();
@@ -220,13 +225,15 @@ export function useReadAlong({
       // Same band primitive, with the smaller top fraction for play headroom.
       // `always` so the first sentence is brought to the start once per playback
       // regardless of where it currently sits.
-      scrollSpanIntoBand(0, SCROLL_TOP_FRACTION, BAND_BOTTOM, BAND_BOTTOM, true);
+      scrollSpanIntoBand(spans[0], SCROLL_TOP_FRACTION, BAND_BOTTOM, BAND_BOTTOM, true);
     }
 
     /** Keep the active sentence in the band — runs on sentence change only. */
-    function followToBand(i: number) {
-      if (i < 0) return;
-      scrollSpanIntoBand(i, BAND_TOP, BAND_BOTTOM, BAND_BOTTOM);
+    function followToBand(activeId: number) {
+      if (activeId < 0) return;
+      const span = spans[spanIds.indexOf(activeId)];
+      if (!span) return; // no rendered span for this id (filtered/unwrapped sentence)
+      scrollSpanIntoBand(span, BAND_TOP, BAND_BOTTOM, BAND_BOTTOM);
     }
 
     /** One animation frame: map currentTime → sentence, update classes. */
@@ -238,10 +245,11 @@ export function useReadAlong({
       }
       const i = activeIndexAt(sentences, audio.currentTime, lastIndexRef.current);
       if (i !== lastIndexRef.current) {
-        applyIndex(i);
+        const activeId = i >= 0 ? sentences[i].id : -1;
+        applyIndex(activeId);
         lastIndexRef.current = i;
         // Follow on sentence change only — never per frame (cadence + no jitter).
-        followToBand(i);
+        followToBand(activeId);
       }
       rafRef.current = requestAnimationFrame(tick);
     }
@@ -252,7 +260,8 @@ export function useReadAlong({
       // Prime the highlight immediately, then run the loop.
       const i = activeIndexAt(sentences, audio?.currentTime ?? 0, lastIndexRef.current);
       if (i !== lastIndexRef.current) {
-        applyIndex(i);
+        const activeId = i >= 0 ? sentences[i].id : -1;
+        applyIndex(activeId);
         lastIndexRef.current = i;
       }
       if (rafRef.current == null) {

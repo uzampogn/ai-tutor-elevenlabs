@@ -1,7 +1,7 @@
 'use client';
 
 import Orb, { type OrbState } from './Orb';
-import { useSpeechRecognition } from './useSpeechRecognition';
+import { useVoiceInput } from './useVoiceInput';
 
 interface VoiceDockProps {
   input: string;
@@ -11,6 +11,8 @@ interface VoiceDockProps {
   setListening: (v: boolean) => void;
   onSend: (override?: string) => void;
   speaking: boolean;
+  /** Pause TTS playback when a listening turn starts (echo strategy). */
+  onStartListening?: () => void;
   /** Session controls (Voice/Text switch + New chat) rendered below the orb. */
   controls?: React.ReactNode;
 }
@@ -22,9 +24,10 @@ export default function VoiceDock({
   setListening,
   onSend,
   speaking,
+  onStartListening,
   controls,
 }: VoiceDockProps) {
-  const { supported, toggle, sendNow } = useSpeechRecognition({
+  const { supported, toggle, sendNow } = useVoiceInput({
     listening,
     setListening,
     onInterim: (t) => setInput(t),
@@ -33,6 +36,7 @@ export default function VoiceDock({
       onSend(t);
     },
     disabled: isLoading,
+    onStartListening,
   });
 
   // Derive orb state with precedence: speaking > thinking > listening > idle.

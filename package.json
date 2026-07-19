@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.40.0",
+    "@elevenlabs/client": "^1.15.1",
     "@langfuse/client": "^5.9.1",
     "@langfuse/otel": "^5.9.1",
     "@langfuse/tracing": "^5.9.1",

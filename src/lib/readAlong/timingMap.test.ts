@@ -54,7 +54,7 @@ function makeDoc(tokens: { text: string; sentenceId: number }[]): SpokenDoc {
 
   const spokenText = pieces.join('');
   const sentences = Array.from(sentenceMap.values()).sort((a, b) => a.id - b.id);
-  return { spokenText, sentences, words };
+  return { spokenText, sentences, words, blocks: [] };
 }
 
 /**
@@ -199,6 +199,7 @@ describe('buildTimings — monotonic & clamped', () => {
       spokenText: 'abcd',
       words: [{ id: 0, sentenceId: 0, text: 'abcd', charStart: 0, charEnd: 99, emphasis: undefined }],
       sentences: [{ id: 0, wordIds: [0], charStart: 0, charEnd: 99, region: 'body' }],
+      blocks: [],
     };
     const align = makeAlignment('abcd', 1); // N=4
     const t = buildTimings(doc, align);
@@ -275,7 +276,7 @@ describe('buildTimings — proportional fallback', () => {
 
 describe('buildTimings — empty / degenerate', () => {
   it('empty doc → empty timings', () => {
-    const doc: SpokenDoc = { spokenText: '', words: [], sentences: [] };
+    const doc: SpokenDoc = { spokenText: '', words: [], sentences: [], blocks: [] };
     const align = makeAlignment('abc', 1);
     expect(buildTimings(doc, align)).toEqual({ sentences: [], words: [], totalSec: 0 });
   });
@@ -379,5 +380,43 @@ describe('activeIndexAt', () => {
   it('forward scan from a stale-but-valid hint advances to the right window', () => {
     // Hint at 0 but time is in window 2.
     expect(activeIndexAt(windows, 5, 0)).toBe(2);
+  });
+});
+
+describe('code-point alignment expansion (Spec 11)', () => {
+  const codePointAlignment = (text: string) => {
+    const cps = Array.from(text);
+    return {
+      chars: cps,
+      charStartTimesSec: cps.map((_, i) => i * 0.1),
+      charEndTimesSec: cps.map((_, i) => (i + 1) * 0.1),
+    };
+  };
+
+  it('takes the measured path for emoji answers', () => {
+    const doc = buildSpokenDoc('Great results 🚀 today.\n\n💼 Business Impact\n\nRevenue grew.');
+    const t = buildTimings(doc, codePointAlignment(doc.spokenText));
+    expect(t.estimated).toBeFalsy();
+    expect(t.words.length).toBe(doc.words.length);
+    for (let i = 1; i < t.words.length; i++) {
+      expect(t.words[i].startSec).toBeGreaterThanOrEqual(t.words[i - 1].startSec);
+    }
+  });
+
+  it('handles astral chars at the edges and ZWJ sequences', () => {
+    for (const text of ['🚀 start here', 'end here 🚀', 'mid 👩‍💻 word']) {
+      const doc = buildSpokenDoc(text);
+      const t = buildTimings(doc, codePointAlignment(doc.spokenText));
+      expect(t.estimated, text).toBeFalsy();
+    }
+  });
+
+  it('still falls back when chars do not reconstruct spokenText', () => {
+    const doc = buildSpokenDoc('Plain text answer here. 🚀');
+    const a = codePointAlignment(doc.spokenText);
+    a.chars = a.chars.slice(1); // drop a char → join mismatch AND length mismatch
+    a.charStartTimesSec = a.charStartTimesSec.slice(1);
+    a.charEndTimesSec = a.charEndTimesSec.slice(1);
+    expect(buildTimings(doc, a).estimated).toBe(true);
   });
 });

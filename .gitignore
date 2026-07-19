@@ -31,3 +31,7 @@ eval/last-run.json
 # Langfuse AI skill (local install from github.com/langfuse/skills, not committed)
 .claude/skills/langfuse/
 .env*
+
+# Local worktrees + SDD scratch
+.worktrees/
+.superpowers/
