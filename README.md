@@ -2,19 +2,52 @@
 
 **Understand the latest in AI — explained clearly, and read aloud.**
 
-AI News Tutor is a conversational agent that turns the [Claude blog](https://claude.com/blog)'s latest posts into clear, on-demand explanations. Ask by voice or text. You can steer any answer to the level you want — high-level business impact or under-the-hood technical detail. Answers are streamed in and **read back aloud while the words highlight and the page follows along**, synced with ElevenLabs timestamps.
+AI News Tutor is a conversational agent that turns the [Claude blog](https://claude.com/blog)'s latest posts into clear, on-demand explanations. Ask by voice or text. You can steer any answer to the level you want — high-level business impact or under-the-hood technical detail. Answers are streamed in and **read back aloud while the words highlight and the page follows along**, synced with ElevenLabs timestamps. Answer quality is gated by a [replayable eval harness](#evals--observability) with a committed baseline.
 
 **▶ Try it live: [ai-tutor-elevenlabs.vercel.app](https://ai-tutor-elevenlabs.vercel.app)**
 
+<!-- TODO: replace with a short GIF of the read-along (highlight + dim + follow-scroll, with voice) -->
 ![AI News Tutor — homepage](./docs/home.png)
+
+---
+
+## Quick start
+
+Two keys and you're running — everything else is optional:
+
+```bash
+git clone https://github.com/uzampogn/ai-tutor-elevenlabs.git
+cd ai-tutor-elevenlabs
+npm install
+cp .env.example .env.local      # set ANTHROPIC_API_KEY + ELEVENLABS_API_KEY
+npm run dev                     # http://localhost:3000
+```
+
+| Key | Where to get it |
+|---|---|
+| `ANTHROPIC_API_KEY` | [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) |
+| `ELEVENLABS_API_KEY` | [elevenlabs.io/app/settings/api-keys](https://elevenlabs.io/app/settings/api-keys) |
+
+Without a database the app live-scrapes the blog on each request; without `VOYAGE_API_KEY` retrieval is off and answers are grounded in article summaries. Both are fine locally. Full configuration — database, cron refresh, RAG embeddings, Langfuse, production deploys — lives in [`docs/DEPLOYING.md`](./docs/DEPLOYING.md).
+
+### Scripts
+
+```bash
+npm run dev          # dev server (http://localhost:3000)
+npm run build        # production build
+npm run start        # serve the production build
+npm run lint         # next lint
+npm run typecheck    # tsc --noEmit
+npm run test         # vitest (watch)   ·   npm run test:run  (one-shot)
+```
+
+> ⚠️ Don't run `npm run build` while `npm run dev` is live — they share `.next` and the prod build corrupts the running dev server. Stop dev first.
 
 ---
 
 ## What it solves
 
 AI moves faster than most people can keep up with, and the primary sources are written for builders. AI News Tutor closes that gap for founders, product managers, engineers — anyone curious about AI. Answers are grounded in current posts (refreshed daily, not a stale training cutoff), pitched at whatever level you ask for, read aloud so you can learn hands-free, and cited back to the exact articles they draw from.
-
----
 
 ## What it does
 
@@ -28,8 +61,6 @@ AI moves faster than most people can keep up with, and the primary sources are w
 | ✨ **Read-along** | The spoken sentence highlights and the view auto-scrolls to follow the voice. |
 | 🎙️ **Talk to it** | Voice-first mode: tap the orb, speak your question, and it sends automatically. |
 | 📰 **Article reader** | Click any article to open a slide-in reader with its summary. |
-
-### The experience
 
 The app opens voice-first: a large, state-reactive orb invites you to tap and speak, the answer streams in, then plays back aloud with the current sentence highlighted and the page following along. A Text mode with a frosted-glass composer is one flip away.
 
@@ -55,71 +86,21 @@ It's built to be unobtrusive and accessible: highlighting toggles CSS classes on
 
 ---
 
-## Built with
+## How it works
 
-| Layer | Technology |
-|---|---|
-| Framework | Next.js 14 (App Router), TypeScript |
-| AI | Anthropic Claude — `claude-sonnet-4-6` (streamed) |
-| Voice output | ElevenLabs TTS — `eleven_turbo_v2`, timestamped `/with-timestamps` |
-| Voice input | ElevenLabs Scribe v2 Realtime (`scribe_v2_realtime`, WebSocket, server VAD) with browser Web Speech API fallback |
-| Storage | Supabase Postgres (transaction pooler) — durable KB of articles + summaries |
-| Design | "Aurora Mist" frosted-glass design system (custom CSS + Tailwind) |
-| Tests | Vitest + Testing Library (jsdom) |
-| Hosting | Vercel (auto-deployed via GitHub Actions) |
-
----
-
-## Run it yourself
-
-```bash
-git clone https://github.com/uzampogn/ai-tutor-elevenlabs.git
-cd ai-tutor-elevenlabs
-npm install
-cp .env.example .env.local      # then fill in the keys below
-npm run dev                     # http://localhost:3000
+```mermaid
+flowchart LR
+  Browser --> ChatAPI["/api/chat"]
+  Browser --> SpeakAPI["/api/speak"]
+  Browser --> ScrapeAPI["/api/scrape"]
+  ChatAPI --> Claude["Claude (streamed)"]
+  ChatAPI --> DB[("Supabase Postgres + pgvector")]
+  ChatAPI -. "optional RAG" .-> Voyage["Voyage embeddings"]
+  SpeakAPI --> XI["ElevenLabs /with-timestamps"]
+  ScrapeAPI --> DB
+  Cron["Vercel Cron (daily)"] --> Refresh["/api/scrape/refresh"]
+  Refresh --> DB
 ```
-
-Fill `.env.local`:
-
-```env
-ANTHROPIC_API_KEY=sk-ant-...
-ELEVENLABS_API_KEY=...
-ELEVENLABS_VOICE_ID=21m00Tcm4TlvDq8ikWAM   # optional; defaults to "Rachel"
-CRON_SECRET=...                            # required in prod for the scheduled refresh
-DATABASE_URL=postgresql://...pooler.supabase.com:6543/postgres?sslmode=require   # Supabase transaction pooler
-VOYAGE_API_KEY=...                         # optional; enables RAG retrieval (unset ⇒ retrieval off)
-```
-
-| Variable | Required | Where to get it |
-|---|---|---|
-| `ANTHROPIC_API_KEY` | yes | [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) |
-| `ELEVENLABS_API_KEY` | yes | [elevenlabs.io/app/settings/api-keys](https://elevenlabs.io/app/settings/api-keys) |
-| `ELEVENLABS_VOICE_ID` | no | Browse [elevenlabs.io/voice-library](https://elevenlabs.io/voice-library); defaults to Rachel |
-| `CRON_SECRET` | prod | Any strong random string. Set in Vercel project settings; the cron sends it as `Authorization: Bearer $CRON_SECRET` to `/api/scrape/refresh`. Without it the refresh route fails closed (401). |
-| `DATABASE_URL` (or `POSTGRES_URL`) | prod | Supabase Postgres connection string — the **transaction pooler** (host `...pooler.supabase.com`, port `6543`), not the direct 5432 connection (IPv6-only, unreachable from Vercel functions). The [Supabase Vercel integration](https://vercel.com/marketplace/supabase) auto-provisions `POSTGRES_URL`; the app reads `DATABASE_URL \|\| POSTGRES_URL`, so no manual alias is needed. Optional locally — without it the app live-scrapes every request. |
-| `VOYAGE_API_KEY` | no | [dash.voyageai.com](https://dash.voyageai.com) — enables RAG retrieval (embeds articles with `voyage-3.5-lite` → pgvector). Unset ⇒ retrieval is off and chat behaves exactly as before (summaries-only grounding, title-match source chips). |
-
-Voice **input** uses ElevenLabs Scribe v2 Realtime (needs `ELEVENLABS_API_KEY`; tokens
-are minted server-side at `/api/stt-token`). Without a key it falls back to the
-browser-native Web Speech API (Chrome/Edge).
-
-### Scripts
-
-```bash
-npm run dev          # dev server (http://localhost:3000)
-npm run build        # production build
-npm run start        # serve the production build
-npm run lint         # next lint
-npm run typecheck    # tsc --noEmit
-npm run test         # vitest (watch)   ·   npm run test:run  (one-shot)
-```
-
-> ⚠️ Don't run `npm run build` while `npm run dev` is live — they share `.next` and the prod build corrupts the running dev server. Stop dev first.
-
----
-
-## How it's wired
 
 All routes run server-side, so API keys never reach the browser.
 
@@ -130,9 +111,9 @@ All routes run server-side, so API keys never reach the browser.
 | `/api/chat` | `POST` | Injects the articles as context and streams Claude's answer. |
 | `/api/speak` | `POST` | Strips markdown, chunks, calls ElevenLabs `/with-timestamps`, returns `{ audioBase64, alignment }` (`alignment.chars.join('') === text`). Fail-soft. |
 
-**Auto-refresh & freshness.** Supabase Postgres is the durable source of truth for the knowledge base (articles + their summaries), so a fresh serverless instance reads precomputed rows instead of re-scraping the blog and re-issuing ~24 summary calls on every cold start. A daily [Vercel Cron](https://vercel.com/docs/cron-jobs) (`0 6 * * *`) hits `/api/scrape/refresh` and is the only writer: it scrapes, summarizes only new/changed posts (a durable content hash skips unchanged ones), and upserts the result. Reads are DB-first and self-heal: if the table is empty or stale, a read scrapes + summarizes inline and writes back, so the KB is never permanently empty. On a scrape failure the app serves the last-good rows, and `/api/scrape` exposes `status.stale` (age > 26h) and `status.ageMs`, so a stuck scrape is observable rather than silent. The daily cadence is a Vercel Hobby cron limit; on Pro, tune `vercel.json`.
+**Freshness.** Supabase Postgres is the durable source of truth for the knowledge base. A daily Vercel Cron is the only writer: it scrapes, summarizes only new/changed posts (a content hash skips the rest), and upserts. Reads are DB-first and self-heal if the table is empty or stale, and a failed scrape serves the last-good rows while `/api/scrape` reports staleness. Details: [`docs/DEPLOYING.md`](./docs/DEPLOYING.md).
 
-**RAG retrieval.** When `VOYAGE_API_KEY` is set, the cron also embeds each new/changed article ([Voyage](https://dash.voyageai.com) `voyage-3.5-lite`, 1024 dims → `pgvector` on Supabase), gated by a `<model>:<content-hash>` so unchanged content never re-embeds. At question time the chat route embeds the user's latest message and retrieves the top-3 most similar articles (cosine distance, similarity floor `0.35` so off-topic questions retrieve nothing); their full bodies are appended to the prompt as a second, uncached system block, leaving the cached summaries block byte-identical so prompt caching is preserved. The response's `X-Sources` header drives the source chips. The feature degrades cleanly: without `VOYAGE_API_KEY` — or on any Voyage error, timeout, or missing DB — the app falls back to the summaries-only path. The pgvector schema is created idempotently at runtime; if `CREATE EXTENSION vector` is refused on the pooled role, enable the `vector` extension once in the Supabase dashboard (Database → Extensions).
+**Retrieval (optional).** With `VOYAGE_API_KEY` set, new/changed articles are embedded (`voyage-3.5-lite` → pgvector) and the chat retrieves the top-3 most similar into a second, uncached system block — the cached summaries block stays byte-identical, so prompt caching is preserved. Without the key the app falls back to summaries-only grounding.
 
 ```
 src/
@@ -153,7 +134,20 @@ src/
         └── timingMap.ts                      #   alignment → sentence/word time windows
 ```
 
-Deploys to Vercel via GitHub Actions: pull requests get a preview URL commented on the PR; pushes to `main` promote to production. Set `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` as repo secrets and the three runtime keys in the Vercel project settings.
+Deploys to Vercel via GitHub Actions — pull requests get a preview URL, pushes to `main` promote to production ([`docs/DEPLOYING.md`](./docs/DEPLOYING.md)).
+
+## Built with
+
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 14 (App Router), TypeScript |
+| AI | Anthropic Claude — `claude-sonnet-4-6` (streamed) |
+| Voice output | ElevenLabs TTS — `eleven_turbo_v2`, timestamped `/with-timestamps` |
+| Voice input | ElevenLabs Scribe v2 Realtime (`scribe_v2_realtime`, WebSocket, server VAD) with browser Web Speech API fallback |
+| Storage | Supabase Postgres (transaction pooler) — durable KB of articles + summaries |
+| Design | "Aurora Mist" frosted-glass design system (custom CSS + Tailwind) |
+| Tests | Vitest + Testing Library (jsdom) |
+| Hosting | Vercel (auto-deployed via GitHub Actions) |
 
 ---
 
@@ -183,6 +177,28 @@ npm run eval:accept   # re-bless: copy the latest run's aggregates into eval/bas
 > **Node 22 for eval scripts.** Run `eval:seed`/`eval` on **Node 22**, not 24: under Node 24 the pinned `@anthropic-ai/sdk` falls back to a bundled `node-fetch@2` whose gzip stream aborts requests (`ERR_STREAM_PREMATURE_CLOSE`); Node 22's native `fetch` works (spec.md §3).
 
 **Observability.** Every production chat turn is traced to Langfuse (trace `chat` → `retrieval` span + `generation` observation with token usage), and a Faithfulness LLM evaluator (project-scoped copy of the RAGAS template, judged by `claude-sonnet-4-6`) samples 20% of live `chat` traces via the `faithfulness-prod-chat` evaluation rule — setup details and verification status in [`spec/eval-harness/langfuse-setup.md`](./spec/eval-harness/langfuse-setup.md). The `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_BASE_URL` env vars are optional; unset ⇒ tracing and evals are silent no-ops.
+
+---
+
+## Why these choices
+
+- **Summaries-grounding by default, RAG as an optional layer.** The app is useful with two API keys; every extra dependency (database, Voyage, Langfuse) degrades to a no-op instead of being a hard requirement.
+- **DB-first reads.** Serverless cold starts read precomputed rows instead of re-scraping the blog and re-issuing ~24 summary calls.
+- **One canonical tokenization for speech and highlighting.** A single source of truth is what keeps ElevenLabs audio timing and rendered markdown in sync — see [Read-along](#read-along).
+
+## Limitations & what's next
+
+Current limitations:
+
+- The knowledge base covers a single source — the Claude blog — refreshed once a day.
+- Voice input needs an ElevenLabs key; the fallback is the browser Web Speech API (Chrome/Edge only).
+
+Next up:
+
+- A smaller orb, leaving more room for the text.
+- Harmonized orb state colours (red → green).
+- Email yourself a conversation transcript with a high-level summary.
+- Back the article drawer with Postgres to cut cold-start time.
 
 ---
 
