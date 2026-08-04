@@ -2,7 +2,7 @@
 
 **Understand the latest in AI — explained clearly, and read aloud.**
 
-AI News Tutor is a conversational agent that turns the [Claude blog](https://claude.com/blog)'s latest posts into clear, on-demand explanations. Ask by voice or text. You can steer any answer to the level you want — high-level business impact or under-the-hood technical detail. Answers are streamed in and **read back aloud while the words highlight and the page follows along**, synced with real ElevenLabs timestamps.
+AI News Tutor is a conversational agent that turns the [Claude blog](https://claude.com/blog)'s latest posts into clear, on-demand explanations. Ask by voice or text. You can steer any answer to the level you want — high-level business impact or under-the-hood technical detail. Answers are streamed in and **read back aloud while the words highlight and the page follows along**, synced with ElevenLabs timestamps.
 
 **▶ Try it live: [ai-tutor-elevenlabs.vercel.app](https://ai-tutor-elevenlabs.vercel.app)**
 
@@ -10,18 +10,9 @@ AI News Tutor is a conversational agent that turns the [Claude blog](https://cla
 
 ---
 
-## Who it's for
-
-Founders, curious product managers or engineers — anyone interested in AI. Steer the conversation just by using your voice whether you want the business headline or the technical specifics.
-
 ## What it solves
 
-AI moves faster than most people can keep up with, and primary sources are written for builders. AI News Tutor closes that gap:
-
-- **Always current** — answers are grounded in every recent post the Claude blog surfaces, auto-refreshed daily and stored durably, not a stale training cutoff.
-- **Speaks at your level** — it makes complex AI topics approachable for anyone, and because the chat is fully interactive it explains them in whatever register you ask for: business impact one moment, technical detail the next. Every answer still ends with a **Business Impact** takeaway.
-- **Listen, don't just read** — full text-to-speech with synchronized read-along, so you can learn hands-free.
-- **Trustworthy** — answers cite the exact articles they draw from, linked to the real posts.
+AI moves faster than most people can keep up with, and the primary sources are written for builders. AI News Tutor closes that gap for founders, product managers, engineers — anyone curious about AI. Answers are grounded in current posts (refreshed daily, not a stale training cutoff), pitched at whatever level you ask for, read aloud so you can learn hands-free, and cited back to the exact articles they draw from.
 
 ---
 
@@ -32,7 +23,7 @@ AI moves faster than most people can keep up with, and primary sources are writt
 | 🗞️ **Live knowledge base** | Pulls every recent Claude blog post the index surfaces — title, date, and excerpt — into a browsable sidebar, refreshed automatically. |
 | 💬 **Grounded answers** | Claude answers your question using those articles as context, streamed token-by-token, structured to scan. |
 | 💼 **Business Impact takeaway** | Every answer closes with a one-line "so what does this mean" callout. |
-| 🔗 **Source citations** | Articles referenced in an answer appear as chips linking to the real posts. |
+| 🔗 **Source citations** | Articles referenced in an answer appear as chips linking to the posts. |
 | 🔊 **Read aloud** | ElevenLabs voices every answer; a waveform animates while it speaks. |
 | ✨ **Read-along** | The spoken sentence highlights and the view auto-scrolls to follow the voice. |
 | 🎙️ **Talk to it** | Voice-first mode: tap the orb, speak your question, and it sends automatically. |
@@ -40,13 +31,13 @@ AI moves faster than most people can keep up with, and primary sources are writt
 
 ### The experience
 
-The app opens in **voice-first** mode — a large, state-reactive **orb** invites you to tap and speak. Ask anything about recent AI news; the answer streams in, grounded in real articles, then plays back aloud. Want more business framing or more technical depth? Just ask a follow-up — the conversation adapts to you. As the voice reads, the current sentence lights up and the page scrolls to keep it in view. Prefer to type? Flip to **Text** mode for a frosted-glass composer. Every answer carries source chips and a Business Impact line, so you always know where a claim came from and why it matters.
+The app opens voice-first: a large, state-reactive orb invites you to tap and speak, the answer streams in, then plays back aloud with the current sentence highlighted and the page following along. A Text mode with a frosted-glass composer is one flip away.
 
 ---
 
-## Read-along: the standout
+## Read-along
 
-Most "read aloud" features just play audio. AI News Tutor synchronizes the audio with the text — the spoken sentence highlights, already-spoken sentences dim, and the thread auto-scrolls to keep the active line in a comfortable reading band.
+AI News Tutor synchronizes the audio with the text: the spoken sentence highlights, already-spoken sentences dim, and the thread auto-scrolls to keep the active line in a comfortable reading band.
 
 The engineering crux is that **the spoken text ≠ the rendered text**: the screen shows full markdown (bold, lists, a separate Impact card, source chips) while the voice engine times a plain string. AI News Tutor solves this with **one canonical tokenization** that is the single source of truth for both what gets spoken and what gets highlighted:
 
@@ -136,12 +127,12 @@ All routes run server-side, so API keys never reach the browser.
 |---|---|---|
 | `/api/scrape` | `GET` | Returns all recent Claude blog posts plus an ingestion `status` (freshness/staleness). Reads **DB-first** from Supabase Postgres (cold-start safe), with a short read-through cache. |
 | `/api/scrape/refresh` | `GET` | Cron-only forced re-scrape — the **writer** that refreshes Postgres. Requires `Authorization: Bearer $CRON_SECRET` (401 otherwise). |
-| `/api/chat` | `POST` | Injects the articles as context and **streams** Claude's answer. |
+| `/api/chat` | `POST` | Injects the articles as context and streams Claude's answer. |
 | `/api/speak` | `POST` | Strips markdown, chunks, calls ElevenLabs `/with-timestamps`, returns `{ audioBase64, alignment }` (`alignment.chars.join('') === text`). Fail-soft. |
 
-**Auto-refresh & freshness.** **Supabase Postgres is the durable source of truth** for the knowledge base — both articles and their per-article summaries — so a fresh serverless instance reads precomputed rows instead of re-scraping the blog and re-issuing ~24 summary calls on every cold start. A daily [Vercel Cron](https://vercel.com/docs/cron-jobs) (`vercel.json` → `crons`, `0 6 * * *`) hits `/api/scrape/refresh` and is the **writer**: it scrapes, summarizes **only new/changed** posts (unchanged content is skipped via a durable content hash → 0 API calls), and upserts the result. The cadence is **daily because the Vercel Hobby plan caps cron jobs at once per day** — on Pro you can tune `vercel.json` to a tighter schedule. All read paths (`/api/scrape`, the chat grounding context) read **DB-first** and so survive cold starts without re-scraping or re-summarizing. If the table is empty or stale (e.g. first deploy, a missed cron run, or a DB hiccup), a read **self-heals**: it scrapes + summarizes inline, writes the result back, and serves it — so the KB is never permanently empty. On a scrape failure the app serves the last-good DB rows **without resetting the freshness clock** — `/api/scrape` exposes `status.stale` (age > 26h, i.e. a missed daily run) and `status.ageMs` so a stuck/old scrape is observable rather than silent. Set `CRON_SECRET` (the cron authenticates with it) and `DATABASE_URL` (the Supabase transaction-pooler string) in the Vercel project.
+**Auto-refresh & freshness.** Supabase Postgres is the durable source of truth for the knowledge base (articles + their summaries), so a fresh serverless instance reads precomputed rows instead of re-scraping the blog and re-issuing ~24 summary calls on every cold start. A daily [Vercel Cron](https://vercel.com/docs/cron-jobs) (`0 6 * * *`) hits `/api/scrape/refresh` and is the only writer: it scrapes, summarizes only new/changed posts (a durable content hash skips unchanged ones), and upserts the result. Reads are DB-first and self-heal: if the table is empty or stale, a read scrapes + summarizes inline and writes back, so the KB is never permanently empty. On a scrape failure the app serves the last-good rows, and `/api/scrape` exposes `status.stale` (age > 26h) and `status.ageMs`, so a stuck scrape is observable rather than silent. The daily cadence is a Vercel Hobby cron limit; on Pro, tune `vercel.json`.
 
-**RAG retrieval.** When `VOYAGE_API_KEY` is set, the cron also **embeds** each new/changed article ([Voyage](https://dash.voyageai.com) `voyage-3.5-lite`, 1024 dims → `pgvector` on Supabase), gated by a `<model>:<content-hash>` so unchanged content re-embeds 0 times. At question time the chat route embeds the user's latest message and retrieves the **top-3** most similar articles (cosine distance, similarity floor `0.35` so off-topic questions retrieve nothing); their full bodies are appended to the prompt as an **uncached second system block** (the cached summaries grounding block is left byte-identical, so prompt caching is preserved). The response's `X-Sources` header (slugs, similarity order) drives the source chips, replacing title-substring matching. The whole feature degrades cleanly: **without `VOYAGE_API_KEY` retrieval is off and behavior is identical to before** — Voyage errors, timeouts, or a missing DB all fall back to the summaries-only path. pgvector is created idempotently at runtime by `ensureVectorSchema()`; if `CREATE EXTENSION vector` is refused on the pooled role, enable the **`vector`** extension once in the Supabase dashboard (Database → Extensions).
+**RAG retrieval.** When `VOYAGE_API_KEY` is set, the cron also embeds each new/changed article ([Voyage](https://dash.voyageai.com) `voyage-3.5-lite`, 1024 dims → `pgvector` on Supabase), gated by a `<model>:<content-hash>` so unchanged content never re-embeds. At question time the chat route embeds the user's latest message and retrieves the top-3 most similar articles (cosine distance, similarity floor `0.35` so off-topic questions retrieve nothing); their full bodies are appended to the prompt as a second, uncached system block, leaving the cached summaries block byte-identical so prompt caching is preserved. The response's `X-Sources` header drives the source chips. The feature degrades cleanly: without `VOYAGE_API_KEY` — or on any Voyage error, timeout, or missing DB — the app falls back to the summaries-only path. The pgvector schema is created idempotently at runtime; if `CREATE EXTENSION vector` is refused on the pooled role, enable the `vector` extension once in the Supabase dashboard (Database → Extensions).
 
 ```
 src/
@@ -162,7 +153,7 @@ src/
         └── timingMap.ts                      #   alignment → sentence/word time windows
 ```
 
-Deploys to Vercel via GitHub Actions: **pull requests** get a preview URL commented on the PR; **pushes to `main`** promote to production. Set `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` as repo secrets and the three runtime keys in the Vercel project settings.
+Deploys to Vercel via GitHub Actions: pull requests get a preview URL commented on the PR; pushes to `main` promote to production. Set `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` as repo secrets and the three runtime keys in the Vercel project settings.
 
 ---
 
@@ -187,11 +178,11 @@ npm run eval          # run the harness live vs. the golden dataset → scores +
 npm run eval:accept   # re-bless: copy the latest run's aggregates into eval/baseline.json (a deliberate, reviewable git diff)
 ```
 
-**Baseline gate.** `eval/baseline.json` is committed. `npm run eval` prints a baseline-vs-current diff table and **exits non-zero if any metric drops below `baseline − tolerance`** (deterministic tolerance ≤0.02; judge dimensions 0.3 to absorb LLM noise). Run it **before merging changes that touch retrieval, prompts, or citations**; when a change legitimately moves the numbers, re-baseline with `npm run eval:accept` so the shift lands as a reviewable diff. `npm run eval` is a live-API run (real tokens, needs `ANTHROPIC_API_KEY` + a Postgres `DATABASE_URL` for retrieval) and is **never part of `npm run test:run`** — the offline `src/lib/eval/*` modules are unit-tested in the normal Vitest gate.
+**Baseline gate.** `eval/baseline.json` is committed. `npm run eval` prints a baseline-vs-current diff table and exits non-zero if any metric drops below `baseline − tolerance` (deterministic tolerance ≤0.02; judge dimensions 0.3 to absorb LLM noise). Run it before merging changes that touch retrieval, prompts, or citations; when a change legitimately moves the numbers, re-baseline with `npm run eval:accept` so the shift lands as a reviewable diff. `npm run eval` is a live-API run (real tokens, needs `ANTHROPIC_API_KEY` + a Postgres `DATABASE_URL` for retrieval) and is never part of `npm run test:run` — the offline `src/lib/eval/*` modules are unit-tested in the normal Vitest gate.
 
 > **Node 22 for eval scripts.** Run `eval:seed`/`eval` on **Node 22**, not 24: under Node 24 the pinned `@anthropic-ai/sdk` falls back to a bundled `node-fetch@2` whose gzip stream aborts requests (`ERR_STREAM_PREMATURE_CLOSE`); Node 22's native `fetch` works (spec.md §3).
 
-**Observability.** Every production chat turn is traced to Langfuse (trace `chat` → `retrieval` span + `generation` observation with token usage), and a **Faithfulness** LLM evaluator (project-scoped copy of the RAGAS template, judged by `claude-sonnet-4-6`) is configured to sample 20% of live `chat` traces via the active `faithfulness-prod-chat` evaluation rule — setup details and verification status in [`spec/eval-harness/langfuse-setup.md`](./spec/eval-harness/langfuse-setup.md). The `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_BASE_URL` env vars are **optional** — unset ⇒ tracing and evals are silent no-ops and the app behaves exactly as before.
+**Observability.** Every production chat turn is traced to Langfuse (trace `chat` → `retrieval` span + `generation` observation with token usage), and a Faithfulness LLM evaluator (project-scoped copy of the RAGAS template, judged by `claude-sonnet-4-6`) samples 20% of live `chat` traces via the `faithfulness-prod-chat` evaluation rule — setup details and verification status in [`spec/eval-harness/langfuse-setup.md`](./spec/eval-harness/langfuse-setup.md). The `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_BASE_URL` env vars are optional; unset ⇒ tracing and evals are silent no-ops.
 
 ---
 
