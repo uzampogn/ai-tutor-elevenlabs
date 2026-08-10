@@ -4,7 +4,10 @@
  */
 export const EVAL_DATASET_NAME = 'rag-golden';
 
-export type EvalKind = 'single' | 'multi' | 'offtopic';
+// 'evergreen': on-topic questions about themes the blog always covers, with no
+// expected slugs. The KB is a rolling window, so slug-level golden answers rot;
+// evergreen items only assert that retrieval surfaces sources at all.
+export type EvalKind = 'single' | 'multi' | 'offtopic' | 'evergreen';
 
 export interface EvalItem {
   /** Stable hash of the normalized question — upsert key locally and in Langfuse. */

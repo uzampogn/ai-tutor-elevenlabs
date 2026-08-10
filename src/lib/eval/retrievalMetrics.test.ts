@@ -55,3 +55,15 @@ describe('scoreRetrieval — offtopic inversion', () => {
     expect(scoreRetrieval([], ['a'], 'offtopic')).toEqual({ 'retrieval.offtopic_pass': 0 });
   });
 });
+
+describe('scoreRetrieval — evergreen (article-agnostic)', () => {
+  // Evergreen items ask about themes the blog always covers, with no expected
+  // slugs — the KB is a rolling window, so slug-level golden answers rot.
+  // The retrieval signal is binary: an on-topic question must surface sources.
+  it('hit when anything is retrieved', () => {
+    expect(scoreRetrieval([], ['a', 'b'], 'evergreen')).toEqual({ 'retrieval.hit': 1 });
+  });
+  it('miss when nothing is retrieved', () => {
+    expect(scoreRetrieval([], [], 'evergreen')).toEqual({ 'retrieval.hit': 0 });
+  });
+});

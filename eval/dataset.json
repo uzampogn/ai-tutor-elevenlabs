@@ -33,7 +33,7 @@
       "ciso-guide-to-agentic-ai"
     ],
     "kind": "single",
-    "curated": true
+    "curated": false
   },
   {
     "id": "7e64h8",
@@ -60,7 +60,7 @@
       "ai-code-migration"
     ],
     "kind": "single",
-    "curated": true
+    "curated": false
   },
   {
     "id": "zyssw7",
@@ -96,7 +96,7 @@
       "working-with-claude-fable-5-in-claude-cowork"
     ],
     "kind": "single",
-    "curated": true
+    "curated": false
   },
   {
     "id": "s6n33z",
@@ -123,7 +123,7 @@
       "working-at-the-frontier-why-base44-trusts-claude-fable-5-with-their-most-challenging-engineering-work"
     ],
     "kind": "single",
-    "curated": true
+    "curated": false
   },
   {
     "id": "e7tw0e",
@@ -141,7 +141,7 @@
       "working-at-the-frontier-how-hebbia-builds-ai-for-financial-diligence-that-cant-miss-a-detail"
     ],
     "kind": "single",
-    "curated": true
+    "curated": false
   },
   {
     "id": "ighafp",
@@ -177,7 +177,7 @@
       "working-at-the-frontier-how-cognition-trusts-claude-fable-5-to-work-through-the-night"
     ],
     "kind": "single",
-    "curated": true
+    "curated": false
   },
   {
     "id": "72bhc9",
@@ -213,7 +213,7 @@
       "working-at-the-frontier-how-thomson-reuters-builds-ai-for-high--stakes-professional-work"
     ],
     "kind": "single",
-    "curated": true
+    "curated": false
   },
   {
     "id": "1fshski",
@@ -222,7 +222,7 @@
       "how-anthropics-marketing-operations-team-uses-claude-cowork-to-automate-reporting-and-campaign-builds"
     ],
     "kind": "single",
-    "curated": true
+    "curated": false
   },
   {
     "id": "1ahbuh8",
@@ -267,7 +267,7 @@
       "bringing-claude-code-and-claude-cowork-to-government"
     ],
     "kind": "single",
-    "curated": true
+    "curated": false
   },
   {
     "id": "lpcjkt",
@@ -285,7 +285,7 @@
       "claude-model-and-effort-level-in-claude-code"
     ],
     "kind": "single",
-    "curated": true
+    "curated": false
   },
   {
     "id": "y4amzd",
@@ -321,7 +321,7 @@
       "cowork-web-mobile"
     ],
     "kind": "single",
-    "curated": true
+    "curated": false
   },
   {
     "id": "76coqi",
@@ -330,7 +330,7 @@
       "how-people-are-using-claude-cowork"
     ],
     "kind": "single",
-    "curated": true
+    "curated": false
   },
   {
     "id": "1h50pbv",
@@ -366,7 +366,7 @@
       "a-field-guide-to-claude-fable-finding-your-unknowns"
     ],
     "kind": "single",
-    "curated": true
+    "curated": false
   },
   {
     "id": "1pmc9gj",
@@ -393,7 +393,7 @@
       "giving-admins-more-visibility-and-control-over-claude-usage-and-spend"
     ],
     "kind": "single",
-    "curated": true
+    "curated": false
   },
   {
     "id": "5zaj60",
@@ -420,7 +420,7 @@
       "artifacts-in-claude-code"
     ],
     "kind": "single",
-    "curated": true
+    "curated": false
   },
   {
     "id": "1f2476j",
@@ -438,7 +438,7 @@
       "claude-for-foundation-models"
     ],
     "kind": "single",
-    "curated": true
+    "curated": false
   },
   {
     "id": "1xnyzvh",
@@ -519,7 +519,7 @@
       "connectors-for-everyday-life"
     ],
     "kind": "single",
-    "curated": true
+    "curated": false
   },
   {
     "id": "1ty7uqo",
@@ -654,7 +654,7 @@
       "harnessing-claudes-intelligence"
     ],
     "kind": "single",
-    "curated": true
+    "curated": false
   },
   {
     "id": "17j5y2f",
@@ -682,7 +682,7 @@
       "working-at-the-frontier-how-cognition-trusts-claude-fable-5-to-work-through-the-night"
     ],
     "kind": "multi",
-    "curated": true
+    "curated": false
   },
   {
     "id": "ytx7uf",
@@ -692,7 +692,7 @@
       "working-with-claude-fable-5-in-claude-cowork"
     ],
     "kind": "multi",
-    "curated": true
+    "curated": false
   },
   {
     "id": "ta1m60",
@@ -703,7 +703,7 @@
       "claude-managed-agents-updates"
     ],
     "kind": "multi",
-    "curated": true
+    "curated": false
   },
   {
     "id": "3tsqul",
@@ -713,7 +713,7 @@
       "preparing-your-security-program-for-ai-accelerated-offense"
     ],
     "kind": "multi",
-    "curated": true
+    "curated": false
   },
   {
     "id": "qrp3w0",
@@ -741,6 +741,62 @@
     "question": "What's the best way to train for my first marathon?",
     "expectedSlugs": [],
     "kind": "offtopic",
+    "curated": true
+  },
+  {
+    "id": "50mnbj",
+    "question": "What are the most recent announcements from Anthropic?",
+    "expectedSlugs": [],
+    "kind": "evergreen",
+    "curated": true
+  },
+  {
+    "id": "h8t1nr",
+    "question": "What's new in Claude Code lately?",
+    "expectedSlugs": [],
+    "kind": "evergreen",
+    "curated": true
+  },
+  {
+    "id": "1keo0fv",
+    "question": "How are companies using Claude in production?",
+    "expectedSlugs": [],
+    "kind": "evergreen",
+    "curated": true
+  },
+  {
+    "id": "1fra8gy",
+    "question": "What has Anthropic written recently about security or safe deployment of AI?",
+    "expectedSlugs": [],
+    "kind": "evergreen",
+    "curated": true
+  },
+  {
+    "id": "2s4d2",
+    "question": "What should a non-technical executive know about Claude's latest capabilities?",
+    "expectedSlugs": [],
+    "kind": "evergreen",
+    "curated": true
+  },
+  {
+    "id": "120j11v",
+    "question": "What recent posts talk about building agents with Claude?",
+    "expectedSlugs": [],
+    "kind": "evergreen",
+    "curated": true
+  },
+  {
+    "id": "dk0y48",
+    "question": "Which Claude models are available and how do I choose between them?",
+    "expectedSlugs": [],
+    "kind": "evergreen",
+    "curated": true
+  },
+  {
+    "id": "1n8vrpk",
+    "question": "What best practices has Anthropic shared for prompting or working with Claude effectively?",
+    "expectedSlugs": [],
+    "kind": "evergreen",
     "curated": true
   }
 ]
