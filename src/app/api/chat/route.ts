@@ -14,7 +14,14 @@ import { flushLangfuse } from '@/lib/langfuse';
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 export async function POST(req: NextRequest) {
-  const { messages } = await req.json();
+  const { messages: rawMessages } = await req.json();
+
+  // The client history carries UI-only fields (e.g. `sources` slugs on assistant
+  // turns, used for citation chips); Anthropic rejects unknown keys with a 400
+  // ("Extra inputs are not permitted"), so keep only what the API accepts.
+  const messages = Array.isArray(rawMessages)
+    ? rawMessages.map((m) => ({ role: m?.role, content: m?.content }))
+    : rawMessages;
 
   const lastUser = Array.isArray(messages)
     ? [...messages].reverse().find((m) => m?.role === 'user')
