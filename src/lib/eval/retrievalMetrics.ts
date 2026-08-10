@@ -10,6 +10,12 @@ export function scoreRetrieval(
     return { 'retrieval.offtopic_pass': retrievedSlugs.length === 0 ? 1 : 0 };
   }
 
+  // Evergreen: no slug-level golden answer (the KB rolls) — the retrieval
+  // signal is binary: an on-topic question must surface sources.
+  if (kind === 'evergreen') {
+    return { 'retrieval.hit': retrievedSlugs.length > 0 ? 1 : 0 };
+  }
+
   const expected = new Set(expectedSlugs);
   const hits = retrievedSlugs.filter((s) => expected.has(s));
 
