@@ -35,7 +35,7 @@ describe('db.ts — no-op without DATABASE_URL', () => {
     expect(await db.getKnownSummaries()).toEqual(new Map());
     await expect(db.upsertArticles([])).resolves.toBeUndefined();
     await expect(db.deleteMissing(['x'])).resolves.toBeUndefined();
-    expect(await db.readMeta()).toEqual({ lastSuccessfulFetch: null, lastError: null });
+    expect(await db.readMeta()).toEqual({ lastSuccessfulFetch: null, lastError: null, embedBacklog: 0 });
     expect(postgresMock).not.toHaveBeenCalled();
     if (ORIGINAL_URL !== undefined) process.env.DATABASE_URL = ORIGINAL_URL;
   });
@@ -58,6 +58,7 @@ describe('db.ts — queries', () => {
   it('getArticles maps rows to the Article shape, ISO pubDate', async () => {
     sqlMock.mockResolvedValueOnce([]); // ensureSchema: articles
     sqlMock.mockResolvedValueOnce([]); // ensureSchema: kb_meta
+    sqlMock.mockResolvedValueOnce([]); // ensureSchema: kb_meta embed_backlog ALTER
     sqlMock.mockResolvedValueOnce([
       { slug: 'a', hash: 'h', title: 'A', url: 'https://claude.com/blog/a',
         pub_date: '2026-06-10T09:00:00.000Z', description: 'd', body: 'b',
@@ -74,6 +75,7 @@ describe('db.ts — queries', () => {
   it('getKnownSummaries excludes empty-hash rows', async () => {
     sqlMock.mockResolvedValueOnce([]); // schema
     sqlMock.mockResolvedValueOnce([]); // schema
+    sqlMock.mockResolvedValueOnce([]); // schema (embed_backlog ALTER)
     sqlMock.mockResolvedValueOnce([{ slug: 'a', hash: 'h1', summary: 's1' }]); // WHERE hash <> ''
     const db = await freshDb();
     const map = await db.getKnownSummaries();
@@ -122,6 +124,7 @@ describe('db.ts — queries', () => {
   it('writeMeta merges: an error-only patch preserves the existing fetch time', async () => {
     sqlMock.mockResolvedValueOnce([]); // schema articles
     sqlMock.mockResolvedValueOnce([]); // schema kb_meta
+    sqlMock.mockResolvedValueOnce([]); // schema kb_meta embed_backlog ALTER
     sqlMock.mockResolvedValueOnce([    // readMeta (inside writeMeta)
       { last_successful_fetch: '2026-06-10T00:00:00.000Z', last_error: null },
     ]);
@@ -154,6 +157,7 @@ describe('db.ts — vector layer', () => {
   it('similarArticles orders by cosine distance and maps similarity', async () => {
     sqlMock.mockResolvedValueOnce([]); // ensureSchema: articles
     sqlMock.mockResolvedValueOnce([]); // ensureSchema: kb_meta
+    sqlMock.mockResolvedValueOnce([]); // ensureSchema: kb_meta embed_backlog ALTER
     sqlMock.mockResolvedValueOnce([]); // vector schema: CREATE EXTENSION
     sqlMock.mockResolvedValueOnce([]); // vector schema: ALTER embedding
     sqlMock.mockResolvedValueOnce([]); // vector schema: ALTER embedded_hash
@@ -184,6 +188,7 @@ describe('db.ts — vector layer', () => {
   it('vector fns degrade to empty when the vector DDL fails (pgvector unavailable)', async () => {
     sqlMock.mockResolvedValueOnce([]); // ensureSchema: articles
     sqlMock.mockResolvedValueOnce([]); // ensureSchema: kb_meta
+    sqlMock.mockResolvedValueOnce([]); // ensureSchema: kb_meta embed_backlog ALTER
     sqlMock.mockRejectedValueOnce(new Error('permission denied for extension vector'));
     const db = await freshDb();
     expect(await db.similarArticles([1], 3)).toEqual([]); // no throw
