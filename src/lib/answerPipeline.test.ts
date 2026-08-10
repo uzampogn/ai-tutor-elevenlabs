@@ -20,8 +20,11 @@ beforeEach(() => {
 
 describe('prepareAnswerContext', () => {
   it('exports the prod model constants', () => {
-    expect(CHAT_MODEL).toBe('claude-sonnet-4-6');
-    expect(CHAT_MAX_TOKENS).toBe(1024);
+    expect(CHAT_MODEL).toBe('claude-opus-5');
+    // Opus 5 thinks by default and thinking tokens count against max_tokens,
+    // so the cap needs headroom beyond the visible answer (route streams, so
+    // large values carry no HTTP-timeout risk).
+    expect(CHAT_MAX_TOKENS).toBe(8192);
   });
 
   it('no retrieval → single cached grounding block', async () => {

@@ -73,6 +73,11 @@ describe('POST /api/chat — grounding from the cached context', () => {
     expect(sysText).toContain('GROUNDING_MARKER');
   });
 
+  it('requests medium effort (Opus 5 cost/latency lever)', async () => {
+    await post([{ role: 'user', content: 'hi' }]);
+    expect(streamMock.mock.calls[0][0].output_config).toEqual({ effort: 'medium' });
+  });
+
   it('streams the model text deltas back to the client', async () => {
     streamMock.mockReturnValue(
       fakeStream([

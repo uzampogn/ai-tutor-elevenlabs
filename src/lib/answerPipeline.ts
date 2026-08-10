@@ -5,8 +5,13 @@
 import { getGroundingContext, buildGroundingContext } from '@/lib/scraper';
 import { retrieveArticles, type RetrievedArticle } from '@/lib/retrieval';
 
-export const CHAT_MODEL = 'claude-sonnet-4-6';
-export const CHAT_MAX_TOKENS = 1024;
+export const CHAT_MODEL = 'claude-opus-5';
+// Opus 5 thinks by default (adaptive) and thinking tokens count against
+// max_tokens, so the cap needs headroom beyond the visible answer. The chat
+// route streams, so a larger cap carries no HTTP-timeout risk.
+export const CHAT_MAX_TOKENS = 8192;
+/** Cost/latency lever for the chat call — Opus 5 low/medium punch above their weight. */
+export const CHAT_EFFORT = 'medium' as const;
 
 // Per-article body excerpt in the retrieved block. 3 × 8k chars ≈ 6k tokens —
 // comfortable headroom, and real depth vs the 700-char summaries in block 1.

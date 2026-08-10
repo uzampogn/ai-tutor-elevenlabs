@@ -7,7 +7,7 @@ import {
   type LangfuseRetriever,
   type LangfuseGeneration,
 } from '@langfuse/tracing';
-import { prepareAnswerContext, CHAT_MODEL, CHAT_MAX_TOKENS } from '@/lib/answerPipeline';
+import { prepareAnswerContext, CHAT_MODEL, CHAT_MAX_TOKENS, CHAT_EFFORT } from '@/lib/answerPipeline';
 import { RETRIEVAL_K, SIM_FLOOR } from '@/lib/retrievalConfig';
 import { flushLangfuse } from '@/lib/langfuse';
 
@@ -91,6 +91,7 @@ export async function POST(req: NextRequest) {
         const messageStream = client.messages.stream({
           model: CHAT_MODEL,
           max_tokens: CHAT_MAX_TOKENS,
+          output_config: { effort: CHAT_EFFORT },
           system,
           messages,
         });

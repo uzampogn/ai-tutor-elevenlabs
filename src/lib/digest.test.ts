@@ -36,6 +36,16 @@ describe('digestArticle', () => {
     expect(await digestArticle(ARTICLE)).toEqual(VALID);
   });
 
+  it('calls Sonnet 5 with thinking disabled (digest is a fixed-shape JSON task)', async () => {
+    createMock.mockResolvedValue(textRes(JSON.stringify(VALID)));
+    const { digestArticle } = await import('./digest');
+    await digestArticle(ARTICLE);
+    expect(createMock.mock.calls[0][0]).toMatchObject({
+      model: 'claude-sonnet-5',
+      thinking: { type: 'disabled' },
+    });
+  });
+
   it('strips a ```json fence around the object', async () => {
     createMock.mockResolvedValue(textRes('```json\n' + JSON.stringify(VALID) + '\n```'));
     const { digestArticle } = await import('./digest');
