@@ -13,6 +13,11 @@ import { contentHash } from './summarize';
 // similarity; full bodies can reach 60k chars.
 export const EMBED_INPUT_CAP = 30_000;
 
+// Per-cron-run ceiling on embed API calls. Voyage's free tier caps both
+// requests/min and tokens/min, so a burst of stale articles must drain across
+// runs rather than in one oversized call. 3 matches the free tier's 3 RPM.
+export const EMBED_MAX_PER_RUN = 3;
+
 /** Staleness key: model + content hash. Model swap ⇒ every article re-embeds. */
 export function embeddedHashFor(title: string, body: string): string {
   return `${EMBEDDING_MODEL}:${contentHash(title, body)}`;
@@ -30,18 +35,25 @@ export async function embedStaleArticles(
     });
     if (stale.length === 0) return;
 
-    const inputs = stale.map((a) => `${a.title}\n\n${a.body.slice(0, EMBED_INPUT_CAP)}`);
-    const vecs = await embedTexts(inputs, 'document');
-    if (!vecs) return; // logged inside embedTexts; retried next cron
-
-    await db.updateEmbeddings(
-      stale.map((a, i) => ({
-        slug: db.slugFromUrl(a.url),
-        embedding: vecs[i],
-        embeddedHash: embeddedHashFor(a.title, a.body),
-      })),
-    );
-    console.log(`[embed] embedded ${stale.length} article(s)`);
+    // One article per API call, persisted immediately. A single all-or-nothing
+    // batch ratchets: once the stale set outgrows the free tier's token/min
+    // budget, every nightly run 429s wholesale and the backlog only grows.
+    // Per-article persistence makes every success durable, so a failure (e.g.
+    // Voyage 429) just defers the remainder to the next cron.
+    let embedded = 0;
+    for (const a of stale.slice(0, EMBED_MAX_PER_RUN)) {
+      const vecs = await embedTexts([`${a.title}\n\n${a.body.slice(0, EMBED_INPUT_CAP)}`], 'document');
+      if (!vecs) break; // logged inside embedTexts; remainder retried next cron
+      await db.updateEmbeddings([
+        {
+          slug: db.slugFromUrl(a.url),
+          embedding: vecs[0],
+          embeddedHash: embeddedHashFor(a.title, a.body),
+        },
+      ]);
+      embedded++;
+    }
+    console.log(`[embed] embedded ${embedded}/${stale.length} stale article(s)`);
   } catch (err) {
     console.error('[embed] embedStaleArticles failed (non-fatal):', err);
   }
