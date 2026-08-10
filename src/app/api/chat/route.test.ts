@@ -158,3 +158,22 @@ describe('POST /api/chat — RAG retrieved block (spec/rag-retrieval-citations)'
     expect(sysArg[0].text).not.toContain('inline marker like [1]');
   });
 });
+
+describe('POST /api/chat — history sanitization', () => {
+  it('strips client-only fields (e.g. sources) before calling Anthropic', async () => {
+    // The client stores X-Sources slugs on assistant turns (Message.sources) and
+    // sends the full history back; Anthropic rejects extra keys with a 400
+    // ("messages.1.sources: Extra inputs are not permitted"), which broke every
+    // follow-up question in production.
+    await post([
+      { role: 'user', content: 'first question' },
+      { role: 'assistant', content: 'answer [1]', sources: ['post-a', 'post-b'] },
+      { role: 'user', content: 'follow-up' },
+    ]);
+    expect(streamMock.mock.calls[0][0].messages).toEqual([
+      { role: 'user', content: 'first question' },
+      { role: 'assistant', content: 'answer [1]' },
+      { role: 'user', content: 'follow-up' },
+    ]);
+  });
+});
