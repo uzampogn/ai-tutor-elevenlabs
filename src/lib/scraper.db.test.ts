@@ -52,7 +52,7 @@ beforeEach(() => {
   db.deleteMissing.mockReset().mockResolvedValue(undefined);
   db.readMeta.mockReset().mockResolvedValue({ lastSuccessfulFetch: null, lastError: null });
   db.writeMeta.mockReset().mockResolvedValue(undefined);
-  embedArticles.embedStaleArticles.mockReset().mockResolvedValue(undefined);
+  embedArticles.embedStaleArticles.mockReset().mockResolvedValue({ embedded: 0, backlog: 0 });
 });
 afterEach(() => vi.unstubAllGlobals());
 

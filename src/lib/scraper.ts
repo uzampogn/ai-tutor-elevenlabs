@@ -83,6 +83,7 @@ let inflight: Promise<Article[]> | null = null;
 let snapCount = 0;
 let snapLastSuccess = 0; // epoch ms, 0 = never
 let snapError: string | null = null;
+let snapEmbedBacklog = 0; // stale articles the last ingest left unembedded
 
 export interface IngestionStatus {
   count: number;
@@ -90,6 +91,10 @@ export interface IngestionStatus {
   ageMs: number | null; // now - lastSuccessfulFetch, or null if never succeeded
   stale: boolean; // ageMs > STALE_THRESHOLD_MS (true before the first success)
   lastError: string | null;
+  /** Embedding-health flag: articles the last ingest left unembedded. Non-zero
+   *  for consecutive runs means the embedding pipeline is down or rate-starved
+   *  and retrieval is degrading — alert on it. */
+  embedBacklog: number;
 }
 
 /**
@@ -105,6 +110,7 @@ export function getIngestionStatus(): IngestionStatus {
     ageMs,
     stale: ageMs === null || ageMs > STALE_THRESHOLD_MS,
     lastError: snapError,
+    embedBacklog: snapEmbedBacklog,
   };
 }
 
@@ -443,6 +449,7 @@ export async function getClaudeArticles(
     snapCount = rows.length;
     snapLastSuccess = meta.lastSuccessfulFetch ?? 0;
     snapError = meta.lastError;
+    snapEmbedBacklog = meta.embedBacklog;
     const fresh =
       meta.lastSuccessfulFetch != null &&
       Date.now() - meta.lastSuccessfulFetch <= STALE_THRESHOLD_MS;
@@ -495,16 +502,17 @@ async function scrapeAndPersist(): Promise<Article[]> {
     await db.upsertArticles(rows);
     // Embed new/changed articles for RAG retrieval. Internally guarded: no-ops
     // without VOYAGE_API_KEY and swallows all errors — never blocks ingest.
-    await embedStaleArticles(rows);
+    const embedRun = await embedStaleArticles(rows);
     // Guard: only prune when the scrape returned articles, so a garbage/empty
     // scrape can never wipe the table.
     if (rows.length > 0) await db.deleteMissing(rows.map((r) => db.slugFromUrl(r.url)));
     const now = Date.now();
-    await db.writeMeta({ lastSuccessfulFetch: now, lastError: null });
+    await db.writeMeta({ lastSuccessfulFetch: now, lastError: null, embedBacklog: embedRun.backlog });
 
     snapCount = articles.length;
     snapLastSuccess = now;
     snapError = null;
+    snapEmbedBacklog = embedRun.backlog;
     readCache = articles;
     readCacheTime = now;
     return articles;

@@ -23,17 +23,24 @@ export function embeddedHashFor(title: string, body: string): string {
   return `${EMBEDDING_MODEL}:${contentHash(title, body)}`;
 }
 
+/** Outcome of one embedding pass — `backlog` is the embedding-health flag. */
+export interface EmbedRunResult {
+  embedded: number;
+  /** Stale articles left unembedded after this run (cap or failure). */
+  backlog: number;
+}
+
 export async function embedStaleArticles(
   articles: { title: string; url: string; body: string }[],
-): Promise<void> {
+): Promise<EmbedRunResult> {
   try {
-    if (!embeddingsEnabled() || articles.length === 0) return;
+    if (!embeddingsEnabled() || articles.length === 0) return { embedded: 0, backlog: 0 };
     const states = await db.getEmbeddingStates();
     const stale = articles.filter((a) => {
       if (!a.body.trim()) return false; // nothing meaningful to embed
       return states.get(db.slugFromUrl(a.url)) !== embeddedHashFor(a.title, a.body);
     });
-    if (stale.length === 0) return;
+    if (stale.length === 0) return { embedded: 0, backlog: 0 };
 
     // One article per API call, persisted immediately. A single all-or-nothing
     // batch ratchets: once the stale set outgrows the free tier's token/min
@@ -54,7 +61,16 @@ export async function embedStaleArticles(
       embedded++;
     }
     console.log(`[embed] embedded ${embedded}/${stale.length} stale article(s)`);
+    const backlog = stale.length - embedded;
+    if (backlog > 0) {
+      // error level on purpose: Vercel's runtime-error clustering picks this up,
+      // so a persistently unembedded backlog is visible/alertable instead of
+      // silently degrading retrieval (as the 2026-08 Voyage-429 incident did).
+      console.error(`[embed] backlog: ${backlog} article(s) still unembedded after this run`);
+    }
+    return { embedded, backlog };
   } catch (err) {
     console.error('[embed] embedStaleArticles failed (non-fatal):', err);
+    return { embedded: 0, backlog: 0 };
   }
 }

@@ -7,6 +7,8 @@ export interface ArticleRow extends Article {
 export interface KbMeta {
   lastSuccessfulFetch: number | null; // epoch ms
   lastError: string | null;
+  /** Stale articles left unembedded by the last ingest run (embedding-health flag). */
+  embedBacklog: number;
 }
 
 // Accept DATABASE_URL (explicit) or POSTGRES_URL — the latter is what the Supabase Vercel
@@ -58,6 +60,7 @@ export async function ensureSchema(): Promise<void> {
         id INT PRIMARY KEY DEFAULT 1, last_successful_fetch TIMESTAMPTZ, last_error TEXT,
         CONSTRAINT kb_meta_singleton CHECK (id = 1)
       )`;
+      await sql`ALTER TABLE kb_meta ADD COLUMN IF NOT EXISTS embed_backlog INT NOT NULL DEFAULT 0`;
     })();
   }
   return schemaReady;
@@ -191,27 +194,30 @@ export async function deleteMissing(keepSlugs: string[]): Promise<void> {
 }
 
 export async function readMeta(): Promise<KbMeta> {
-  if (!sql) return { lastSuccessfulFetch: null, lastError: null };
+  if (!sql) return { lastSuccessfulFetch: null, lastError: null, embedBacklog: 0 };
   await ensureSchema();
-  const rows = (await sql`SELECT last_successful_fetch, last_error FROM kb_meta WHERE id = 1`) as Row[];
-  if (rows.length === 0) return { lastSuccessfulFetch: null, lastError: null };
+  const rows = (await sql`SELECT last_successful_fetch, last_error, embed_backlog FROM kb_meta WHERE id = 1`) as Row[];
+  if (rows.length === 0) return { lastSuccessfulFetch: null, lastError: null, embedBacklog: 0 };
   const r = rows[0];
   return {
     lastSuccessfulFetch: r.last_successful_fetch ? new Date(r.last_successful_fetch as string).getTime() : null,
     lastError: (r.last_error as string | null) ?? null,
+    embedBacklog: Number(r.embed_backlog ?? 0),
   };
 }
 
-export async function writeMeta(patch: { lastSuccessfulFetch?: number | null; lastError?: string | null }): Promise<void> {
+export async function writeMeta(patch: { lastSuccessfulFetch?: number | null; lastError?: string | null; embedBacklog?: number }): Promise<void> {
   if (!sql) return;
   await ensureSchema();
   const current = await readMeta();
   const nextFetch = patch.lastSuccessfulFetch !== undefined ? patch.lastSuccessfulFetch : current.lastSuccessfulFetch;
   const nextError = patch.lastError !== undefined ? patch.lastError : current.lastError;
+  const nextBacklog = patch.embedBacklog !== undefined ? patch.embedBacklog : current.embedBacklog;
   const tsIso = nextFetch != null ? new Date(nextFetch).toISOString() : null;
   await sql`
-    INSERT INTO kb_meta (id, last_successful_fetch, last_error)
-    VALUES (1, ${tsIso}, ${nextError})
+    INSERT INTO kb_meta (id, last_successful_fetch, last_error, embed_backlog)
+    VALUES (1, ${tsIso}, ${nextError}, ${nextBacklog})
     ON CONFLICT (id) DO UPDATE SET
-      last_successful_fetch = EXCLUDED.last_successful_fetch, last_error = EXCLUDED.last_error`;
+      last_successful_fetch = EXCLUDED.last_successful_fetch, last_error = EXCLUDED.last_error,
+      embed_backlog = EXCLUDED.embed_backlog`;
 }

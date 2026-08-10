@@ -30,3 +30,4 @@ CREATE TABLE IF NOT EXISTS kb_meta (
 CREATE EXTENSION IF NOT EXISTS vector;
 ALTER TABLE articles ADD COLUMN IF NOT EXISTS embedding vector(1024);
 ALTER TABLE articles ADD COLUMN IF NOT EXISTS embedded_hash TEXT NOT NULL DEFAULT ''; -- "<model>:<djb2>" at embed time
+ALTER TABLE kb_meta ADD COLUMN IF NOT EXISTS embed_backlog INT NOT NULL DEFAULT 0; -- embedding-health flag: stale articles the last ingest left unembedded
