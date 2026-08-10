@@ -8,8 +8,10 @@ import type { Article, ArticleDigest } from './types';
  * `null` for that article rather than dropping it or throwing.
  */
 
-const DIGEST_MODEL = process.env.DIGEST_MODEL ?? 'claude-haiku-4-5';
-const DIGEST_MAX_TOKENS = 600;
+const DIGEST_MODEL = process.env.DIGEST_MODEL ?? 'claude-sonnet-5';
+// Sonnet 5's tokenizer produces ~30% more tokens for the same text than
+// Haiku 4.5's, so give the JSON digest a matching bump in output headroom.
+const DIGEST_MAX_TOKENS = 800;
 const BODY_INPUT_CAP = 12_000;
 const CONCURRENCY = 5;
 
@@ -84,6 +86,10 @@ export async function digestArticle(a: Article): Promise<ArticleDigest | null> {
     const res = await client.messages.create({
       model: DIGEST_MODEL,
       max_tokens: DIGEST_MAX_TOKENS,
+      // Sonnet 5 runs adaptive thinking when `thinking` is omitted, and thinking
+      // tokens count against max_tokens. The digest is a fixed-shape JSON task —
+      // keep the pre-bump (non-thinking) behavior so the small cap can't truncate.
+      thinking: { type: 'disabled' },
       system: DIGEST_SYSTEM_PROMPT,
       messages: [{ role: 'user', content: `${a.title}\n\n${body.slice(0, BODY_INPUT_CAP)}` }],
     });
