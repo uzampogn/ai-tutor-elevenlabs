@@ -16,7 +16,7 @@ const embeddings = vi.hoisted(() => ({
 }));
 vi.mock('./embeddings', () => embeddings);
 
-import { embedStaleArticles, embeddedHashFor } from './embedArticles';
+import { embedStaleArticles, embeddedHashFor, EMBED_MAX_PER_RUN } from './embedArticles';
 
 const art = (slug: string, body = 'body text') => ({
   title: `T ${slug}`, url: `https://claude.com/blog/${slug}`, body,
@@ -74,5 +74,39 @@ describe('embedStaleArticles', () => {
   it('skips articles with empty bodies', async () => {
     await embedStaleArticles([art('a', '')]);
     expect(embeddings.embedTexts).not.toHaveBeenCalled();
+  });
+
+  // Backlog-ratchet regression (2026-08): a single all-or-nothing batch call
+  // exceeded Voyage free-tier limits once the stale set grew, so every nightly
+  // cron 429'd wholesale, persisted nothing, and the backlog could only grow
+  // (15/25 prod articles ended up unembedded). Per-article calls + immediate
+  // persistence make partial progress durable, so the backlog always drains.
+  describe('per-article embedding (backlog ratchet fix)', () => {
+    it('embeds one article per API call and persists each success immediately', async () => {
+      embeddings.embedTexts.mockResolvedValue([[1]]);
+      await embedStaleArticles([art('a'), art('b'), art('c')]);
+      expect(embeddings.embedTexts).toHaveBeenCalledTimes(3);
+      for (const call of embeddings.embedTexts.mock.calls) {
+        expect(call[0]).toHaveLength(1); // one article per request
+      }
+      expect(db.updateEmbeddings).toHaveBeenCalledTimes(3);
+    });
+
+    it('keeps successes persisted when a later article fails, then stops', async () => {
+      embeddings.embedTexts
+        .mockResolvedValueOnce([[1]])
+        .mockResolvedValueOnce(null); // e.g. Voyage 429 mid-run
+      await embedStaleArticles([art('a'), art('b'), art('c')]);
+      expect(embeddings.embedTexts).toHaveBeenCalledTimes(2); // stopped after the failure
+      expect(db.updateEmbeddings).toHaveBeenCalledTimes(1); // 'a' survived the run
+      expect(db.updateEmbeddings.mock.calls[0][0][0].slug).toBe('a');
+    });
+
+    it('caps embeds per run so a burst never exceeds the rate-limit budget', async () => {
+      const many = Array.from({ length: EMBED_MAX_PER_RUN + 4 }, (_, i) => art(`a${i}`));
+      embeddings.embedTexts.mockResolvedValue([[1]]);
+      await embedStaleArticles(many);
+      expect(embeddings.embedTexts).toHaveBeenCalledTimes(EMBED_MAX_PER_RUN);
+    });
   });
 });
