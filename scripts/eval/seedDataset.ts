@@ -1,11 +1,12 @@
 /**
  * Seed golden-dataset candidates from digest.questions[] (spec/eval-harness §3).
  * Idempotent: merges by question hash, never touches existing/hand-edited items.
- * Run: npm run eval:seed   (needs ANTHROPIC_API_KEY for digest cache misses)
+ * Run: npm run eval:seed   (reads digests persisted by ingest — run an
+ * authenticated /api/scrape/refresh first if the digest column is still empty)
  */
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { getClaudeArticles } from '@/lib/scraper';
-import { getArticleDigests } from '@/lib/digest';
+import { getDigests } from '@/lib/db';
 import { articleSlug } from '@/lib/parseAnswer';
 import { mergeCandidates, questionId, type EvalItem } from '@/lib/eval/dataset';
 
@@ -13,7 +14,7 @@ const DATASET_PATH = 'eval/dataset.json';
 
 async function main() {
   const articles = await getClaudeArticles();
-  const digests = await getArticleDigests();
+  const digests = await getDigests();
 
   const candidates: EvalItem[] = [];
   for (const a of articles) {
