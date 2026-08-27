@@ -145,7 +145,12 @@ export async function updateDigests(
   if (!sql || rows.length === 0) return;
   await ensureSchema();
   for (const r of rows) {
-    await sql`UPDATE articles SET digest = ${JSON.stringify(r.digest)}::jsonb,
+    // `::text::jsonb`, not `::jsonb`: postgres.js sees a jsonb-cast parameter and
+    // JSON-encodes the bound value, so a pre-stringified object lands as a jsonb
+    // *string* ("{\"tldr\":…}") that reads back as a string. Casting through text
+    // forces the server to parse the literal into a jsonb object. Verified against
+    // the live DB with jsonb_typeof() — a mocked-postgres test can't catch this.
+    await sql`UPDATE articles SET digest = ${JSON.stringify(r.digest)}::text::jsonb,
       digest_hash = ${r.digestHash} WHERE slug = ${r.slug}`;
   }
 }

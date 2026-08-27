@@ -228,6 +228,9 @@ describe('digest persistence', () => {
     await db.updateDigests([{ slug: 'post-a', digest, digestHash: 'h1' }]);
     expect(lastSql()).toContain('UPDATE articles SET digest =');
     expect(lastSql()).toContain('digest_hash =');
+    // Must cast through text — a bare ::jsonb makes postgres.js JSON-encode the
+    // already-stringified value, persisting a jsonb string instead of an object.
+    expect(lastSql()).toContain('::text::jsonb');
   });
 
   it('getDigests returns url-keyed map of non-null digests', async () => {
