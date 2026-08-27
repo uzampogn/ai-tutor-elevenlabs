@@ -1,11 +1,12 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { getClaudeArticles } from './scraper';
+import * as db from './db';
 import type { Article, ArticleDigest } from './types';
 
 /**
- * Per-article "score card" digest, generated at ingest and cached by
- * slug + content hash (sibling of lib/summarize.ts). Every failure degrades to
- * `null` for that article rather than dropping it or throwing.
+ * Per-article "score card" digest, generated at ingest and persisted in
+ * Postgres keyed by slug + content hash (sibling of lib/summarize.ts). Every
+ * failure degrades to `null` for that article rather than dropping it or
+ * throwing. The read path (`/api/digest`) never enters this module.
  */
 
 const DIGEST_MODEL = process.env.DIGEST_MODEL ?? 'claude-sonnet-5';
@@ -33,9 +34,6 @@ try {
   console.error('[digest] client init failed; digests will be null:', err);
   client = null;
 }
-
-/** Cache survives a body re-fetch; keyed by slug, invalidated by content hash. */
-const digestCache = new Map<string, { hash: string; digest: ArticleDigest | null }>();
 
 /** Cheap stable hash (djb2) over title+body — changes only when content changes. */
 function contentHash(title: string, body: string): string {
@@ -108,38 +106,42 @@ export async function digestArticle(a: Article): Promise<ArticleDigest | null> {
 }
 
 /**
- * Digest every article, reusing cached digests for unchanged content (0 API
- * calls on a cache hit). Misses run with bounded concurrency. Returns a map
- * keyed by article URL.
+ * Ingest step: digest every article whose content hash differs from the stored
+ * digest_hash, persisting non-null results immediately (failures leave the
+ * stored hash unchanged, so the next ingest retries). Never throws — a digest
+ * problem must not block ingest.
  */
-export async function getArticleDigests(): Promise<Record<string, ArticleDigest | null>> {
-  const articles = await getClaudeArticles();
-  const out: Record<string, ArticleDigest | null> = {};
-  const misses: Article[] = [];
-
-  for (const a of articles) {
-    const cached = digestCache.get(slugFromUrl(a.url));
-    const hash = contentHash(a.title, a.body ?? '');
-    if (cached && cached.hash === hash) {
-      out[a.url] = cached.digest;
-    } else {
-      misses.push(a);
+export async function digestStaleArticles(
+  articles: Article[],
+): Promise<{ digested: number; failed: number }> {
+  try {
+    if (!client) return { digested: 0, failed: 0 };
+    const states = await db.getDigestStates();
+    const stale = articles.filter((a) => {
+      if (!(a.body ?? '').trim()) return false; // nothing meaningful to digest
+      return states.get(slugFromUrl(a.url)) !== contentHash(a.title, a.body ?? '');
+    });
+    let digested = 0;
+    let failed = 0;
+    for (let i = 0; i < stale.length; i += CONCURRENCY) {
+      const chunk = stale.slice(i, i + CONCURRENCY);
+      const results = await Promise.all(
+        chunk.map(async (a) => ({ a, digest: await digestArticle(a) })),
+      );
+      const rows = results
+        .filter((r): r is { a: Article; digest: ArticleDigest } => r.digest !== null)
+        .map((r) => ({
+          slug: slugFromUrl(r.a.url),
+          digest: r.digest,
+          digestHash: contentHash(r.a.title, r.a.body ?? ''),
+        }));
+      await db.updateDigests(rows);
+      digested += rows.length;
+      failed += results.length - rows.length;
     }
+    return { digested, failed };
+  } catch (err) {
+    console.error('[digest] digestStaleArticles failed:', err);
+    return { digested: 0, failed: 0 };
   }
-
-  for (let i = 0; i < misses.length; i += CONCURRENCY) {
-    const chunk = misses.slice(i, i + CONCURRENCY);
-    await Promise.all(
-      chunk.map(async (a) => {
-        const digest = await digestArticle(a);
-        digestCache.set(slugFromUrl(a.url), {
-          hash: contentHash(a.title, a.body ?? ''),
-          digest,
-        });
-        out[a.url] = digest;
-      }),
-    );
-  }
-
-  return out;
 }
