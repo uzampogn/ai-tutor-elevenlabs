@@ -16,14 +16,9 @@ Rows are in build sequence (top = earliest delivered). Rows with disjoint
 
 | # | Item | Outcome | Status | Owns / files | Deps | Bead |
 |---|---|---|---|---|---|---|
-| 1 | Bootstrap: repo skeleton + CI green + hello-world deploy | Deploy path proven on day 1 | ✅ | repo root | — | dl-001 |
-| 2 | Freeze `contracts/` v1.0 (schema + API shape + repo layout) | Parallel lanes can't drift on shared surfaces | ✅ | `contracts/` | — | dl-002 |
-| 3 | [00-example-metric-drawer](00-example-metric-drawer/) — 4-section drawer, rendered formula | Non-experts understand a metric before acting on it | ⬜ | `frontend/src/components/MetricDrawer.tsx` + test | 2 | dl-003 |
-| 4 | Deploy credentials for staging (HUMAN-BOUND) | — | 🙋 | — | — | dl-004 |
+| 22 | [22-persist-article-digests](22-persist-article-digests/) | Cold instance opens the article drawer from a single Postgres read — no LLM burst (closes O7/C7 for the drawer). A2: schema — PR parks for human review. | ⬜ | `db/schema.sql`, `src/lib/db.ts` (+test), `src/lib/digest.ts` (+test), `src/lib/scraper.ts` (+db test), `src/app/api/digest/route.ts` (+test) | — | AT-oxb |
 
-<!-- Rows are regenerated from `bd list --json` — these 4 are shown so you know
-the shape they take. Rows 1 (walking skeleton first) and 2 (contracts frozen
-before parallelizing) are the recommended opening moves for a new build. -->
+<!-- Regenerated 2026-08-27 by /design-session (O7) from `bd list --json`. -->
 
 ## How beads fits in
 
