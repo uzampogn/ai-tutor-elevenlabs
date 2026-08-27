@@ -1,5 +1,9 @@
 # Specs
 
+> **Read-only reference since 2026-08-27** — the live queue is `brain/02-backlog/`
+> (dual-loop harness; see `CLAUDE.md`). Nothing here is deleted; new items go
+> through `/design-session` and continue this numbering at 22+.
+
 Feature specs for ai-tutor, one folder per feature, numbered in the order the spec
 was first written. The numbering is a historical record — it reflects when work
 started, not priority or dependency order. Numbers are never reused or renumbered.
