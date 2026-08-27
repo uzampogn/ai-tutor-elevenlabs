@@ -30,7 +30,7 @@ All plan steps followed TDD: failing test → implement → pass → commit. 6 c
 ```
 npm run lint       → clean (1 pre-existing warning: ArticleHero.tsx <img>)
 npm run typecheck  → clean
-npm run test:run   → Test Files 61 passed (61) · Tests 581 passed (581)
+npm run test:run   → Test Files 61 passed (61) · Tests 582 passed (582)
 ```
 
 ### Real ingest against the live DB + live Anthropic
@@ -138,15 +138,57 @@ non-production files (a test and a dev script); neither changes app behavior.
   `src/components/**` change), but this is the one claim I could not verify
   visually. Marked `unverified`.
 
-## Proposal for the decision log (not built)
+## Verify-gate findings — fixed
 
-`digestStaleArticles` runs whenever `ANTHROPIC_API_KEY` is set, even with no
-`DATABASE_URL`/`POSTGRES_URL` — but digests are only ever read back from
-Postgres, so a no-DB deployment burns ~23 Sonnet calls per ingest and discards
-every result. Guarding the step on "DB configured" would remove that waste.
-Not built: it changes ingest semantics beyond this plan, and it would diverge
-from `embedStaleArticles`, which guards on its capability key alone. Worth a
-decision.
+Two findings from the orchestrator's verify pass. File boundary respected
+(`src/lib/digest.ts`, `src/lib/digest.test.ts`, `src/lib/db.ts`,
+`src/lib/db.test.ts` only); gate re-run green afterwards.
+
+### 1 — no-DB guard on `digestStaleArticles` (`default — unratified`)
+
+The step guarded only on the Anthropic client. With `ANTHROPIC_API_KEY` set and
+no `DATABASE_URL`/`POSTGRES_URL`, `getDigestStates()` returns an empty map, so
+every article reads as stale → a full ~24-call Sonnet burst per scrape whose
+results `updateDigests()` silently discards. Spec §Desired behavior 4 / D6 want
+a no-DB deploy to degrade, not to pay.
+
+- `db.ts` exports `isDbConfigured()` (`sql !== null` — the same connection-string
+  detection every accessor already no-ops on), and `digestStaleArticles()`
+  returns `{ digested: 0, failed: 0 }` early when it's false.
+- TDD: the test was written first and failed with `{ digested: 1, failed: 0 }`
+  — i.e. it reproduced the wasted call — then passed once the guard landed.
+
+Labelled `default — unratified`: it makes the digest step diverge from
+`embedStaleArticles`, which still guards on its capability key alone. That
+divergence is the decision worth ratifying (the argument is unchanged from the
+proposal this section replaces).
+
+### 2 — `digestStaleArticles` tests re-seamed onto the postgres driver
+
+The new tests mocked `./db`, a project module. The spec's §Known tension
+carve-out permits new tests to mock **only** system boundaries, and this is the
+precise seam where the `::text::jsonb` double-encoding bug hid — a `./db` mock
+is blind to it by construction.
+
+- The `sqlMock`/`postgresMock` pattern from `db.test.ts` now backs the block, so
+  the real `db.ts` executes. The stub routes on SQL text rather than call order,
+  so schema DDL can grow without rewriting expectations.
+- All 4 behaviors kept, none weakened: persists a digest, skips unchanged
+  content with 0 API calls, counts a null digest failed without persisting,
+  degrades to zero counts on a DB error. The persist assertion is now
+  *stronger* — it asserts the `::text::jsonb` cast, the parsed digest payload,
+  the bound slug, and a non-empty hash on the actual UPDATE.
+- Older `getArticleDigests`-era tests and other files' conventions untouched.
+
+```
+npm run lint       → clean (1 pre-existing warning: ArticleHero.tsx <img>)
+npm run typecheck  → clean
+npm run test:run   → Test Files 61 passed (61) · Tests 582 passed (582)
+```
+
+Both fixes are unit-verified only; no live-DB or live-Anthropic re-run was
+needed, since neither changes the configured-DB path exercised by the empirical
+evidence above.
 
 ## Blockers
 
