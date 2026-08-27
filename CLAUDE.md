@@ -2,6 +2,10 @@
 
 Conversational agent that turns the latest [Claude blog](https://claude.com/blog) posts into clear, on-demand explanations. Voice or text in; answers stream back, are **read aloud with word-level highlighting** synced to ElevenLabs timestamps, and can be steered between business-level and technical depth. Live: https://ai-tutor-elevenlabs.vercel.app
 
+Development runs on the dual-loop harness — session rules:
+
+@brain/00-system/DUAL-LOOP-HARNESS.md
+
 ## Stack
 
 - **Next.js 14** + **React 18** + **TypeScript 5**, **Tailwind CSS 3**
@@ -14,7 +18,9 @@ Conversational agent that turns the latest [Claude blog](https://claude.com/blog
 | Path | What's here |
 |---|---|
 | `src/` | App code |
-| `spec/` | Feature specs / backlog |
+| `brain/` | Dual-loop state: `00-system/` = law, `01-observations/` → `02-backlog/` (the only live queue) → `03-build-reports/` → `04-handoffs/` |
+| `contracts/` | Frozen API shapes + golden fixtures shared across lanes |
+| `spec/` | **Read-only reference** — historical specs 00–21 + FEATURE-BACKLOG.md. New items go through `/design-session` into `brain/02-backlog/`, numbering continues at 22+ (numbers never reused) |
 | `ui-design-mockup/` | Design mockups (HTML) |
 | `docs/` | Screenshots, docs |
 
@@ -38,7 +44,7 @@ Requires **Node 24+** (impeccable's CLI requires `>=24`). Pinned via `.nvmrc` �
 
 - **Don't run `next build` while `next dev` is live** — they share `.next/`; the prod build corrupts the dev runtime (HTTP 500, `MODULE_NOT_FOUND`). Stop dev first.
 - **Subagent dev → use a git worktree.** This repo shares one working tree across many active branches; isolate subagent work in a worktree with hard git rules.
-- **All worktrees live under `/Users/vkau/Personal-space/Projects/` named `ai-tutor-wt-<feature>`** — create them there, nowhere else.
+- **All worktrees live under `/Users/vkau/Personal-space/Projects/`**, created as `git worktree add ../ai-tutor-<item-slug>` per `/orchestrate` — nowhere else. (Pre-harness worktrees used `ai-tutor-wt-<feature>`; the kit convention wins — see decision log.)
 
 ## Design — Impeccable
 
