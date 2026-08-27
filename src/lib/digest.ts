@@ -115,7 +115,11 @@ export async function digestStaleArticles(
   articles: Article[],
 ): Promise<{ digested: number; failed: number }> {
   try {
-    if (!client) return { digested: 0, failed: 0 };
+    // No DB → `getDigestStates()` returns an empty map (every article looks
+    // stale) and `updateDigests()` discards the results, so the whole step is a
+    // Sonnet burst with nowhere to land. Digests are only ever read back from
+    // Postgres, so skip rather than pay for them. (`default — unratified`.)
+    if (!client || !db.isDbConfigured()) return { digested: 0, failed: 0 };
     const states = await db.getDigestStates();
     const stale = articles.filter((a) => {
       if (!(a.body ?? '').trim()) return false; // nothing meaningful to digest

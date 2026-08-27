@@ -40,6 +40,15 @@ const sql = raw
     }
   : null;
 
+/**
+ * True when a connection string is configured (DATABASE_URL / POSTGRES_URL).
+ * Callers that only do work worth persisting (e.g. the ingest digest step) can
+ * skip it entirely rather than compute results this module would discard.
+ */
+export function isDbConfigured(): boolean {
+  return sql !== null;
+}
+
 /** Canonical slug derivation (PK). Mirrors the blog URL shape. */
 export function slugFromUrl(u: string): string {
   const m = u.match(/\/blog\/([^/?#]+)/);
