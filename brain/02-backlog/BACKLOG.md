@@ -16,9 +16,9 @@ Rows are in build sequence (top = earliest delivered). Rows with disjoint
 
 | # | Item | Outcome | Status | Owns / files | Deps | Bead |
 |---|---|---|---|---|---|---|
-| 22 | [22-persist-article-digests](22-persist-article-digests/) | Cold instance opens the article drawer from a single Postgres read — no LLM burst (closes O7/C7 for the drawer). A2: schema — PR parks for human review. | ⬜ | `db/schema.sql`, `src/lib/db.ts` (+test), `src/lib/digest.ts` (+test), `src/lib/scraper.ts` (+db test), `src/app/api/digest/route.ts` (+test) | — | AT-oxb |
+| 22 | [22-persist-article-digests](22-persist-article-digests/) | Cold instance opens the article drawer from a single Postgres read — no LLM burst (closes O7/C7 for the drawer). A2: schema — [PR #57](https://github.com/uzampogn/ai-tutor-elevenlabs/pull/57) built, CI green, awaiting human review. | 🙋 | `db/schema.sql`, `src/lib/db.ts` (+test), `src/lib/digest.ts` (+test), `src/lib/scraper.ts` (+tests), `src/app/api/digest/route.ts` (+test), `scripts/eval/seedDataset.ts` | — | AT-oxb |
 
-<!-- Regenerated 2026-08-27 by /design-session (O7) from `bd list --json`. -->
+<!-- Regenerated 2026-08-27 by /orchestrate from `bd list --json`. -->
 
 ## How beads fits in
 
