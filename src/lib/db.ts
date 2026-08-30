@@ -1,5 +1,6 @@
 import postgres from 'postgres';
 import type { Article } from './scraper';
+import type { ArticleDigest } from './types';
 
 export interface ArticleRow extends Article {
   hash: string;
@@ -39,6 +40,15 @@ const sql = raw
     }
   : null;
 
+/**
+ * True when a connection string is configured (DATABASE_URL / POSTGRES_URL).
+ * Callers that only do work worth persisting (e.g. the ingest digest step) can
+ * skip it entirely rather than compute results this module would discard.
+ */
+export function isDbConfigured(): boolean {
+  return sql !== null;
+}
+
 /** Canonical slug derivation (PK). Mirrors the blog URL shape. */
 export function slugFromUrl(u: string): string {
   const m = u.match(/\/blog\/([^/?#]+)/);
@@ -61,6 +71,8 @@ export async function ensureSchema(): Promise<void> {
         CONSTRAINT kb_meta_singleton CHECK (id = 1)
       )`;
       await sql`ALTER TABLE kb_meta ADD COLUMN IF NOT EXISTS embed_backlog INT NOT NULL DEFAULT 0`;
+      await sql`ALTER TABLE articles ADD COLUMN IF NOT EXISTS digest JSONB`;
+      await sql`ALTER TABLE articles ADD COLUMN IF NOT EXISTS digest_hash TEXT NOT NULL DEFAULT ''`;
     })();
   }
   return schemaReady;
@@ -120,6 +132,46 @@ export async function updateEmbeddings(
     await sql`UPDATE articles SET embedding = ${toSqlVector(r.embedding)}::vector,
       embedded_hash = ${r.embeddedHash} WHERE slug = ${r.slug}`;
   }
+}
+
+// Digest layer (brain/02-backlog/22-persist-article-digests). Plain columns on
+// the base schema — no extension needed, so they live in ensureSchema() rather
+// than a guarded block like the vector layer.
+
+/** slug → digest_hash for every row ('' = never digested). */
+export async function getDigestStates(): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  if (!sql) return map;
+  await ensureSchema();
+  const rows = (await sql`SELECT slug, digest_hash FROM articles`) as Row[];
+  for (const r of rows) map.set(String(r.slug), String(r.digest_hash ?? ''));
+  return map;
+}
+
+export async function updateDigests(
+  rows: { slug: string; digest: ArticleDigest; digestHash: string }[],
+): Promise<void> {
+  if (!sql || rows.length === 0) return;
+  await ensureSchema();
+  for (const r of rows) {
+    // `::text::jsonb`, not `::jsonb`: postgres.js sees a jsonb-cast parameter and
+    // JSON-encodes the bound value, so a pre-stringified object lands as a jsonb
+    // *string* ("{\"tldr\":…}") that reads back as a string. Casting through text
+    // forces the server to parse the literal into a jsonb object. Verified against
+    // the live DB with jsonb_typeof() — a mocked-postgres test can't catch this.
+    await sql`UPDATE articles SET digest = ${JSON.stringify(r.digest)}::text::jsonb,
+      digest_hash = ${r.digestHash} WHERE slug = ${r.slug}`;
+  }
+}
+
+/** url → persisted digest, for every article that has one. */
+export async function getDigests(): Promise<Record<string, ArticleDigest>> {
+  const out: Record<string, ArticleDigest> = {};
+  if (!sql) return out;
+  await ensureSchema();
+  const rows = (await sql`SELECT url, digest FROM articles WHERE digest IS NOT NULL`) as Row[];
+  for (const r of rows) out[String(r.url)] = r.digest as ArticleDigest;
+  return out;
 }
 
 /** Top-k articles by cosine similarity to `vec` (unfiltered; caller applies the floor). */

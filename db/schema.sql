@@ -31,3 +31,9 @@ CREATE EXTENSION IF NOT EXISTS vector;
 ALTER TABLE articles ADD COLUMN IF NOT EXISTS embedding vector(1024);
 ALTER TABLE articles ADD COLUMN IF NOT EXISTS embedded_hash TEXT NOT NULL DEFAULT ''; -- "<model>:<djb2>" at embed time
 ALTER TABLE kb_meta ADD COLUMN IF NOT EXISTS embed_backlog INT NOT NULL DEFAULT 0; -- embedding-health flag: stale articles the last ingest left unembedded
+
+-- Digest layer (brain/02-backlog/22-persist-article-digests). Score-card digest
+-- generated at ingest; digest_hash = djb2(title+body) at digest time, '' = none
+-- yet (next ingest generates). Mirrors the embedded_hash pattern above.
+ALTER TABLE articles ADD COLUMN IF NOT EXISTS digest JSONB;
+ALTER TABLE articles ADD COLUMN IF NOT EXISTS digest_hash TEXT NOT NULL DEFAULT '';

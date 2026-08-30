@@ -14,6 +14,9 @@ vi.mock('@/lib/db', () => db);
 const embedArticles = vi.hoisted(() => ({ embedStaleArticles: vi.fn() }));
 vi.mock('@/lib/embedArticles', () => embedArticles);
 
+const digestMod = vi.hoisted(() => ({ digestStaleArticles: vi.fn() }));
+vi.mock('@/lib/digest', () => digestMod);
+
 const ORIGIN = 'https://claude.com';
 const articleRow = (slug: string) => ({
   title: `T ${slug}`, url: `${ORIGIN}/blog/${slug}`, pubDate: '2026-06-10T09:00:00.000Z',
@@ -53,6 +56,7 @@ beforeEach(() => {
   db.readMeta.mockReset().mockResolvedValue({ lastSuccessfulFetch: null, lastError: null });
   db.writeMeta.mockReset().mockResolvedValue(undefined);
   embedArticles.embedStaleArticles.mockReset().mockResolvedValue({ embedded: 0, backlog: 0 });
+  digestMod.digestStaleArticles.mockReset().mockResolvedValue({ digested: 0, failed: 0 });
 });
 afterEach(() => vi.unstubAllGlobals());
 
@@ -119,6 +123,15 @@ describe('getClaudeArticles — DB-first', () => {
     expect(embedArticles.embedStaleArticles).toHaveBeenCalledTimes(1);
     const arg = embedArticles.embedStaleArticles.mock.calls[0][0];
     expect(arg[0]).toMatchObject({ url: 'https://claude.com/blog/post-a' });
+  });
+
+  it('a successful scrape hands the upserted rows to digestStaleArticles', async () => {
+    vi.stubGlobal('fetch', makeFetchMock());
+    const scraper = await freshScraper();
+    await scraper.getClaudeArticles({ force: true });
+    expect(digestMod.digestStaleArticles).toHaveBeenCalledTimes(1);
+    const rows = digestMod.digestStaleArticles.mock.calls[0][0];
+    expect(rows).toEqual(db.upsertArticles.mock.calls[0][0]);
   });
 
   it('getIngestionStatus reflects kb_meta after a DB-hit read', async () => {

@@ -3,6 +3,7 @@ import { summarizeAll } from './summarize';
 import { unstable_cache } from 'next/cache';
 import * as db from './db';
 import { embedStaleArticles } from './embedArticles';
+import { digestStaleArticles } from './digest';
 
 export interface Article {
   title: string;
@@ -503,6 +504,13 @@ async function scrapeAndPersist(): Promise<Article[]> {
     // Embed new/changed articles for RAG retrieval. Internally guarded: no-ops
     // without VOYAGE_API_KEY and swallows all errors — never blocks ingest.
     const embedRun = await embedStaleArticles(rows);
+    // Digest new/changed articles for the drawer score card. Internally
+    // guarded: no-ops without ANTHROPIC_API_KEY and never throws — a digest
+    // failure must not block ingest (failures retry next run via digest_hash).
+    const digestRun = await digestStaleArticles(rows);
+    if (digestRun.digested || digestRun.failed) {
+      console.log(`[scraper] digests: ${digestRun.digested} written, ${digestRun.failed} failed`);
+    }
     // Guard: only prune when the scrape returned articles, so a garbage/empty
     // scrape can never wipe the table.
     if (rows.length > 0) await db.deleteMissing(rows.map((r) => db.slugFromUrl(r.url)));

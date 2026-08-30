@@ -8,6 +8,13 @@ vi.mock('@anthropic-ai/sdk', () => ({
 }));
 const CANNED_SUMMARY = 'Canned summary for testing.';
 
+// Ingest also digests stale articles through the same Anthropic client. This
+// suite counts `createMock` calls to assert *summarization* caching, so stub the
+// digest step out — it has its own coverage in digest.test.ts / scraper.db.test.ts.
+vi.mock('@/lib/digest', () => ({
+  digestStaleArticles: vi.fn(async () => ({ digested: 0, failed: 0 })),
+}));
+
 /**
  * Fixture-based unit tests for the Claude blog scraper.
  *

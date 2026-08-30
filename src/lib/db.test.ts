@@ -59,6 +59,8 @@ describe('db.ts — queries', () => {
     sqlMock.mockResolvedValueOnce([]); // ensureSchema: articles
     sqlMock.mockResolvedValueOnce([]); // ensureSchema: kb_meta
     sqlMock.mockResolvedValueOnce([]); // ensureSchema: kb_meta embed_backlog ALTER
+    sqlMock.mockResolvedValueOnce([]); // ensureSchema: articles digest ALTER
+    sqlMock.mockResolvedValueOnce([]); // ensureSchema: articles digest_hash ALTER
     sqlMock.mockResolvedValueOnce([
       { slug: 'a', hash: 'h', title: 'A', url: 'https://claude.com/blog/a',
         pub_date: '2026-06-10T09:00:00.000Z', description: 'd', body: 'b',
@@ -76,6 +78,8 @@ describe('db.ts — queries', () => {
     sqlMock.mockResolvedValueOnce([]); // schema
     sqlMock.mockResolvedValueOnce([]); // schema
     sqlMock.mockResolvedValueOnce([]); // schema (embed_backlog ALTER)
+    sqlMock.mockResolvedValueOnce([]); // schema (digest ALTER)
+    sqlMock.mockResolvedValueOnce([]); // schema (digest_hash ALTER)
     sqlMock.mockResolvedValueOnce([{ slug: 'a', hash: 'h1', summary: 's1' }]); // WHERE hash <> ''
     const db = await freshDb();
     const map = await db.getKnownSummaries();
@@ -125,6 +129,8 @@ describe('db.ts — queries', () => {
     sqlMock.mockResolvedValueOnce([]); // schema articles
     sqlMock.mockResolvedValueOnce([]); // schema kb_meta
     sqlMock.mockResolvedValueOnce([]); // schema kb_meta embed_backlog ALTER
+    sqlMock.mockResolvedValueOnce([]); // schema articles digest ALTER
+    sqlMock.mockResolvedValueOnce([]); // schema articles digest_hash ALTER
     sqlMock.mockResolvedValueOnce([    // readMeta (inside writeMeta)
       { last_successful_fetch: '2026-06-10T00:00:00.000Z', last_error: null },
     ]);
@@ -158,6 +164,8 @@ describe('db.ts — vector layer', () => {
     sqlMock.mockResolvedValueOnce([]); // ensureSchema: articles
     sqlMock.mockResolvedValueOnce([]); // ensureSchema: kb_meta
     sqlMock.mockResolvedValueOnce([]); // ensureSchema: kb_meta embed_backlog ALTER
+    sqlMock.mockResolvedValueOnce([]); // ensureSchema: articles digest ALTER
+    sqlMock.mockResolvedValueOnce([]); // ensureSchema: articles digest_hash ALTER
     sqlMock.mockResolvedValueOnce([]); // vector schema: CREATE EXTENSION
     sqlMock.mockResolvedValueOnce([]); // vector schema: ALTER embedding
     sqlMock.mockResolvedValueOnce([]); // vector schema: ALTER embedded_hash
@@ -189,8 +197,57 @@ describe('db.ts — vector layer', () => {
     sqlMock.mockResolvedValueOnce([]); // ensureSchema: articles
     sqlMock.mockResolvedValueOnce([]); // ensureSchema: kb_meta
     sqlMock.mockResolvedValueOnce([]); // ensureSchema: kb_meta embed_backlog ALTER
+    sqlMock.mockResolvedValueOnce([]); // ensureSchema: articles digest ALTER
+    sqlMock.mockResolvedValueOnce([]); // ensureSchema: articles digest_hash ALTER
     sqlMock.mockRejectedValueOnce(new Error('permission denied for extension vector'));
     const db = await freshDb();
     expect(await db.similarArticles([1], 3)).toEqual([]); // no throw
+  });
+});
+
+describe('digest persistence', () => {
+  it('ensureSchema adds digest + digest_hash columns', async () => {
+    const db = await freshDb();
+    await db.ensureSchema();
+    const ddl = sqlMock.mock.calls.map((c) => (c[0] as string[]).join('?')).join('\n');
+    expect(ddl).toContain('ADD COLUMN IF NOT EXISTS digest JSONB');
+    expect(ddl).toContain("ADD COLUMN IF NOT EXISTS digest_hash TEXT NOT NULL DEFAULT ''");
+  });
+
+  it('getDigestStates maps slug → digest_hash', async () => {
+    const db = await freshDb();
+    sqlMock.mockResolvedValue([{ slug: 'post-a', digest_hash: 'h1' }]);
+    const states = await db.getDigestStates();
+    expect(states.get('post-a')).toBe('h1');
+    expect(lastSql()).toContain('SELECT slug, digest_hash FROM articles');
+  });
+
+  it('updateDigests writes digest json + hash per slug', async () => {
+    const db = await freshDb();
+    const digest = { tldr: 't', takeaways: ['a'], whyItMatters: 'w', tags: ['x'], questions: ['q?'] };
+    await db.updateDigests([{ slug: 'post-a', digest, digestHash: 'h1' }]);
+    expect(lastSql()).toContain('UPDATE articles SET digest =');
+    expect(lastSql()).toContain('digest_hash =');
+    // Must cast through text — a bare ::jsonb makes postgres.js JSON-encode the
+    // already-stringified value, persisting a jsonb string instead of an object.
+    expect(lastSql()).toContain('::text::jsonb');
+  });
+
+  it('getDigests returns url-keyed map of non-null digests', async () => {
+    const db = await freshDb();
+    const digest = { tldr: 't', takeaways: ['a'], whyItMatters: 'w', tags: ['x'], questions: ['q?'] };
+    sqlMock.mockResolvedValue([{ url: 'https://claude.com/blog/post-a', digest }]);
+    expect(await db.getDigests()).toEqual({ 'https://claude.com/blog/post-a': digest });
+    expect(lastSql()).toContain('WHERE digest IS NOT NULL');
+  });
+
+  it('digest accessors no-op safely without a DB url', async () => {
+    delete process.env.DATABASE_URL;
+    delete process.env.POSTGRES_URL;
+    const db = await freshDb();
+    expect(await db.getDigestStates()).toEqual(new Map());
+    expect(await db.getDigests()).toEqual({});
+    await expect(db.updateDigests([])).resolves.toBeUndefined();
+    if (ORIGINAL_URL !== undefined) process.env.DATABASE_URL = ORIGINAL_URL;
   });
 });
