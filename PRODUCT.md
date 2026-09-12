@@ -19,7 +19,7 @@ web
 
 AI News Tutor is a personalised learning experience for keeping up with AI (confirmed 2026-09-12). It fetches content from a **dedicated source** (today the Claude blog; a specific YouTube channel is the named next kind of source), builds a **knowledge base** from it (summaries, pre-defined questions, digests, score cards), and lets the user learn by **conversing with an AI agent** about the whole knowledge base or one specific piece of content.
 
-Today's surface: ask by voice or text; the answer streams in, is read aloud by ElevenLabs, and the spoken sentence highlights while the page follows along. Any answer can be steered between business-level and technical depth, closes with a **💼 Business Impact** takeaway when warranted, and cites the exact posts it drew from.
+Today's surface: ask by voice or text; the answer streams in, is read aloud by ElevenLabs, and the spoken sentence highlights while the page follows along. Any answer can be steered between business-level and technical depth, closes with a **💼 Business Impact** takeaway on every answer (confirmed 2026-09-12; the prompt in `src/lib/answerPipeline.ts` still says "only when it earns its place" — aligning it is a prompt change gated by the eval harness, D4), and cites the exact posts it drew from.
 
 Why it exists (README): "AI moves faster than most people can keep up with, and the primary sources are written for builders." Success means the user acquires the knowledge fast, at the depth they need, and can trust where it came from.
 
@@ -74,7 +74,8 @@ The umbrella claim (confirmed 2026-09-12) is **personalised AI-assisted learning
 - **Name is temporary (confirmed 2026-09-12).** "AI News Tutor" (repo `ai-tutor-elevenlabs`) is a placeholder. Do not treat the name, the "News" framing, or the README tagline ("Understand the latest in AI — explained clearly, and read aloud.") as durable brand. Design work **may propose names** as the new visual direction is explored; the final choice is made in a dedicated naming session after the rebuild.
 - **Binding visual constraint, volunteered by the human (2026-09-12):** the design stays **minimalist**. Recorded as stated, not expanded here; new-work interprets it.
 - **Tutor voice** (spec 11 system prompt, binding for copy): "a sharp, friendly expert — natural and conversational, never templated." Business framing and plain language for non-technical roles; precise terms for engineers; asks at most one clarifier.
-- **No logo, wordmark, or favicon asset exists** in the repo. Future work must not invent one as if it were established.
+- **No logo, wordmark, or favicon asset exists yet**, and the human wants one (confirmed 2026-09-12). A mark may be designed during the redesign and **proposed**, never presented as established; the wordmark waits for the naming session because the name is temporary.
+- **Typeface (confirmed 2026-09-12):** the Gemini app's family. Gemini's own face, Google Sans, is proprietary; the licensed equivalent is **Google Sans Flex** (SIL Open Font License, on Google Fonts, variable: wght · wdth · opsz · slnt · GRAD · ROND). One family for UI and for the tutor's words.
 - Depends on and names third parties: Claude blog (source), Anthropic Claude (answers), ElevenLabs (voice). These are factual attributions, not co-branding.
 
 ## Evidence on Hand
