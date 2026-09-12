@@ -35,6 +35,8 @@
   --hair: color-mix(in oklab, var(--ink) 20%, var(--ground));
   --hair-2: color-mix(in oklab, var(--ink) 11%, var(--ground));
   --wash: color-mix(in oklab, var(--lime-200) 48%, transparent);
+  /* the link/on tone: teal deepened toward ink so small text clears 4.5:1 */
+  --accent-ink: color-mix(in oklab, var(--teal-600) 50%, var(--teal-900));
 
   --font: 'Google Sans Flex', system-ui, -apple-system, 'Segoe UI', sans-serif;
 
@@ -133,7 +135,7 @@ p { margin: 0; }
 }
 .rail-btn:hover .rail-name, .rail-btn:focus-visible .rail-name { opacity: 1; }
 .sidebar-toggle .mark { color: var(--ink); }
-.sidebar-toggle[aria-expanded="true"] .mark { color: var(--teal-600); rotate: 45deg; }
+.sidebar-toggle[aria-expanded="true"] .mark { color: var(--accent-ink); rotate: 45deg; }
 
 /* ── knowledge base ────────────────────────────────────────────────────── */
 .sidebar {
@@ -179,7 +181,7 @@ p { margin: 0; }
 }
 .kb-row:hover { background: var(--plane); }
 .kb-row.is-active { background: var(--plane); }
-.kb-row.is-active .kb-row-title { color: var(--teal-600); }
+.kb-row.is-active .kb-row-title { color: var(--accent-ink); font-weight: 500; }
 .kb-row-meta { display: flex; gap: 6px; font-size: 12px; color: var(--ink-2); margin-bottom: 3px; }
 .kb-row-title { display: block; font-size: 13.5px; line-height: 1.35; letter-spacing: -0.003em; }
 .kb-row.is-ghost { cursor: default; }
@@ -208,7 +210,7 @@ p { margin: 0; }
    collapse to 0 when the content is taller than the viewport, so a tall
    welcome scrolls from the top instead of clipping. */
 .scroll:has(.welcome) { display: flex; flex-direction: column; }
-.scroll:has(.welcome) .thread { margin: auto; padding-left: 24px; width: 100%; }
+.scroll:has(.welcome) .thread { margin: auto; padding: 8vh 24px 24px; width: 100%; }
 
 /* ── welcome ───────────────────────────────────────────────────────────── */
 .welcome { max-width: var(--welcome-col); margin-inline: auto; width: 100%; padding: 24px 0; }
@@ -229,7 +231,7 @@ p { margin: 0; }
   padding: 12px 10px 13px;
   font-size: 15px; line-height: 1.4;
 }
-.welcome-ask:hover { color: var(--teal-600); background: var(--plane); }
+.welcome-ask:hover { color: var(--accent-ink); background: var(--plane); }
 
 /* ── thread rows ───────────────────────────────────────────────────────── */
 .row { margin-bottom: 44px; }
@@ -271,8 +273,8 @@ p { margin: 0; }
 }
 .s-read { color: var(--ink-2); }
 /* the playhead: a peach tick that walks the margin; read measures settle to sage */
-.s-active::before { background: var(--peach-200); width: 16px; height: 3px; margin-top: calc(0.72em - 1px); border-radius: 2px; }
-.s-read::before { background: var(--sage-200); }
+.ai-body .s-active::before { background: var(--peach-200); width: 16px; height: 3px; margin-top: calc(0.72em - 1px); border-radius: 2px; }
+.ai-body .s-read::before { background: var(--sage-200); }
 
 .ai-status {
   display: inline-flex; align-items: center; gap: 10px;
@@ -298,7 +300,7 @@ p { margin: 0; }
 .ai-list-item strong { font-weight: 600; }
 .caret {
   display: inline-block; width: 2px; height: 1em; vertical-align: -0.15em;
-  background: var(--teal-600); margin-left: 2px;
+  background: var(--accent-ink); margin-left: 2px;
 }
 @keyframes caret { 50% { opacity: 0; } }
 .row-ai.is-error .ai-para { color: var(--ink-2); }
@@ -316,7 +318,7 @@ p { margin: 0; }
 
 /* citations + the numbered source list */
 .cite { font-size: .68em; line-height: 0; }
-.cite a { color: var(--teal-600); text-decoration: none; padding: 0 1px; }
+.cite a { color: var(--accent-ink); text-decoration: none; padding: 0 1px; }
 .cite a:hover, .cite a:focus-visible { text-decoration: underline; text-underline-offset: 2px; }
 .sources { margin-top: 24px; }
 .sources-label { font-size: 13px; color: var(--ink-2); margin-bottom: 4px; }
@@ -327,7 +329,7 @@ p { margin: 0; }
   padding: 9px 4px; color: var(--ink); text-decoration: none;
   font-size: 14.5px; line-height: 1.4;
 }
-.source-chip:hover { color: var(--teal-600); }
+.source-chip:hover { color: var(--accent-ink); }
 .source-chip-num {
   flex: none; min-width: 1.4em;
   font-size: 12.5px; color: var(--ink-2);
@@ -343,7 +345,7 @@ p { margin: 0; }
   font-size: 13px; font-weight: 500; padding: 6px 10px; border-radius: var(--r-sm);
 }
 .act:hover { color: var(--ink); background: var(--plane); }
-.act.is-on { color: var(--teal-600); }
+.act.is-on { color: var(--accent-ink); background: var(--wash); }
 .act:disabled { color: var(--ink-4); cursor: default; }
 .sound-wave { display: inline-flex; align-items: center; gap: 2px; height: 14px; }
 .sound-wave i { display: block; width: 2px; border-radius: 2px; background: var(--aqua-400); }
@@ -470,7 +472,7 @@ p { margin: 0; }
 /* Four poses, each distinct in a still frame (these hold under reduced motion). */
 .orb[data-orb-state="listening"] .orb-core { transform: scale(1.1); }
 .orb[data-orb-state="listening"] .orb-bloom { opacity: 1; }
-.orb[data-orb-state="listening"] .orb-ring:nth-of-type(1) { opacity: .55; transform: scale(1.28); }
+.orb[data-orb-state="listening"] .orb-core + .orb-ring { opacity: .55; transform: scale(1.28); }
 .orb[data-orb-state="thinking"] .orb-core { filter: saturate(.72); }
 .orb[data-orb-state="thinking"] .orb-spark { rotate: 45deg; }
 .orb[data-orb-state="speaking"] .orb-bloom {
@@ -552,7 +554,7 @@ p { margin: 0; }
   border: 0; background: transparent; color: var(--ink);
   padding: 10px 4px 11px; font-size: 14.5px; line-height: 1.4;
 }
-.score-ask:hover { color: var(--teal-600); background: var(--ground); }
+.score-ask:hover { color: var(--accent-ink); background: var(--ground); }
 .score-original {
   display: inline-flex; align-items: center; gap: 8px;
   font-size: 14px; color: var(--ink);
@@ -590,7 +592,7 @@ p { margin: 0; }
 
   /* read-along: the sentence lights and the playhead steps */
   .s-active, .s-read { transition: background-color .2s ease, color .2s ease; }
-  .ai-body .s::before { transition: background-color .2s ease, width .2s var(--ease-out-quart), height .2s ease; }
+  .ai-body .s::before { transition: background-color .2s ease; }
 
   /* the orb's drift between poses (transform only) and its breathing */
   .orb-body { transition: transform .4s var(--ease-out-quart); }
@@ -603,8 +605,8 @@ p { margin: 0; }
 
   .orb[data-orb-state="listening"] .orb-core { animation: orb-breathe-big 2.4s ease-in-out infinite; }
   .orb[data-orb-state="listening"] .orb-ring { animation: orb-ripple 2.4s ease-out infinite; }
-  .orb[data-orb-state="listening"] .orb-ring:nth-of-type(2) { animation-delay: 1.2s; }
-  .orb[data-orb-state="listening"] .orb-ring:nth-of-type(1) { transform: none; opacity: 0; }
+  .orb[data-orb-state="listening"] .orb-ring + .orb-ring { animation-delay: 1.2s; }
+  .orb[data-orb-state="listening"] .orb-core + .orb-ring { transform: none; opacity: 0; }
 
   .orb[data-orb-state="thinking"] .orb-core::after { animation: orb-shimmer 4s linear infinite; }
   .orb[data-orb-state="thinking"] .orb-spark { animation: orb-spark-turn 3s ease-in-out infinite; rotate: 0deg; }
@@ -612,7 +614,7 @@ p { margin: 0; }
   .orb[data-orb-state="speaking"] .orb-bloom { animation: orb-speak 4s ease-in-out infinite; }
   .orb[data-orb-state="speaking"] .orb-core { animation: orb-breathe 4s ease-in-out infinite; }
   .orb[data-orb-state="speaking"] .orb-ring { animation: orb-ripple 4s ease-out infinite; }
-  .orb[data-orb-state="speaking"] .orb-ring:nth-of-type(2) { animation-delay: 2s; }
+  .orb[data-orb-state="speaking"] .orb-ring + .orb-ring { animation-delay: 2s; }
 
   .orb:disabled .orb-core, .orb:disabled .orb-core::after, .orb:disabled .orb-bloom { animation: none; }
 }
@@ -637,7 +639,8 @@ p { margin: 0; }
   .app.sidebar-collapsed { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
   /* 100% resolves to the layout viewport on mobile and the foot falls under the
      URL bar; dvh tracks the visual viewport. */
-  html, body, .app, .main { height: 100dvh; min-height: 100dvh; }
+  html, body, .app { height: 100dvh; min-height: 100dvh; }
+  .main { height: auto; min-height: 0; }
 
   .rail {
     flex-direction: row; gap: 4px;
@@ -665,14 +668,17 @@ p { margin: 0; }
   }
 
   .thread { padding: 28px 16px 24px calc(16px + var(--track)); }
-  .scroll:has(.welcome) .thread { padding-left: 16px; }
+  .scroll:has(.welcome) .thread { padding: 12vh 16px 24px; }
   .welcome-title { font-size: 26px; }
   .welcome-greeting { margin-bottom: 30px; }
   .welcome-slot { margin-bottom: 30px; }
   .q { font-size: 18px; }
   .ai-para, .ai-list, .impact-text { font-size: 16px; }
 
-  .foot { padding: 6px 16px calc(18px + env(safe-area-inset-bottom) + var(--kb-inset, 0px)) calc(16px + var(--track)); }
+  /* The orb's mobile home is bottom-right (decision 3): the slot moves to the
+     end of the foot row, after the text line when that is showing. */
+  .foot { padding: 6px 16px calc(18px + env(safe-area-inset-bottom) + var(--kb-inset, 0px)) calc(16px + var(--track)); justify-content: flex-end; }
+  .foot-slot { order: 2; }
   .foot-note { left: calc(16px + var(--track)); bottom: calc(4px + env(safe-area-inset-bottom)); }
   .orb-caption { max-width: 22ch; }
 

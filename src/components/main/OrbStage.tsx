@@ -110,10 +110,14 @@ export default function OrbStage({
   const [placed, setPlaced] = useState<Placed | null>(null);
   const [dragging, setDragging] = useState(false);
 
-  // A new chat (pose back to centre) forgets the session position.
+  // A new chat (pose back to centre) forgets the session position, and so does
+  // crossing the 880px breakpoint (desktop edges and mobile homes differ).
   useEffect(() => {
     if (pose === 'centre') setPlaced(null);
   }, [pose]);
+  useEffect(() => {
+    setPlaced(null);
+  }, [isMobile]);
 
   const measure = useCallback(() => {
     const plane = planeRef.current;

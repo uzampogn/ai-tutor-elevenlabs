@@ -156,8 +156,8 @@ describe('Read-along — class toggles, the playhead in the margin', () => {
     expect(rule('.s-read')).toContain('var(--ink-2)');
   });
   it('draws the peach playhead and sage read ticks on the [data-s] spans', () => {
-    expect(rule('.s-active::before')).toContain('var(--peach-200)');
-    expect(rule('.s-read::before')).toContain('var(--sage-200)');
+    expect(rule('.ai-body .s-active::before')).toContain('var(--peach-200)');
+    expect(rule('.ai-body .s-read::before')).toContain('var(--sage-200)');
     expect(normalizedCss).toContain('.ai-body .s::before {');
   });
   it('changes only background and colour on the spans (no reflow)', () => {
