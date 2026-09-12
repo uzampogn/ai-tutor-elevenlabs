@@ -23,6 +23,8 @@ interface ThreadProps {
   onAsk: (question: string) => void;
   onReadAloud: (text: string) => void;
   onStopAudio: () => void;
+  /** Open the article drawer at a cited post. */
+  onOpenSource?: (article: Article) => void;
 }
 
 export default function Thread({
@@ -36,6 +38,7 @@ export default function Thread({
   onAsk,
   onReadAloud,
   onStopAudio,
+  onOpenSource,
 }: ThreadProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -78,9 +81,11 @@ export default function Thread({
                 streaming={isLoading && i === messages.length - 1}
                 articles={articles}
                 speaking={speakingContent === msg.content}
+                error={msg.error}
                 rowRef={speakingContent === msg.content ? setSpeakingRowEl : undefined}
                 onReadAloud={onReadAloud}
                 onStopAudio={onStopAudio}
+                onOpenSource={onOpenSource}
                 sourceSlugs={msg.sources}
               />
             ),

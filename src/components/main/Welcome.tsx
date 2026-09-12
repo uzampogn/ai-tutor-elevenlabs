@@ -1,29 +1,28 @@
-// Empty-state hero with serif title, lede, and a 2x2 grid of the
-// suggested questions. Clicking a chip sends that question.
+// The welcome: a greeting above the orb's centre-stage slot, the quick
+// questions as ruled text rows beneath. The orb itself is the free body in
+// OrbStage; `[data-orb-anchor="centre"]` is where it measures its centre pose.
 
 import { SUGGESTED } from '@/lib/types';
-import { ArrowIcon } from '../icons';
 
 export default function Welcome({ onAsk }: { onAsk: (question: string) => void }) {
   return (
     <div className="welcome">
-      <h2 className="welcome-title">
-        Understand the latest in AI, <em>explained clearly</em>.
-      </h2>
-      <p className="welcome-lede">
-        Ask anything about Anthropic&apos;s recent research and product news. I&apos;ll teach you the
-        key concepts and the business impact, grounded in the latest articles.
-      </p>
-      <div className="welcome-grid">
-        {SUGGESTED.map((q) => (
-          <button key={q} type="button" className="welcome-chip" onClick={() => onAsk(q)}>
-            <span className="wc-q">{q}</span>
-            <span className="wc-arrow" aria-hidden="true">
-              <ArrowIcon />
-            </span>
-          </button>
-        ))}
+      <div className="welcome-greeting">
+        <h1 className="welcome-title">What do you want to understand today?</h1>
+        <p className="welcome-lede">
+          Tap the orb and ask. I answer from the latest posts, read it aloud, and follow along.
+        </p>
       </div>
+      <div className="welcome-slot" data-orb-anchor="centre" aria-hidden="true" />
+      <ul className="welcome-asks">
+        {SUGGESTED.map((q) => (
+          <li key={q}>
+            <button type="button" className="welcome-ask" onClick={() => onAsk(q)}>
+              {q}
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

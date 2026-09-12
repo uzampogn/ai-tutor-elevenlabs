@@ -21,12 +21,19 @@ interface DocBlocksProps {
    * out-of-range markers render as literal "[n]".
    */
   citeTargets?: (Article | undefined)[];
+  /**
+   * When provided, a plain click on a citation opens the article drawer at that
+   * post instead of leaving the page; the anchor keeps its href for modifier
+   * clicks, copy-link and keyboard users.
+   */
+  onOpenSource?: (article: Article) => void;
 }
 
 /** Superscript source links for a word's glued citation markers (if any). */
 function renderCitations(
   w: SpokenWord,
   citeTargets: (Article | undefined)[] | undefined,
+  onOpenSource: ((article: Article) => void) | undefined,
 ): ReactNode {
   if (!w.citations || w.citations.length === 0) return null;
   return w.citations.map((n, ci) => {
@@ -34,7 +41,17 @@ function renderCitations(
     if (!target) return <Fragment key={`c${ci}`}>[{n}]</Fragment>;
     return (
       <sup key={`c${ci}`} className="cite">
-        <a href={target.url} target="_blank" rel="noopener noreferrer" title={target.title}>
+        <a
+          href={target.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={target.title}
+          onClick={(e) => {
+            if (!onOpenSource || e.metaKey || e.ctrlKey || e.shiftKey) return;
+            e.preventDefault();
+            onOpenSource(target);
+          }}
+        >
           [{n}]
         </a>
       </sup>
@@ -48,6 +65,7 @@ function renderWords(
   wordIds: number[],
   keyBase: string,
   citeTargets: (Article | undefined)[] | undefined,
+  onOpenSource: ((article: Article) => void) | undefined,
 ): ReactNode[] {
   const words = wordIds.map((id) => doc.words[id]).filter(Boolean) as SpokenWord[];
   // Group contiguous same-sentence words (ids are document-ordered).
@@ -78,7 +96,7 @@ function renderWords(
               <Tag className="w" data-w={w.id}>
                 {text}
               </Tag>
-              {renderCitations(w, citeTargets)}
+              {renderCitations(w, citeTargets, onOpenSource)}
             </Fragment>
           );
         })}
@@ -88,7 +106,7 @@ function renderWords(
   return out;
 }
 
-export default function DocBlocks({ doc, region, streaming, citeTargets }: DocBlocksProps) {
+export default function DocBlocks({ doc, region, streaming, citeTargets, onOpenSource }: DocBlocksProps) {
   const blocks = doc.blocks.filter((b) => b.region === region);
   const caret = streaming ? <span className="caret" /> : null;
   const lastBlock = blocks[blocks.length - 1];
@@ -111,7 +129,7 @@ export default function DocBlocks({ doc, region, streaming, citeTargets }: DocBl
         if (block.type === 'paragraph') {
           return (
             <p key={i} className="ai-para">
-              {renderWords(doc, block.wordIds, `b${i}`, citeTargets)}
+              {renderWords(doc, block.wordIds, `b${i}`, citeTargets, onOpenSource)}
               {isLast && caret}
             </p>
           );
@@ -121,7 +139,7 @@ export default function DocBlocks({ doc, region, streaming, citeTargets }: DocBl
           <List key={i} className="ai-list">
             {block.items.map((item, j) => (
               <li key={j} className="ai-list-item">
-                {renderWords(doc, item.wordIds, `b${i}-i${j}`, citeTargets)}
+                {renderWords(doc, item.wordIds, `b${i}-i${j}`, citeTargets, onOpenSource)}
                 {isLast && j === block.items.length - 1 && caret}
               </li>
             ))}
