@@ -11,7 +11,7 @@ C2: The product's signature feature (word-level sync) degrades exactly on the co
 O3: Orb takes too much space on screen.
 C3: Less room for the text users are supposed to read along with.
 
-O4: Colour scheme is disharmonious — red should move toward green, "like a sunshine".
+O4: Colour scheme is disharmonious — red should move toward green, "like a sunshine". → absorbed by the Impeccable redesign (D8); the colour hint is not binding.
 C4: Visual tone fights the calm-tutor positioning.
 
 O5: No /handoff + /teach skills (matt pocock style) in the repo.

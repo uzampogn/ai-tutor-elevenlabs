@@ -21,7 +21,7 @@ Development runs on the dual-loop harness — session rules:
 | `brain/` | Dual-loop state: `00-system/` = law, `01-observations/` → `02-backlog/` (the only live queue) → `03-build-reports/` → `04-handoffs/` |
 | `contracts/` | Frozen API shapes + golden fixtures shared across lanes |
 | `spec/` | **Read-only reference** — historical specs 00–21 + FEATURE-BACKLOG.md. New items go through `/design-session` into `brain/02-backlog/`, numbering continues at 22+ (numbers never reused) |
-| `ui-design-mockup/` | Design mockups (HTML) |
+| `ui-design-mockup/` | Pre-redesign mockups — evidence only, not direction (D8) |
 | `docs/` | Screenshots, docs |
 
 ## Quality gate
@@ -51,6 +51,7 @@ Requires **Node 24+** (impeccable's CLI requires `>=24`). Pinned via `.nvmrc` �
 [Impeccable](https://github.com/pbakaus/impeccable) is installed **project-locally** (`.claude/skills/impeccable/`) as a design-guidance system: detector rules + iteration commands for frontend work. The skill dir is **gitignored** (treated as a local tool, not committed); the hook config lives in `.claude/settings.local.json` (also gitignored).
 
 - A `PostToolUse` hook (`scripts/hook.mjs`) runs after `Edit`/`Write`/`MultiEdit`, self-filters to UI files, and surfaces design findings as system reminders. It's local-only (no network/API key), times out at 5s, and always exits 0 so it can't break a turn.
-- **First-time setup:** run `/impeccable init` (writes `PRODUCT.md` + `DESIGN.md` design context).
+- **Context files:** `PRODUCT.md` (product truth, written by `/impeccable init` — done 2026-09-12) and `DESIGN.md` (visual authority, written by Impeccable new-work / `document`; absent until the redesign ratifies one).
+- **Redesign in progress (D8):** the pre-2026-09 visual direction (Aurora Mist, specs 00–06, `ui-design-mockup/`) is evidence and anti-reference only — never polish on it; replace it through Impeccable new-work.
 - **Iterate:** `/impeccable audit | polish | critique | bolder | quieter` (23 commands total).
 - **Overlap note:** the workspace also has the `frontend-design` plugin and a `ui-prompt` skill. Pick one design playbook per task so the agent isn't getting conflicting guidance — Impeccable is the heavier, detector-driven option.
