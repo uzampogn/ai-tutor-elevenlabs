@@ -13,7 +13,7 @@ web
 
 - **Primary (confirmed 2026-09-12):** people who want to keep up with AI developments and use AI-assisted learning to do it. The README names founders, product managers, engineers, and "anyone curious about AI". Their job: acquire knowledge fast enough to keep pace with the rate of innovation, without reading every primary source themselves.
 - **How they use it:** they converse with the AI agent about the knowledge base as a whole or about one specific piece of content, at the depth they choose. Voice-first and read-aloud so learning can be hands-free. `inferred — confirm`: listening contexts (commute, desk, second screen) have not been named.
-- **Secondary audience (repo evidence, not a design driver):** `spec/FEATURE-BACKLOG.md` frames the app as a **portfolio piece** proving the author can architect and ship non-trivial AI systems solo. Reviewers reading the code and live app are served by the README, the eval harness, and the visible engineering. Design decisions on the app surface optimise for the learner.
+- **One audience (confirmed 2026-09-12):** the learner. `spec/FEATURE-BACKLOG.md` states the objective as a production-grade agentic app delivering a premium user experience and a polished interface, with engineering sophistication as the means; there is no secondary "reviewer" audience to design for.
 
 ## Product Purpose
 
@@ -57,7 +57,7 @@ The umbrella claim (confirmed 2026-09-12) is **personalised AI-assisted learning
 - **Colour scheme is slated for replacement (confirmed 2026-09-12).** The incumbent light-only declaration (`colorScheme: 'light'` in `src/app/layout.tsx`) is evidence of the current implementation, not a binding commitment. The replacement is decided in new-work, not here.
 - **Mobile web is in scope** (spec 14) with a desktop-equivalence guard (`globals.desktop-guard.test.ts`) — desktop layouts above 880px must not regress.
 - **Serverless limits** on Vercel bound audio job length (D2); all keys stay server-side.
-- **Full redesign in progress (decision D8, 2026-09-12).** The incumbent "Aurora Mist" system (frosted glass, custom CSS + Tailwind), specs 00–06, and `ui-design-mockup/` are **evidence and anti-reference only**, not direction. The new visual world is chosen in Impeccable new-work and recorded in `DESIGN.md`. There is no human screenshot gate on UI PRs (decision D9); they merge on the quality gate plus Impeccable's finish review.
+- **Full redesign in progress (decision D8, 2026-09-12).** The incumbent "Aurora Mist" system (frosted glass, custom CSS + Tailwind) and specs 00–06 are **evidence and anti-reference only**, not direction; the old `ui-design-mockup/` folder was deleted on 2026-09-12, and the incumbent is captured in `docs/inspiration/brief.md` §1 instead. The new visual world is chosen in Impeccable new-work and recorded in `DESIGN.md`. There is no human screenshot gate on UI PRs (decision D9); they merge on the quality gate plus Impeccable's finish review.
 
 **Terminology (use these words):** knowledge base (KB) · article drawer · orb · Voice mode / Text mode · composer · thread · read-along · Impact card · source chips · score card · digest · welcome (empty state).
 
@@ -82,7 +82,7 @@ The umbrella claim (confirmed 2026-09-12) is **personalised AI-assisted learning
 
 - Live deployment: https://ai-tutor-elevenlabs.vercel.app
 - Screenshot of the home surface: `docs/home.png` (README notes a read-along GIF is still TODO).
-- Design mockups: `ui-design-mockup/reskin-welcome-desktop.png`, `reskin-welcome-880.png`, `ui-inspiration.png`.
+- Redesign references: `docs/inspiration/brief.md` (dossier with incumbent screenshots, pinned palette, mood) and `docs/inspiration/shape-brief.md` (the confirmed design brief).
 - Eval dataset and baseline: `eval/dataset.json` (91 cases), `eval/baseline.json`; harness spec in `spec/eval-harness/`.
 - Engineering narrative for reviewers: README "Read-along" and "How it works" sections; 21 historical specs in `spec/`.
 - **Absent — do not fabricate:** testimonials, named users or customers, usage numbers, press, pricing, benchmarks against other products.

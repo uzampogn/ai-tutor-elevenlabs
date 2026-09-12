@@ -204,4 +204,4 @@ Next up:
 
 ## Design
 
-The editorial **Aurora Mist** visual system — soft frosted-glass surfaces on a clean white canvas — is documented in [`ui-design-mockup/`](./ui-design-mockup/) (`AI News Tutor.html` is the visual source of truth; `SPEC.md` maps each screen to its components).
+The incumbent **Aurora Mist** visual system (frosted-glass surfaces on a clean white canvas) is being replaced (decision D8). The reference dossier for the redesign lives in [`docs/inspiration/brief.md`](./docs/inspiration/brief.md) and the confirmed design brief in [`docs/inspiration/shape-brief.md`](./docs/inspiration/shape-brief.md); the new visual system will be recorded in `DESIGN.md` when it ships.

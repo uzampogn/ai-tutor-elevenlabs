@@ -17,7 +17,7 @@
 ## 1. Job and audience
 
 - **Mode: Operate.** The visitor completes a task (ask, listen, follow, open the source); design serves the product; brand lives in precise details. The answer body has Read-mode obligations (measure, comprehension).
-- **Who:** people keeping up with AI through AI-assisted learning (PRODUCT.md). A secondary audience exists only in the repo's own framing: `spec/FEATURE-BACKLOG.md` calls the app "a portfolio piece proving I can architect and ship non-trivial AI systems solo", so people reviewing it as a portfolio piece read the README, the specs and the code. They are not a design driver for the surface; the learner is.
+- **Who:** people keeping up with AI through AI-assisted learning (PRODUCT.md). One audience, the learner; the backlog's objective is a production-grade agentic app with a premium experience and polished interface, delivered through engineering sophistication.
 - **Job:** converse with the tutor about the knowledge base or one post, at the depth they choose, hands-free when they want it.
 
 ## 2. Outcome and proof
