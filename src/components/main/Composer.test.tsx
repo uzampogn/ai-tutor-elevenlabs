@@ -9,8 +9,6 @@ function renderComposer(overrides: Partial<React.ComponentProps<typeof Composer>
     input: '',
     setInput: vi.fn(),
     isLoading: false,
-    listening: false,
-    setListening: vi.fn(),
     onSend: vi.fn(),
     ...overrides,
   };

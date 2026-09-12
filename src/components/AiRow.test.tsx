@@ -45,14 +45,28 @@ describe('AiRow', () => {
     expect(hasText(container, 'p.ai-para', 'Here is the main explanation of the topic.')).toBe(true);
   });
 
-  it('renders no impact card when content has no Business Impact section', () => {
+  it('draws the Impact passage as a ghost when content has no Business Impact section', () => {
     const content = 'Just a plain answer with no special section.';
     const { container } = render(
       <AiRow content={content} streaming={false} articles={[]} speaking={false} onReadAloud={() => {}} onStopAudio={() => {}} />,
     );
 
-    expect(screen.queryByText(/Business Impact/i)).toBeNull();
+    // The takeaway closes every answer (PRODUCT.md): when the model omits it the
+    // place is drawn as a ghost, hidden from assistive tech, with no spoken spans.
+    const ghost = container.querySelector('.impact.is-ghost');
+    expect(ghost).not.toBeNull();
+    expect(ghost).toHaveAttribute('aria-hidden', 'true');
+    expect(ghost!.querySelector('[data-s]')).toBeNull();
+    expect(container.querySelector('.impact:not(.is-ghost)')).toBeNull();
     expect(hasText(container, 'p.ai-para', 'Just a plain answer with no special section.')).toBe(true);
+  });
+
+  it('draws no Impact ghost on the stream-failure row', () => {
+    const { container } = render(
+      <AiRow content="Something went wrong. Please try again." streaming={false} error articles={[]} speaking={false} onReadAloud={() => {}} onStopAudio={() => {}} />,
+    );
+    expect(container.querySelector('.impact')).toBeNull();
+    expect(container.querySelector('.msg-actions')).toBeNull();
   });
 
   it('renders a source link when content mentions an article title', () => {

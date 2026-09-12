@@ -1,25 +1,26 @@
 'use client';
 
+// The conversation surface: rail · knowledge base · main plane · article drawer,
+// with the orb as a free body over the main plane (OrbStage). Voice is the
+// primary input; Text is the fallback, a ruled line at the orb's home.
+
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Message, Article, ArticleDigest } from '@/lib/types';
 import { buildSpokenDoc } from '@/lib/readAlong/spokenDoc';
 import { buildTimings, type ReadAlongTimings } from '@/lib/readAlong/timingMap';
 import { driftCheck, type ChunkMeta } from '@/lib/readAlong/driftCheck';
+import Rail, { type InputMode } from './rail/Rail';
 import Sidebar from './sidebar/Sidebar';
-import SidebarToggle from './sidebar/SidebarToggle';
 import Thread from './main/Thread';
-import InputDock from './main/InputDock';
+import Composer from './main/Composer';
+import OrbStage, { type OrbPose } from './main/OrbStage';
 import { useIsMobile } from './main/useIsMobile';
 import { useSwipeToClose } from './main/useSwipeToClose';
 import ArticleDrawer from './ArticleDrawer';
-import { categoryFor } from './sidebar/kb';
-
-type Density = 'compact' | 'normal' | 'comfy';
 
 /**
- * Read-along mode (Spec 00 cross-cutting flag). `'off'` is a total no-op
- * equivalent to today; `'sentence'` is the dev default once Spec 04 lands;
- * `'word'` arrives in Spec 07. A user-facing toggle is out of scope.
+ * Read-along mode (Spec 00 cross-cutting flag). `'off'` is a total no-op;
+ * `'sentence'` is the default; `'word'` is reserved. No user-facing toggle.
  */
 export type ReadAlongMode = 'off' | 'sentence' | 'word';
 
@@ -45,26 +46,27 @@ function audioUrlFromBase64(audioBase64: string): string {
   return URL.createObjectURL(blob);
 }
 
+const ERROR_ROW = 'Something went wrong. Please try again.';
+
 export default function AppShell() {
   const [messages, setMessages] = useState<Message[]>([]); // start empty → Welcome
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [speakingContent, setSpeakingContent] = useState<string | null>(null);
-  // Stashed alignment for the currently-speaking answer (consumed by Spec 03).
   const [speakingAlignment, setSpeakingAlignment] = useState<SpeakAlignment | null>(null);
-  // Read-along mode. Default 'sentence' (Spec 04): a true no-op visually until
-  // audio plays with valid timings; the controller is otherwise inert.
   const [readAlong] = useState<ReadAlongMode>('sentence');
-  // The live audio element, surfaced to the view so the read-along controller
-  // can drive its rAF loop. Set on `onplay`, cleared on `ended`/`pause`.
+  // The live audio element, surfaced so the read-along controller can drive its rAF loop.
   const [audioEl, setAudioEl] = useState<HTMLAudioElement | null>(null);
-  const [inputMode, setInputMode] = useState<'voice' | 'text'>('voice');
+  const [inputMode, setInputMode] = useState<InputMode>('voice');
+  // False once OrbStage reports the browser has no voice input: Text is then fixed on.
+  const [voiceSupported, setVoiceSupported] = useState(true);
 
   // KB sidebar collapse. Starts closed every load (no persistence).
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const isMobile = useIsMobile();
+  const mainRef = useRef<HTMLElement>(null);
 
   // Swipe the KB overlay left to dismiss it (mobile only, while open).
   const sidebarSwipe = useSwipeToClose({
@@ -74,8 +76,7 @@ export default function AppShell() {
   });
 
   // Mobile overlay only: Escape closes the sidebar and the body is scroll-locked
-  // while it's open. Both are no-ops on desktop (isMobile === false), so the
-  // desktop runtime is unchanged.
+  // while it's open. Both are no-ops on desktop.
   useEffect(() => {
     if (!isMobile || !sidebarOpen) return;
     const onKey = (e: KeyboardEvent) => {
@@ -89,12 +90,13 @@ export default function AppShell() {
     if (!isMobile || !sidebarOpen) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = prev; };
+    return () => {
+      document.body.style.overflow = prev;
+    };
   }, [isMobile, sidebarOpen]);
 
-  // Keyboard-aware dock (mobile only): lift the dock by the slice of viewport
-  // the on-screen keyboard covers. No-op on desktop and where visualViewport is
-  // unsupported. The CSS var defaults to 0px via globals.css.
+  // Keyboard-aware foot (mobile only): lift it by the slice of viewport the
+  // on-screen keyboard covers. The CSS var defaults to 0px via globals.css.
   useEffect(() => {
     if (!isMobile) return;
     const vv = window.visualViewport;
@@ -121,7 +123,6 @@ export default function AppShell() {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Swipe the article drawer right to dismiss it (mobile only, while open).
-  // `closeDrawer` is a hoisted function declaration defined below.
   const drawerSwipe = useSwipeToClose({
     onClose: () => closeDrawer(),
     direction: 'right',
@@ -131,28 +132,16 @@ export default function AppShell() {
   const [digests, setDigests] = useState<Record<string, ArticleDigest | null>>({});
   const [digestsLoaded, setDigestsLoaded] = useState(false);
 
-  // density default 'normal' = no class on .app.
-  const [density] = useState<Density>('normal');
-
-  // Sentence/word time windows for the speaking answer (Spec 03), built from the
-  // canonical spoken doc + stashed alignment. Null until both are present; the
-  // read-along controller treats null as "inert".
+  // Sentence/word time windows for the speaking answer, built from the
+  // canonical spoken doc + stashed alignment. Null until both are present.
   const timings: ReadAlongTimings | null = useMemo(() => {
     if (!speakingContent || !speakingAlignment) return null;
     return buildTimings(buildSpokenDoc(speakingContent), speakingAlignment);
   }, [speakingContent, speakingAlignment]);
 
-  // Category color of the active article, for the hero gradient fallback. Keeps
-  // the palette logic in one place (sidebar/kb), matching the KB card dots.
-  const activeAccent = useMemo(() => {
-    if (!activeArticle) return categoryFor(0).color;
-    const i = articles.findIndex((a) => a.url === activeArticle.url);
-    return categoryFor(i >= 0 ? i : 0).color;
-  }, [activeArticle, articles]);
-
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const speakAbortRef = useRef<AbortController | null>(null);
-  // The KB card that opened the drawer, so focus returns there on close.
+  // The KB row that opened the drawer, so focus returns there on close.
   const drawerTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   const loadArticles = useCallback(() => {
@@ -168,8 +157,7 @@ export default function AppShell() {
     loadArticles();
   }, [loadArticles]);
 
-  // Prefetch the per-article digests once, in the background. The sidebar list
-  // never waits on this; the drawer reads from `digests` when an article opens.
+  // Prefetch the per-article digests once, in the background.
   useEffect(() => {
     fetch('/api/digest')
       .then((r) => r.json())
@@ -178,67 +166,64 @@ export default function AppShell() {
       .finally(() => setDigestsLoaded(true));
   }, []);
 
-  function stopAudio() {
-    speakAbortRef.current?.abort();
-    audioRef.current?.pause();
+  function clearSpeaking() {
     setSpeakingContent(null);
     setSpeakingAlignment(null);
     setAudioEl(null);
   }
 
-  // Voice is always on in the conversation-first cleanup — there is no on/off toggle.
+  function stopAudio() {
+    speakAbortRef.current?.abort();
+    audioRef.current?.pause();
+    clearSpeaking();
+  }
+
+  /** Fetch speech for `content` and play it, wiring the read-along state. */
+  const speak = useCallback(async (content: string, signal?: AbortSignal) => {
+    const spokenText = buildSpokenDoc(content).spokenText;
+    const res = await fetch('/api/speak', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: spokenText }),
+      signal,
+    });
+    if (!res.ok) {
+      clearSpeaking();
+      return;
+    }
+    const { audioBase64, alignment, chunkMeta } = (await res.json()) as SpeakResult;
+    const audio = new Audio(audioUrlFromBase64(audioBase64));
+    audioRef.current = audio;
+    audio.addEventListener(
+      'loadedmetadata',
+      () => {
+        const totalSec = alignment?.charEndTimesSec.length ? Math.max(...alignment.charEndTimesSec) : 0;
+        const { level, message } = driftCheck(audio.duration, totalSec, chunkMeta);
+        console[level](message);
+      },
+      { once: true },
+    );
+    audio.onplay = () => {
+      setSpeakingContent(content);
+      setSpeakingAlignment(alignment);
+      setAudioEl(audio);
+    };
+    audio.onended = clearSpeaking;
+    audio.onpause = clearSpeaking;
+    audio.play().catch(clearSpeaking);
+  }, []);
+
   const playVoice = useCallback(
     async (content: string) => {
       audioRef.current?.pause();
       try {
-        // Send the canonical spoken text (markdown stripped, no length cap),
-        // not the raw markdown — keeps audio identical for short answers and
-        // adds the rest for long ones.
-        const spokenText = buildSpokenDoc(content).spokenText;
-        const res = await fetch('/api/speak', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: spokenText }),
-        });
-        if (!res.ok) return;
-        const { audioBase64, alignment, chunkMeta } = (await res.json()) as SpeakResult;
-        const audio = new Audio(audioUrlFromBase64(audioBase64));
-        audioRef.current = audio;
-        audio.addEventListener('loadedmetadata', () => {
-          const totalSec = alignment?.charEndTimesSec.length
-            ? Math.max(...alignment.charEndTimesSec)
-            : 0;
-          const { level, message } = driftCheck(audio.duration, totalSec, chunkMeta);
-          console[level](message);
-        }, { once: true });
-        audio.onplay = () => {
-          setSpeakingContent(content);
-          setSpeakingAlignment(alignment);
-          setAudioEl(audio);
-        };
-        audio.onended = () => {
-          setSpeakingContent(null);
-          setSpeakingAlignment(null);
-          setAudioEl(null);
-        };
-        audio.onpause = () => {
-          setSpeakingContent(null);
-          setSpeakingAlignment(null);
-          setAudioEl(null);
-        };
-        audio.play().catch(() => {
-          setSpeakingContent(null);
-          setSpeakingAlignment(null);
-          setAudioEl(null);
-        });
+        await speak(content);
       } catch (err) {
         console.error('[voice]', err);
-        setSpeakingContent(null);
-        setSpeakingAlignment(null);
-        setAudioEl(null);
+        clearSpeaking();
       }
     },
-    [],
+    [speak],
   );
 
   const sendMessage = useCallback(
@@ -280,10 +265,7 @@ export default function AppShell() {
         await playVoice(full);
       } catch (err) {
         console.error('[chat]', err);
-        setMessages([
-          ...history,
-          { role: 'assistant', content: 'Something went wrong. Please try again.' },
-        ]);
+        setMessages([...history, { role: 'assistant', content: ERROR_ROW, error: true }]);
       } finally {
         setIsLoading(false);
       }
@@ -292,19 +274,17 @@ export default function AppShell() {
   );
 
   function handleNewChat() {
-    audioRef.current?.pause();
+    stopAudio();
     setMessages([]);
     setInput('');
-    setAudioEl(null);
   }
 
   function openArticle(article: Article, trigger: HTMLButtonElement | null) {
     drawerTriggerRef.current = trigger;
     setActiveArticle(article);
     setDrawerOpen(true);
-    // Mobile master→detail: the KB sidebar is a full-width overlay (z above the
-    // drawer), so dismiss it when an article opens or the drawer would be hidden
-    // behind it. No-op on desktop, where the sidebar + drawer sit side by side.
+    // Mobile master→detail: the KB overlay sits above the drawer, so dismiss it
+    // when an article opens. No-op on desktop, where they sit side by side.
     if (isMobile) setSidebarOpen(false);
   }
 
@@ -320,62 +300,30 @@ export default function AppShell() {
     setSpeakingAlignment(null);
     const controller = new AbortController();
     speakAbortRef.current = controller;
-    void (async () => {
-      try {
-        const spokenText = buildSpokenDoc(content).spokenText;
-        const res = await fetch('/api/speak', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: spokenText }),
-          signal: controller.signal,
-        });
-        if (!res.ok) { setSpeakingContent(null); setSpeakingAlignment(null); setAudioEl(null); return; }
-        const { audioBase64, alignment, chunkMeta } = (await res.json()) as SpeakResult;
-        const audio = new Audio(audioUrlFromBase64(audioBase64));
-        audioRef.current = audio;
-        audio.addEventListener('loadedmetadata', () => {
-          const totalSec = alignment?.charEndTimesSec.length
-            ? Math.max(...alignment.charEndTimesSec)
-            : 0;
-          const { level, message } = driftCheck(audio.duration, totalSec, chunkMeta);
-          console[level](message);
-        }, { once: true });
-        audio.onplay = () => {
-          setSpeakingContent(content);
-          setSpeakingAlignment(alignment);
-          setAudioEl(audio);
-        };
-        audio.onended = () => {
-          setSpeakingContent(null);
-          setSpeakingAlignment(null);
-          setAudioEl(null);
-        };
-        audio.onpause = () => {
-          setSpeakingContent(null);
-          setSpeakingAlignment(null);
-          setAudioEl(null);
-        };
-        audio.play().catch(() => {
-          setSpeakingContent(null);
-          setSpeakingAlignment(null);
-          setAudioEl(null);
-        });
-      } catch (err) {
-        if ((err as Error).name === 'AbortError') return;
-        console.error('[voice]', err);
-        setSpeakingContent(null);
-        setSpeakingAlignment(null);
-        setAudioEl(null);
-      }
-    })();
+    void speak(content, controller.signal).catch((err: unknown) => {
+      if ((err as Error).name === 'AbortError') return;
+      console.error('[voice]', err);
+      clearSpeaking();
+    });
   }
 
-  const densityClass =
-    density === 'compact' ? ' density-compact' : density === 'comfy' ? ' density-comfy' : '';
+  const textMode = inputMode === 'text' || !voiceSupported;
+  const inConversation = messages.length > 0;
+  // The orb starts centre stage and leaves it as the first answer begins (or
+  // when the text line is asked for, since the orb is that line's mic).
+  const pose: OrbPose = inConversation || textMode ? 'home' : 'centre';
+  const showFoot = pose === 'home';
 
   return (
-    <div className={`app${densityClass}${sidebarOpen ? '' : ' sidebar-collapsed'}`}>
-      <SidebarToggle open={sidebarOpen} onToggle={() => setSidebarOpen((v) => !v)} />
+    <div className={`app${sidebarOpen ? '' : ' sidebar-collapsed'}`}>
+      <Rail
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={() => setSidebarOpen((v) => !v)}
+        inputMode={textMode ? 'text' : 'voice'}
+        voiceUnavailable={!voiceSupported}
+        onSetInputMode={setInputMode}
+        onNewChat={handleNewChat}
+      />
       {isMobile && sidebarOpen && (
         <div className="scrim" aria-hidden="true" onClick={() => setSidebarOpen(false)} />
       )}
@@ -389,7 +337,7 @@ export default function AppShell() {
         swipeHandlers={sidebarSwipe}
       />
 
-      <main className="main">
+      <main className="main" ref={mainRef}>
         <Thread
           messages={messages}
           isLoading={isLoading}
@@ -398,13 +346,32 @@ export default function AppShell() {
           readAlong={readAlong}
           timings={timings}
           audio={audioEl}
+          orbHere={pose === 'centre'}
           onAsk={(q) => void sendMessage(q)}
           onReadAloud={readAloud}
           onStopAudio={stopAudio}
+          onOpenSource={(a) => openArticle(a, null)}
         />
-        <InputDock
-          inputMode={inputMode}
-          setInputMode={setInputMode}
+
+        {showFoot && (
+          <div className="foot">
+            <div className="foot-slot" data-orb-anchor="home" aria-hidden="true" />
+            {textMode && (
+              <Composer
+                input={input}
+                setInput={setInput}
+                isLoading={isLoading}
+                onSend={(override) => void sendMessage(override)}
+              />
+            )}
+            <p className="foot-note">Answers are grounded in the Claude blog and may be imperfect.</p>
+          </div>
+        )}
+
+        <OrbStage
+          planeRef={mainRef}
+          pose={pose}
+          isMobile={isMobile}
           input={input}
           setInput={setInput}
           isLoading={isLoading}
@@ -412,8 +379,8 @@ export default function AppShell() {
           setListening={setIsListening}
           onSend={(override) => void sendMessage(override)}
           speaking={!!speakingContent}
-          onNewChat={handleNewChat}
           onStartListening={stopAudio}
+          onSupportedChange={setVoiceSupported}
         />
       </main>
 
@@ -421,7 +388,6 @@ export default function AppShell() {
         article={activeArticle}
         digest={activeArticle ? digests[activeArticle.url] ?? null : null}
         digestsLoaded={digestsLoaded}
-        accentColor={activeAccent}
         open={drawerOpen}
         onClose={closeDrawer}
         swipeHandlers={drawerSwipe}

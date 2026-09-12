@@ -1,28 +1,37 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Scribe, RealtimeEvents, __lastConnection } from '@/test/fakeScribeClient';
-import VoiceDock from './VoiceDock';
+import OrbStage from './OrbStage';
 
 function Shell({ onStartListening }: { onStartListening: () => void }) {
-  // Minimal stand-in for AppShell's listening state ownership.
+  // Minimal stand-in for AppShell's listening state ownership and main plane.
   const [listening, setListening] = React.useState(false);
+  const ref = useRef<HTMLElement>(null);
   return (
-    <VoiceDock
-      input=""
-      setInput={vi.fn()}
-      isLoading={false}
-      listening={listening}
-      setListening={setListening}
-      onSend={vi.fn()}
-      speaking={false}
-      onStartListening={onStartListening}
-    />
+    <main ref={ref} className="main">
+      <div className="scroll">
+        <div data-orb-anchor="centre" />
+      </div>
+      <OrbStage
+        planeRef={ref}
+        pose="centre"
+        isMobile={false}
+        input=""
+        setInput={vi.fn()}
+        isLoading={false}
+        listening={listening}
+        setListening={setListening}
+        onSend={vi.fn()}
+        speaking={false}
+        onStartListening={onStartListening}
+      />
+    </main>
   );
 }
 
-describe('VoiceDock + Scribe integration', () => {
+describe('OrbStage + Scribe integration', () => {
   const realFetch = global.fetch;
   beforeEach(() => {
     global.fetch = vi
@@ -53,9 +62,6 @@ describe('VoiceDock + Scribe integration', () => {
         config: {},
       }),
     );
-    expect(screen.getByRole('button', { name: 'Stop listening' })).toHaveAttribute(
-      'data-orb-state',
-      'listening',
-    );
+    expect(screen.getByRole('button', { name: 'Stop listening' })).toHaveAttribute('data-orb-state', 'listening');
   });
 });

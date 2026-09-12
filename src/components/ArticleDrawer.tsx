@@ -1,5 +1,10 @@
 'use client';
 
+// The article drawer: the top plane, sliding in from the right. The article is
+// organized as stacked blocks with one job each — date + close · title · hero ·
+// What it says · Why it matters · Ask the tutor · Read the original. Opening it
+// never stops playback.
+
 import { useEffect, type PointerEventHandler } from 'react';
 import type { Article, ArticleDigest } from '@/lib/types';
 import { formatShortDate } from './sidebar/kb';
@@ -11,7 +16,6 @@ interface ArticleDrawerProps {
   article: Article | null;
   digest: ArticleDigest | null;
   digestsLoaded: boolean;
-  accentColor: string;
   open: boolean;
   onClose: () => void;
   onAsk: (question: string) => void;
@@ -27,7 +31,6 @@ export default function ArticleDrawer({
   article,
   digest,
   digestsLoaded,
-  accentColor,
   open,
   onClose,
   onAsk,
@@ -49,17 +52,12 @@ export default function ArticleDrawer({
         <div className="drawer-inner">
           <div className="drawer-head">
             <span className="drawer-date">{formatShortDate(article.pubDate)}</span>
-            <button
-              type="button"
-              className="drawer-close"
-              onClick={onClose}
-              aria-label="Close article"
-            >
+            <button type="button" className="drawer-close" onClick={onClose} aria-label="Close article">
               <CloseIcon />
             </button>
           </div>
           <h2 className="drawer-title">{article.title}</h2>
-          <ArticleHero src={article.heroImage} alt={article.title} accentColor={accentColor} />
+          <ArticleHero src={article.heroImage} alt={article.title} />
           <ScoreCard
             digest={digest}
             digestsLoaded={digestsLoaded}

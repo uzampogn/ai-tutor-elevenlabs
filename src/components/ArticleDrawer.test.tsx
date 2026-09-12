@@ -26,7 +26,6 @@ function renderDrawer(overrides: Partial<React.ComponentProps<typeof ArticleDraw
       article={ARTICLE}
       digest={DIGEST}
       digestsLoaded
-      accentColor="#abc"
       open
       onClose={() => {}}
       onAsk={() => {}}

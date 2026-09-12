@@ -7,10 +7,10 @@ const normalize = (s: string) => s.replace(/\s+/g, ' ');
 const full = normalize(css);
 
 describe('Mobile viewport fit', () => {
-  it('uses 100dvh so the dock clears mobile browser chrome', () => {
+  it('uses 100dvh so the foot clears mobile browser chrome', () => {
     expect(full).toContain('100dvh');
   });
-  it('pads the dock for the home-bar safe area', () => {
+  it('pads the foot for the home-bar safe area', () => {
     expect(full).toContain('env(safe-area-inset-bottom)');
   });
 });
@@ -28,7 +28,7 @@ function block880(src: string): string {
 }
 const mobile880 = normalize(block880(css));
 
-describe('Mobile sidebar overlay', () => {
+describe('Mobile shell — rail as a top strip, KB as an overlay', () => {
   it('no longer hides the sidebar or its toggle', () => {
     expect(mobile880).not.toContain('.sidebar { display: none');
     expect(mobile880).not.toContain('.sidebar-toggle { display: none');
@@ -40,20 +40,26 @@ describe('Mobile sidebar overlay', () => {
   it('defines the scrim', () => {
     expect(mobile880).toContain('.scrim');
   });
-  it('keeps the main column full-width when the KB overlay is collapsed', () => {
+  it('resolves both KB states to one full-width column with the rail on top', () => {
     // The sidebar is a fixed overlay on mobile (out of grid flow), so the desktop
-    // `.app.sidebar-collapsed { grid-template-columns: 0 1fr }` must be overridden
-    // here or .main lands in the collapsed 0-width column.
-    expect(mobile880).toContain('.app.sidebar-collapsed { grid-template-columns: 1fr');
+    // three-track grid must collapse to a single column in both states.
+    expect(mobile880).toContain('.app.sidebar-collapsed { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }');
+    expect(mobile880).toContain('.rail { flex-direction: row;');
+  });
+  it('scales the orb down: 120px centre stage, 60px at home', () => {
+    expect(mobile880).toContain('--orb-centre: 120px; --orb-home: 60px;');
   });
 });
 
 describe('Mobile touch targets & drawer', () => {
-  it('bumps mic/send buttons to a 44px target', () => {
-    expect(mobile880).toContain('.mic-btn, .send-btn { width: 44px; height: 44px');
+  it('bumps send, rail and close buttons to a 44px target', () => {
+    expect(mobile880).toContain('.send-btn, .rail-btn, .drawer-close { width: 44px; height: 44px');
   });
   it('insets the drawer for the safe area', () => {
     expect(mobile880).toContain('.drawer-inner');
     expect(mobile880).toContain('env(safe-area-inset-bottom)');
+  });
+  it('makes the drawer full-width', () => {
+    expect(mobile880).toContain('.drawer { width: 100%; }');
   });
 });
