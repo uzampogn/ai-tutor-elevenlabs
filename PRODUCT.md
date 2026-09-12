@@ -38,7 +38,7 @@ The umbrella claim (confirmed 2026-09-12) is **personalised AI-assisted learning
 
 ## Operating Context
 
-- **Two input modes.** Voice mode: a state-reactive orb — tap, speak, the question sends on silence. Text mode: a frosted-glass composer with a quick-question row. One flip between them.
+- **Two input modes.** Voice mode: a state-reactive orb — tap, speak, the question sends on silence. Text mode: a single ruled composer line at the orb's home, with the orb as its mic (the frosted-glass composer was retired with the 2026-09-12 redesign). One flip between them, on the rail.
 - **Knowledge-base sidebar** lists every recent post (title, date, excerpt); it collapses to a mark. Clicking a post opens a slide-in **article drawer** with hero image, digest, and a **score card**.
 - **The thread** holds the conversation; each AI answer renders body, Impact card, and source chips, with per-sentence spans for read-along and follow-scroll.
 - **Surfaces in scope today:** the single-page app at `/`. No landing page, docs site, settings, or account surface exists.
@@ -54,16 +54,15 @@ The umbrella claim (confirmed 2026-09-12) is **personalised AI-assisted learning
 - **Answer markdown is contract-bound.** The parser and read-along require: blocks separated by blank lines, `- ` bullets, `1. ` numbered items, `**bold**` and `*italic*` only; **no** headings, tables, nested lists, or code fences; never `" - "` in prose; article titles cited verbatim; the takeaway heading is exactly `💼 Business Impact` (spec 11).
 - **Graceful degradation is a feature, not a fallback.** Without a database the app live-scrapes; without `VOYAGE_API_KEY` retrieval is off; without timing data audio still plays and text stays readable. Every surface must remain usable in the degraded state.
 - **Read-along must not re-render.** Highlighting toggles CSS classes on stable `[data-s]` spans; follow-scroll moves only on sentence change; `prefers-reduced-motion` is honoured.
-- **Colour scheme is slated for replacement (confirmed 2026-09-12).** The incumbent light-only declaration (`colorScheme: 'light'` in `src/app/layout.tsx`) is evidence of the current implementation, not a binding commitment. The replacement is decided in new-work, not here.
+- **Colour scheme (replaced 2026-09-12).** The pinned palette (teal → lime → peach, `docs/inspiration/brief.md` §4) ships as one light ground and one teal ink, with the full gradient on the orb only; recorded in `DESIGN.md`. The light-only declaration (`colorScheme: 'light'` in `src/app/layout.tsx`) now follows the daylight scene named in the shape brief.
 - **Mobile web is in scope** (spec 14) with a desktop-equivalence guard (`globals.desktop-guard.test.ts`) — desktop layouts above 880px must not regress.
 - **Serverless limits** on Vercel bound audio job length (D2); all keys stay server-side.
-- **Full redesign in progress (decision D8, 2026-09-12).** The incumbent "Aurora Mist" system (frosted glass, custom CSS + Tailwind) and specs 00–06 are **evidence and anti-reference only**, not direction; the old `ui-design-mockup/` folder was deleted on 2026-09-12, and the incumbent is captured in `docs/inspiration/brief.md` §1 instead. The new visual world is chosen in Impeccable new-work and recorded in `DESIGN.md`. There is no human screenshot gate on UI PRs (decision D9); they merge on the quality gate plus Impeccable's finish review.
+- **Full redesign shipped (decision D8, built 2026-09-12).** The visual world is **Follow the Voice — Companion**, recorded in `DESIGN.md` (sidecar `.impeccable/design.json`) with the direction contract in `.impeccable/surfaces/src-app-page-tsx.md`. The retired "Aurora Mist" system and specs 00–06 are **anti-reference only**, captured in `docs/inspiration/brief.md` §1. There is no human screenshot gate on UI PRs (decision D9); they merge on the quality gate plus Impeccable's finish review.
 
 **Terminology (use these words):** knowledge base (KB) · article drawer · orb · Voice mode / Text mode · composer · thread · read-along · Impact card · source chips · score card · digest · welcome (empty state).
 
 **Explicitly undecided product facts:**
 
-- Colour scheme: the human wants to change it (2026-09-12); observation O4 ("red should move toward green, like a sunshine") is the earlier note on the same topic. The new scheme is undecided and belongs to new-work.
 - Build sequence for the feature backlog (multi-source ingestion, debate, critique, plans, recall, memory, source trace) is marked TBD in `spec/FEATURE-BACKLOG.md`.
 - **Source model (confirmed 2026-09-12):** the product is not Claude-blog-only by design. It ingests a *dedicated source* into a knowledge base; the Claude blog is the first source and a specific YouTube channel is the named next kind. Which sources ship, and whether a user picks the source or the product does, is undecided.
 - Pre-defined questions per article exist in the digest (`questions[]`) but are not yet surfaced in a learning loop (backlog #6).
