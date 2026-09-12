@@ -2,7 +2,7 @@
 
 ## Objective
 
-Push this agentic app from "beginner" to **intermediate** engineering sophistication — as a portfolio piece proving I can architect and ship non-trivial AI systems solo. Each new capability must earn its place through a real **user outcome**, not just a reviewer checklist.
+Build a **production-grade agentic app** that delivers a premium user experience and a polished user interface. The UX/UI is delivered by setting a high standard for engineering sophistication: each new capability must earn its place through a real **user outcome**, not a checklist.
 
 ## Capabilities
 

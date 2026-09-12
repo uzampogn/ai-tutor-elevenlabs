@@ -10,6 +10,8 @@ export interface Message {
   content: string;
   /** Retrieved-source slugs (X-Sources header order) for assistant turns. */
   sources?: string[];
+  /** True when this assistant turn is the stream-failure row, not an answer. */
+  error?: boolean;
 }
 
 /** AI-generated score-card digest for one article (see lib/digest.ts). */

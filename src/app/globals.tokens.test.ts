@@ -3,25 +3,15 @@ import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 
 /**
- * Regression lock for the "Aurora Mist" conversation-first redesign.
+ * Regression lock for the "Follow the Voice — Companion" world (decision D8;
+ * direction contract in .impeccable/surfaces/src-app-page-tsx.md, palette
+ * pinned in docs/inspiration/brief.md §4).
  *
- * Spec: spec/conversation-first-redesign.md
- *
- * This suite reads the raw globals.css from disk and asserts the LOCKED
- * Aurora Mist token values and structural guarantees (radial-gradient aurora
- * background, frosted-glass backdrop-filter, orb/dock CSS classes, and
- * reduced-motion guard). Any accidental revert to the old warm cream/terracotta
- * palette will fail here immediately.
- *
- * NOTE: This test reads globals.css from disk. If the design agent has not yet
- * landed the Aurora Mist CSS, this suite will fail — that is expected and fine.
- * The test is written against the final contract; it will go green once the CSS
- * lands.
+ * Reads the raw globals.css from disk and asserts the pinned palette stops,
+ * the single type family, the retired Aurora Mist materials staying gone, the
+ * orb and read-along classes, and the reduced-motion guard.
  */
 
-// Read the raw stylesheet from disk so this test locks the on-disk CSS,
-// not a bundled/transformed version. Resolved from the project root
-// (vitest runs with cwd at the project root).
 const cssPath = resolve(process.cwd(), 'src/app/globals.css');
 const css = readFileSync(cssPath, 'utf8');
 
@@ -29,228 +19,164 @@ const css = readFileSync(cssPath, 'utf8');
 const normalize = (s: string) => s.replace(/\s+/g, ' ');
 const normalizedCss = normalize(css);
 
-/** Assert a `--token: value;` declaration is present, tolerant of whitespace. */
 function expectToken(name: string, value: string) {
-  expect(
-    normalizedCss,
-    `expected token "${name}: ${value};" to be present in globals.css`,
-  ).toContain(`${name}: ${value};`);
+  expect(normalizedCss, `expected token "${name}: ${value};" in globals.css`).toContain(`${name}: ${value};`);
 }
 
-describe('Aurora Mist — locked :root token values', () => {
-  const tokens: Array<[string, string]> = [
-    ['--ink',          '#1B2236'],
-    ['--ink-soft',     '#4A5470'],
-    ['--muted',        '#7C86A0'],
-    ['--faint',        '#9AA3BD'],
-    ['--accent',       '#8AB4FF'],
-    ['--accent-strong','#4F7BE8'],
-    ['--accent-2',     '#C9B8FF'],
-    ['--line',         '#E1E7F4'],
-    ['--line-2',       '#EEF2FB'],
-    ['--bg',           '#EDF1FB'],
-    ['--panel',        '#FFFFFF'],
-    ['--panel-2',      '#FFFFFF'],
+/** The bare `<selector> { … }` rule body, so a check can't match a longer selector. */
+function rule(selector: string): string {
+  const start = normalizedCss.indexOf(`${selector} {`);
+  expect(start, `expected a "${selector} {" rule`).toBeGreaterThan(-1);
+  const end = normalizedCss.indexOf('}', start);
+  return normalizedCss.slice(start, end + 1);
+}
+
+describe('Pinned palette — the sampled stops are declared verbatim', () => {
+  const stops: Array<[string, string]> = [
+    ['--teal-900', '#194D49'],
+    ['--teal-600', '#2E8970'],
+    ['--aqua-400', '#52A88D'],
+    ['--sage-200', '#9AD1A9'],
+    ['--mist-100', '#ABE4D0'],
+    ['--lime-200', '#C0E2B0'],
+    ['--lime-500', '#A2BA6E'],
+    ['--glow-50', '#EEEFCF'],
+    ['--peach-200', '#F1C9A7'],
+    ['--peach-100', '#FBD8BB'],
   ];
+  it.each(stops)('locks %s to %s', (name, value) => expectToken(name, value));
 
-  it.each(tokens)('locks %s to %s', (name, value) => {
-    expectToken(name, value);
-  });
-});
-
-describe('Aurora Mist — aurora background present', () => {
-  it('uses a radial-gradient aurora background (not flat)', () => {
-    expect(css, 'expected radial-gradient for aurora background').toContain('radial-gradient');
+  it('grounds the page on the light anchor and inks it with the dark anchor', () => {
+    expectToken('--ground', 'var(--glow-50)');
+    expectToken('--ink', 'var(--teal-900)');
   });
 
-  it('contains backdrop-filter for frosted glass surfaces', () => {
-    expect(css, 'expected backdrop-filter for frosted glass').toContain('backdrop-filter');
-  });
-});
-
-describe('Aurora Mist — old warm palette removed', () => {
-  it('does NOT contain the old terracotta accent #c75b39', () => {
-    expect(css, 'old terracotta accent #c75b39 must be absent').not.toContain('#c75b39');
-  });
-});
-
-describe('Aurora Mist — orb and dock CSS classes present', () => {
-  const requiredClasses = [
-    '.orb-core',
-    '.orb-bloom',
-    '.orb-ring',
-    '.input-mode-switch',
-    '.voice-dock',
-    '.session-controls',
-    '.newchat',
-    '.voice-dock-unsupported',
-  ];
-
-  it.each(requiredClasses)('contains class %s', (cls) => {
-    expect(css, `expected class "${cls}" to be defined in globals.css`).toContain(cls);
-  });
-});
-
-describe('Conversation-first cleanup (pass 2) — removed chrome is gone', () => {
-  // spec/conversation-first-cleanup.md: top bar, voice on/off toggle, welcome
-  // badge, and the orb status readout were all removed.
-  const removedClasses = [
-    '.topbar',
-    '.topbar-title',
-    '.topbar-sub',
-    '.voice-toggle',
-    '.welcome-badge',
-    '.voice-dock-status',
-    '.voice-dock-hint',
-  ];
-
-  it.each(removedClasses)('does NOT contain removed class %s', (cls) => {
-    expect(css, `class "${cls}" should have been removed in the pass-2 cleanup`).not.toContain(
-      cls,
-    );
-  });
-
-  it('caps the orb at 25vh and applies the −15% --orb-scale (spec/reduce-orb-size.md)', () => {
-    // The design cap (248px / 25vh) is preserved; --orb-scale: 0.85 trims the
-    // orb 15% to free vertical space for the conversation/text above it.
-    expect(normalizedCss, 'expected --orb-scale: 0.85 on .orb').toContain('--orb-scale: 0.85;');
-    expect(
-      normalizedCss,
-      'expected --orb-size capped at min(248px, 25vh) and scaled by --orb-scale',
-    ).toContain('--orb-size: calc(min(248px, 25vh) * var(--orb-scale));');
-  });
-});
-
-describe('Shell layout — .app is a full-width, non-centered grid', () => {
-  // Regression lock: spec/layout-fix-sidebar-content-centering.md.
-  // The `.app` shell must NOT be capped/centered (no max-width / margin-inline:
-  // auto), or the 320px sidebar floats off the viewport's left edge. Extract
-  // just the `.app { … }` rule so these assertions can't catch other selectors.
-  const appRule = (() => {
-    const start = normalizedCss.indexOf('.app {');
-    const end = normalizedCss.indexOf('}', start);
-    return normalizedCss.slice(start, end + 1);
-  })();
-
-  it('keeps the two-column grid (320px 1fr)', () => {
-    expect(appRule, 'expected .app to keep grid-template-columns: 320px 1fr').toContain(
-      'grid-template-columns: 320px 1fr;',
-    );
-  });
-
-  it('does NOT center the shell with margin-inline: auto', () => {
-    expect(appRule, '.app must not re-introduce margin-inline: auto').not.toContain(
-      'margin-inline: auto',
-    );
-  });
-
-  it('does NOT cap the shell with a max-width', () => {
-    expect(appRule, '.app must not re-introduce a max-width cap').not.toContain('max-width:');
-  });
-});
-
-describe('Welcome composition — text block + orb share main\'s center axis', () => {
-  // Regression lock: spec/center-welcome-composition.md.
-  // The welcome block is centered on main's axis at --welcome-col (text stays
-  // left-aligned inside it) and vertically centered above the docked orb in the
-  // welcome state only. Extract the bare `.welcome { … }` rule so these checks
-  // can't match `.welcome-title`/`-grid`/`-chip`.
-  const welcomeRule = (() => {
-    const start = normalizedCss.indexOf('.welcome {');
-    const end = normalizedCss.indexOf('}', start);
-    return normalizedCss.slice(start, end + 1);
-  })();
-
-  it('defines the --welcome-col content-width token (620px)', () => {
-    expectToken('--welcome-col', '620px');
-  });
-
-  it('centers the welcome block horizontally (margin-inline: auto)', () => {
-    expect(welcomeRule, 'expected .welcome to center its block with margin-inline: auto').toContain(
-      'margin-inline: auto',
-    );
-  });
-
-  it('caps the welcome block at --welcome-col', () => {
-    expect(welcomeRule, 'expected .welcome max-width: var(--welcome-col)').toContain(
-      'max-width: var(--welcome-col)',
-    );
-  });
-
-  it('vertically centers the thread in the welcome state only (:has scope)', () => {
-    expect(
-      normalizedCss,
-      'expected .scroll:has(.welcome) .thread { margin: auto; } for welcome-only vertical centering',
-    ).toContain('.scroll:has(.welcome) .thread { margin: auto; }');
-  });
-});
-
-describe('Dark-strip backstop — light UA canvas guaranteed', () => {
-  // Regression lock for the bottom "dark strip" bug: commit 38cc6e1 lacked the
-  // html background-color backstop, so in OS dark mode the transparent root
-  // canvas showed through the viewport's bottom gutter. Both of these guards
-  // must stay so the strip can never return — even in dark mode or on a
-  // partial CSS load.
-  it('declares color-scheme: light so the UA never paints dark chrome', () => {
-    expect(normalizedCss, 'expected `color-scheme: light;` (light-only design)').toContain(
-      'color-scheme: light;',
-    );
-  });
-
-  it('backstops the root canvas with html { background-color: var(--bg) }', () => {
-    expect(normalizedCss, 'expected an html { background-color: var(--bg); } backstop').toContain(
-      'html { background-color: var(--bg); }',
-    );
-  });
-});
-
-describe('Read-along sentence highlight (Spec 04) — classes present, palette intact', () => {
-  // The first user-visible read-along adds .s-active (spoken sentence) and
-  // .s-read (already-spoken). These must exist, reuse existing tokens, and
-  // introduce NO new accent hex (Aurora Mist locked).
-  const requiredClasses = ['.s-active', '.s-read'];
-
-  it.each(requiredClasses)('contains class %s', (cls) => {
-    expect(css, `expected read-along class "${cls}" to be defined in globals.css`).toContain(cls);
-  });
-
-  // Isolate the two new rules + their transition so the hex check can't be
-  // satisfied (or tripped) by unrelated declarations elsewhere in the file.
-  const readAlongRules = (() => {
-    const pieces: string[] = [];
-    for (const sel of ['.s-active {', '.s-read {', '.s-active, .s-read {']) {
-      let from = 0;
-      for (;;) {
-        const start = normalizedCss.indexOf(sel, from);
-        if (start === -1) break;
-        const end = normalizedCss.indexOf('}', start);
-        pieces.push(normalizedCss.slice(start, end + 1));
-        from = end + 1;
-      }
+  it('mixes every secondary tone from ink and ground — no grey hex', () => {
+    for (const t of ['--ink-2', '--ink-3', '--ink-4', '--hair', '--hair-2', '--plane']) {
+      const decl = normalizedCss.match(new RegExp(`${t}: ([^;]+);`))?.[1] ?? '';
+      expect(decl, `${t} should be a color-mix of ink/ground`).toContain('color-mix(');
+      expect(decl, `${t} must not be a hex literal`).not.toMatch(/#[0-9a-fA-F]{3,8}/);
     }
-    return pieces.join(' ');
-  })();
-
-  it('derives the highlight from existing tokens (--accent / --ink / --ink-soft)', () => {
-    expect(readAlongRules, 'expected .s-active to wash with var(--accent)').toContain('var(--accent)');
-    expect(readAlongRules, 'expected .s-read to reuse var(--ink-soft)').toContain('var(--ink-soft)');
   });
 
-  it('introduces NO new accent hex literal in the read-along rules', () => {
-    // Any `#rrggbb` / `#rgb` in the new rules would be a foreign accent value.
-    const hexInNewRules = readAlongRules.match(/#[0-9a-fA-F]{3,8}\b/g) ?? [];
-    expect(
-      hexInNewRules,
-      `read-along rules must use tokens, not hex literals — found ${hexInNewRules.join(', ')}`,
-    ).toEqual([]);
+  it('carries the full gradient on the orb core only', () => {
+    const core = rule('.orb-core');
+    for (const stop of ['--teal-900', '--teal-600', '--aqua-400', '--sage-200', '--lime-200', '--glow-50', '--peach-200']) {
+      expect(core, `orb core should carry ${stop}`).toContain(`var(${stop})`);
+    }
+    // No other rule strings all of teal → peach together.
+    const others = normalizedCss.replace(core, '');
+    const fullRun = /var\(--teal-900\)[^}]*var\(--teal-600\)[^}]*var\(--aqua-400\)[^}]*var\(--sage-200\)[^}]*var\(--peach-200\)/;
+    expect(others).not.toMatch(fullRun);
   });
 });
 
-describe('Aurora Mist — motion guard present', () => {
-  it('contains @media (prefers-reduced-motion: no-preference) guard for animations', () => {
-    expect(
-      css,
-      'expected @media (prefers-reduced-motion: no-preference) guard',
-    ).toContain('@media (prefers-reduced-motion: no-preference)');
+describe('Type — Google Sans Flex is the only family, named on the root', () => {
+  it("declares --font with 'Google Sans Flex' first", () => {
+    expect(normalizedCss).toMatch(/--font: 'Google Sans Flex'/);
+  });
+  it('sets font-family directly on html (no :root/body variable hand-off)', () => {
+    expect(rule('html')).toContain('font-family: var(--font)');
+    expect(normalizedCss).not.toContain('var(--font-sans)');
+    expect(normalizedCss).not.toContain('var(--font-serif)');
+  });
+  it('uses no monospace and no uppercase meta', () => {
+    expect(css).not.toMatch(/monospace/);
+    expect(css).not.toMatch(/text-transform: uppercase/);
+  });
+});
+
+describe('Retired Aurora Mist materials stay gone', () => {
+  it('has no frosted glass, no blue accent, no aurora blooms', () => {
+    expect(css).not.toContain('backdrop-filter');
+    expect(css).not.toContain('#8AB4FF');
+    expect(css).not.toContain('#4F7BE8');
+    expect(css).not.toContain('#C9B8FF');
+    expect(css).not.toContain('#EDF1FB');
+    expect(css).not.toContain('--glass');
+  });
+  it('has no chat bubbles and no floating mode pill', () => {
+    for (const cls of ['.bubble-user', '.input-mode-switch', '.voice-dock', '.session-controls', '.newchat', '.ai-avatar']) {
+      expect(css, `${cls} should be gone`).not.toContain(cls);
+    }
+  });
+});
+
+describe('Shell — rail · knowledge base · main plane', () => {
+  it('keeps the three-track grid with the KB collapsing to nothing', () => {
+    expect(rule('.app')).toContain('grid-template-columns: var(--rail) var(--kb) 1fr;');
+    expect(rule('.app.sidebar-collapsed')).toContain('grid-template-columns: var(--rail) 0 1fr;');
+  });
+  it('sizes the rail at 56px and the KB at 300px', () => {
+    expectToken('--rail', '56px');
+    expectToken('--kb', '300px');
+  });
+  it('does not centre or cap the shell', () => {
+    expect(rule('.app')).not.toContain('margin-inline: auto');
+    expect(rule('.app')).not.toContain('max-width:');
+  });
+});
+
+describe('Welcome composition — the orb centre stage', () => {
+  it('defines the 620px welcome column and the orb sizes', () => {
+    expectToken('--welcome-col', '620px');
+    expectToken('--orb-centre', '144px');
+    expectToken('--orb-home', '72px');
+  });
+  it('centres the welcome block horizontally and, welcome-only, vertically', () => {
+    expect(rule('.welcome')).toContain('margin-inline: auto');
+    expect(rule('.welcome')).toContain('max-width: var(--welcome-col)');
+    expect(normalizedCss).toContain('.scroll:has(.welcome) .thread { margin: auto;');
+  });
+});
+
+describe('The orb — four poses, a free body, one sparkle', () => {
+  it.each(['.orb-stage', '.orb-body', '.orb-core', '.orb-bloom', '.orb-ring', '.orb-spark'])('defines %s', (cls) => {
+    expect(css).toContain(cls);
+  });
+  it('gives each state a static pose outside the motion guard', () => {
+    const guardAt = css.indexOf('@media (prefers-reduced-motion: no-preference)');
+    const before = css.slice(0, guardAt);
+    for (const s of ['listening', 'thinking', 'speaking']) {
+      expect(before, `static pose for ${s}`).toContain(`.orb[data-orb-state="${s}"]`);
+    }
+  });
+  it('drifts with transform only (no layout property animation)', () => {
+    const body = normalizedCss.slice(normalizedCss.indexOf('.orb-body { transition'));
+    const decl = body.slice(0, body.indexOf('}'));
+    expect(decl).toContain('transform .4s var(--ease-out-quart)');
+    expect(decl).not.toMatch(/width|height|left|top/);
+  });
+});
+
+describe('Read-along — class toggles, the playhead in the margin', () => {
+  it.each(['.s-active', '.s-read'])('defines %s', (cls) => expect(css).toContain(cls));
+  it('washes the active sentence with lime and settles read ink from the mix', () => {
+    expect(rule('.s-active')).toContain('var(--wash)');
+    expect(rule('.s-read')).toContain('var(--ink-2)');
+  });
+  it('draws the peach playhead and sage read ticks on the [data-s] spans', () => {
+    expect(rule('.ai-body .s-active::before')).toContain('var(--peach-200)');
+    expect(rule('.ai-body .s-read::before')).toContain('var(--sage-200)');
+    expect(normalizedCss).toContain('.ai-body .s::before {');
+  });
+  it('changes only background and colour on the spans (no reflow)', () => {
+    for (const r of [rule('.s-active'), rule('.s-read')]) {
+      expect(r).not.toMatch(/font-size|font-weight|padding|margin|display/);
+    }
+  });
+});
+
+describe('Light UA canvas and the motion guard', () => {
+  it('declares color-scheme: light and backstops the root canvas', () => {
+    expect(normalizedCss).toContain('color-scheme: light;');
+    expect(rule('html')).toContain('background-color: var(--ground)');
+  });
+  it('gates every animation behind prefers-reduced-motion: no-preference', () => {
+    expect(css).toContain('@media (prefers-reduced-motion: no-preference)');
+    const guardAt = css.indexOf('@media (prefers-reduced-motion: no-preference)');
+    const before = css.slice(0, guardAt);
+    // No `animation:` shorthand outside the guard (keyframes may be declared anywhere).
+    expect(before).not.toMatch(/\banimation:\s/);
   });
 });

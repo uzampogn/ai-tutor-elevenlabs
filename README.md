@@ -57,12 +57,12 @@ AI moves faster than most people can keep up with, and the primary sources are w
 | 💬 **Grounded answers** | Claude answers your question using those articles as context, streamed token-by-token, structured to scan. |
 | 💼 **Business Impact takeaway** | Every answer closes with a one-line "so what does this mean" callout. |
 | 🔗 **Source citations** | Articles referenced in an answer appear as chips linking to the posts. |
-| 🔊 **Read aloud** | ElevenLabs voices every answer; a waveform animates while it speaks. |
-| ✨ **Read-along** | The spoken sentence highlights and the view auto-scrolls to follow the voice. |
+| 🔊 **Read aloud** | ElevenLabs voices every answer; the orb breathes while it speaks. |
+| ✨ **Read-along** | The spoken sentence lights, a peach playhead walks the margin, and the view follows the voice. |
 | 🎙️ **Talk to it** | Voice-first mode: tap the orb, speak your question, and it sends automatically. |
-| 📰 **Article reader** | Click any article to open a slide-in reader with its summary. |
+| 📰 **Article drawer** | Open any post in a slide-in drawer: what it says, why it matters, questions to ask the tutor. |
 
-The app opens voice-first: a large, state-reactive orb invites you to tap and speak, the answer streams in, then plays back aloud with the current sentence highlighted and the page following along. A Text mode with a frosted-glass composer is one flip away.
+The app opens voice-first: a small luminous orb waits centre stage under a greeting and four ruled questions. Tap it (or press `V`) and speak; as the first answer begins the orb drifts to its home at the foot of the thread, the answer streams into a ruled column, and the voice plays with the current sentence lit and the page following along. The orb is a free body: drag it anywhere and it snaps to an edge for the session. Text mode, one tap on the rail, is a single ruled line with the orb as its mic.
 
 ---
 
@@ -118,14 +118,15 @@ All routes run server-side, so API keys never reach the browser.
 ```
 src/
 ├── app/
-│   ├── page.tsx · layout.tsx · globals.css   # shell, fonts, Aurora Mist tokens + CSS
+│   ├── page.tsx · layout.tsx · globals.css   # shell, Google Sans Flex, the Follow the Voice world
 │   └── api/{chat,scrape,speak}/              # Claude stream · blog scrape · ElevenLabs TTS
 ├── components/
 │   ├── AppShell.tsx                          # root client component; owns all state
 │   ├── AiRow.tsx                             # answer: body, Impact card, source chips, [data-s] spans
-│   ├── main/                                 # InputDock, VoiceDock, Orb, Composer, Thread,
-│   │   └── useReadAlong.ts                   #   useReadAlong (highlight + follow-scroll), STT hook
-│   └── sidebar/                              # knowledge-base sidebar
+│   ├── main/                                 # OrbStage (orb poses, drift, drag, voice input), Orb,
+│   │   └── useReadAlong.ts                   #   Composer, Thread, Welcome, useReadAlong, STT hooks
+│   ├── rail/                                 # the icon rail (mark/KB toggle · New chat · Text)
+│   └── sidebar/                              # knowledge-base rows
 └── lib/
     ├── scraper.ts · parseAnswer.ts · types.ts
     └── readAlong/                            # pure, unit-tested read-along core
@@ -145,7 +146,7 @@ Deploys to Vercel via GitHub Actions — pull requests get a preview URL, pushes
 | Voice output | ElevenLabs TTS — `eleven_turbo_v2`, timestamped `/with-timestamps` |
 | Voice input | ElevenLabs Scribe v2 Realtime (`scribe_v2_realtime`, WebSocket, server VAD) with browser Web Speech API fallback |
 | Storage | Supabase Postgres (transaction pooler) — durable KB of articles + summaries |
-| Design | "Aurora Mist" frosted-glass design system (custom CSS + Tailwind) |
+| Design | "Follow the Voice — Companion" (custom CSS + Tailwind; tokens in `DESIGN.md`) |
 | Tests | Vitest + Testing Library (jsdom) |
 | Hosting | Vercel (auto-deployed via GitHub Actions) |
 
@@ -195,8 +196,6 @@ Current limitations:
 
 Next up:
 
-- A smaller orb, leaving more room for the text.
-- Harmonized orb state colours (red → green).
 - Email yourself a conversation transcript with a high-level summary.
 - Back the article drawer with Postgres to cut cold-start time.
 
@@ -204,4 +203,4 @@ Next up:
 
 ## Design
 
-The editorial **Aurora Mist** visual system — soft frosted-glass surfaces on a clean white canvas — is documented in [`ui-design-mockup/`](./ui-design-mockup/) (`AI News Tutor.html` is the visual source of truth; `SPEC.md` maps each screen to its components).
+The visual world is **Follow the Voice — Companion** (decision D8, built 2026-09-12): one light ground (`#EEEFCF`) and one deep-teal ink, every secondary tone mixed from the two; hairlines instead of cards; Google Sans Flex as the single family; the pinned teal → lime → peach gradient carried by exactly one object, the orb. The tokens and rules live in [`DESIGN.md`](./DESIGN.md) (sidecar `.impeccable/design.json`); the direction contract is in `.impeccable/surfaces/src-app-page-tsx.md`; the reference dossier and the confirmed brief are in [`docs/inspiration/`](./docs/inspiration/). The retired Aurora Mist look survives only as anti-reference in the dossier.

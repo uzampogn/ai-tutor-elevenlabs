@@ -1,4 +1,5 @@
-// One knowledge-base article card. Clicking opens the reader drawer.
+// One knowledge-base row: date and category on the meta line, title beneath.
+// Clicking opens the article drawer.
 
 import { forwardRef } from 'react';
 import type { Article } from '@/lib/types';
@@ -15,22 +16,20 @@ const KbCard = forwardRef<HTMLButtonElement, KbCardProps>(function KbCard(
   { article, index, active, onOpen },
   ref,
 ) {
-  const cat = categoryFor(index);
   return (
     <button
       ref={ref}
       type="button"
-      className={`kb-card${active ? ' is-active' : ''}`}
+      className={`kb-row${active ? ' is-active' : ''}`}
       onClick={onOpen}
+      aria-current={active ? 'true' : undefined}
     >
-      <div className="kb-card-top">
-        <span className="kb-cat" style={{ ['--c' as string]: cat.color } as React.CSSProperties}>
-          <span className="kb-cat-dot" />
-          {cat.name}
-        </span>
-        <span className="kb-date">{formatShortDate(article.pubDate)}</span>
-      </div>
-      <div className="kb-card-title">{article.title}</div>
+      <span className="kb-row-meta">
+        <span>{formatShortDate(article.pubDate)}</span>
+        <span aria-hidden="true">·</span>
+        <span>{categoryFor(index)}</span>
+      </span>
+      <span className="kb-row-title">{article.title}</span>
     </button>
   );
 });

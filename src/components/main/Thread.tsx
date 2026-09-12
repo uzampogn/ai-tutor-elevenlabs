@@ -23,6 +23,10 @@ interface ThreadProps {
   onAsk: (question: string) => void;
   onReadAloud: (text: string) => void;
   onStopAudio: () => void;
+  /** Open the article drawer at a cited post. */
+  onOpenSource?: (article: Article) => void;
+  /** False when the orb has left the welcome's centre slot (Text mode). */
+  orbHere?: boolean;
 }
 
 export default function Thread({
@@ -36,6 +40,8 @@ export default function Thread({
   onAsk,
   onReadAloud,
   onStopAudio,
+  onOpenSource,
+  orbHere = true,
 }: ThreadProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -66,7 +72,7 @@ export default function Thread({
     <div className="scroll" ref={scrollRef}>
       <div className="thread">
         {messages.length === 0 ? (
-          <Welcome onAsk={onAsk} />
+          <Welcome onAsk={onAsk} orbHere={orbHere} />
         ) : (
           messages.map((msg, i) =>
             msg.role === 'user' ? (
@@ -78,9 +84,11 @@ export default function Thread({
                 streaming={isLoading && i === messages.length - 1}
                 articles={articles}
                 speaking={speakingContent === msg.content}
+                error={msg.error}
                 rowRef={speakingContent === msg.content ? setSpeakingRowEl : undefined}
                 onReadAloud={onReadAloud}
                 onStopAudio={onStopAudio}
+                onOpenSource={onOpenSource}
                 sourceSlugs={msg.sources}
               />
             ),

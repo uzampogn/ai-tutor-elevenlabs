@@ -1,7 +1,7 @@
-// Top-left toggle that collapses/expands the knowledge-base sidebar.
-// Rendered by AppShell; absolutely positioned, present in both states.
-// Visually it is the brand mark (gradient square + pulsing dot); the corner
-// radius morphs square (open) ⇄ circle (closed), driven by aria-expanded in CSS.
+// The mark, doubling as the knowledge-base collapse control. First control on
+// the rail; present in both states, aria-expanded drives its look in CSS.
+
+import Mark from '../Mark';
 
 interface SidebarToggleProps {
   open: boolean;
@@ -12,13 +12,16 @@ export default function SidebarToggle({ open, onToggle }: SidebarToggleProps) {
   return (
     <button
       type="button"
-      className="sidebar-toggle"
+      className="rail-btn sidebar-toggle"
       onClick={onToggle}
       aria-label={open ? 'Collapse knowledge base' : 'Expand knowledge base'}
       aria-expanded={open}
       aria-controls="kb-sidebar"
     >
-      <span className="brand-pulse" aria-hidden="true" />
+      <Mark className="mark" size={20} />
+      <span className="rail-name" aria-hidden="true">
+        {open ? 'Hide knowledge base' : 'Knowledge base'}
+      </span>
     </button>
   );
 }

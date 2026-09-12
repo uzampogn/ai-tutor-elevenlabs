@@ -1,13 +1,10 @@
-// Product name and subtitle. The pulsing brand mark now lives in the top-left
-// SidebarToggle (which doubles as the collapse control), so it is not repeated here.
+// Product name at the head of the knowledge base. The name is a placeholder
+// (PRODUCT.md): set plainly, no wordmark, no tagline.
 
 export default function Brand() {
   return (
     <div className="brand">
-      <div>
-        <div className="brand-name">AI News Tutor</div>
-        <div className="brand-sub">Claude blog × voice</div>
-      </div>
+      <div className="brand-name">AI News Tutor</div>
     </div>
   );
 }

@@ -26,10 +26,10 @@ describe('SidebarToggle', () => {
     expect(onToggle).toHaveBeenCalledTimes(1);
   });
 
-  it('renders the pulsing brand-mark dot, not a panel icon', () => {
-    const { container } = render(<SidebarToggle open={false} onToggle={() => {}} />);
+  it('renders the sparkle mark (the proposed logo), not a panel icon', () => {
+    render(<SidebarToggle open={false} onToggle={() => {}} />);
     const btn = screen.getByRole('button');
-    expect(btn.querySelector('.brand-pulse')).not.toBeNull();
-    expect(btn.querySelector('svg')).toBeNull();
+    expect(btn.querySelector('svg.mark')).not.toBeNull();
+    expect(btn.querySelector('.brand-pulse')).toBeNull();
   });
 });

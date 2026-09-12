@@ -1,5 +1,10 @@
 'use client';
 
+// The score card: the digest as stacked blocks in the article drawer —
+// What it says (tl;dr + takeaways + tags) · Why it matters · Ask the tutor
+// (questions as ruled rows) · Read the original. Loading draws a skeleton in
+// place; no digest falls back to the excerpt and the original link.
+
 import type { ArticleDigest } from '@/lib/types';
 import InlineMarkdown from './InlineMarkdown';
 import { LinkIcon } from './icons';
@@ -14,14 +19,9 @@ interface ScoreCardProps {
 
 function OriginalLink({ url }: { url: string }) {
   return (
-    <a
-      className="source-chip score-original"
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-    >
+    <a className="score-original" href={url} target="_blank" rel="noopener noreferrer">
       <LinkIcon />
-      <span className="source-chip-title">Read the original article</span>
+      <span>Read the original article</span>
     </a>
   );
 }
@@ -43,54 +43,67 @@ export default function ScoreCard({ digest, digestsLoaded, description, url, onA
   if (!digest) {
     return (
       <div className="score-card">
-        <p className="drawer-summary">{description}</p>
-        <OriginalLink url={url} />
+        <section className="dblock">
+          <h3 className="dblock-title">What it says</h3>
+          <p className="drawer-summary">{description}</p>
+        </section>
+        <section className="dblock">
+          <OriginalLink url={url} />
+        </section>
       </div>
     );
   }
 
   return (
     <div className="score-card">
-      <p className="score-tldr">
-        <InlineMarkdown text={digest.tldr} />
-      </p>
+      <section className="dblock">
+        <h3 className="dblock-title">What it says</h3>
+        <p className="score-tldr">
+          <InlineMarkdown text={digest.tldr} />
+        </p>
+        <ul className="score-takeaways">
+          {digest.takeaways.map((t, i) => (
+            <li key={i}>
+              <InlineMarkdown text={t} />
+            </li>
+          ))}
+        </ul>
+        {digest.tags.length > 0 && (
+          <p className="drawer-tags">
+            {digest.tags.map((t) => (
+              <span key={t} className="tag">
+                {t}
+              </span>
+            ))}
+          </p>
+        )}
+      </section>
 
-      <ul className="score-takeaways">
-        {digest.takeaways.map((t, i) => (
-          <li key={i}>
-            <InlineMarkdown text={t} />
-          </li>
-        ))}
-      </ul>
-
-      {/* Reuses the chat Impact-card styling (.impact) with a card-appropriate label. */}
-      <div className="impact">
-        <div className="impact-label">
-          <span aria-hidden="true">💼</span> Why it matters
-        </div>
-        <p className="impact-text">
+      <section className="dblock">
+        <h3 className="dblock-title">Why it matters</h3>
+        <p className="score-why">
           <InlineMarkdown text={digest.whyItMatters} />
         </p>
-      </div>
+      </section>
 
-      <div className="drawer-tags">
-        {digest.tags.map((t) => (
-          <span key={t} className="tag">
-            {t}
-          </span>
-        ))}
-      </div>
+      {digest.questions.length > 0 && (
+        <section className="dblock">
+          <h3 className="dblock-title">Ask the tutor</h3>
+          <ul className="score-asks">
+            {digest.questions.map((q) => (
+              <li key={q}>
+                <button type="button" className="score-ask" onClick={() => onAsk(q)}>
+                  {q}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
-      <div className="score-asks">
-        <div className="score-asks-label">Ask the tutor</div>
-        {digest.questions.map((q) => (
-          <button key={q} type="button" className="score-ask" onClick={() => onAsk(q)}>
-            {q}
-          </button>
-        ))}
-      </div>
-
-      <OriginalLink url={url} />
+      <section className="dblock">
+        <OriginalLink url={url} />
+      </section>
     </div>
   );
 }

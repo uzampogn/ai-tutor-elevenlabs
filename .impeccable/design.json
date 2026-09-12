@@ -1,0 +1,197 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-12T00:00:00Z",
+  "title": "Design System: AI News Tutor (placeholder name)",
+  "source": {
+    "branch": "redesign/impeccable",
+    "commit": "ca7c1eb",
+    "direction": "Follow the Voice — Companion (Score Follower × Show Notes), seed 1030dbaf, decision D8",
+    "files": ["src/app/globals.css", "src/app/layout.tsx", "src/components/**"]
+  },
+  "extensions": {
+    "colorMeta": {
+      "ink":        { "role": "primary",   "displayName": "Deep Teal Ink",     "canonical": "#194D49", "cssVar": "--ink / --teal-900", "tonalRamp": ["#0B2A28", "#194D49", "#236A5C", "#2E8970", "#52A88D", "#9AD1A9", "#C0E2B0", "#EEEFCF"] },
+      "accent-ink": { "role": "primary",   "displayName": "Link Teal",         "canonical": "color-mix(in oklab, #2E8970 50%, #194D49)", "cssVar": "--accent-ink", "contrast": "small-text link/on tone; deepened so ≥4.5:1 on ground and plane", "tonalRamp": ["#0B2A28", "#194D49", "#236A5C", "#2E8970", "#52A88D", "#9AD1A9", "#C0E2B0", "#EEEFCF"] },
+      "teal":       { "role": "tertiary",  "displayName": "Teal (gradient stop)", "canonical": "#2E8970", "cssVar": "--teal-600", "tonalRamp": ["#0B2A28", "#194D49", "#236A5C", "#2E8970", "#52A88D", "#9AD1A9", "#C0E2B0", "#EEEFCF"] },
+      "aqua":       { "role": "secondary", "displayName": "Aqua Liveness",     "canonical": "#52A88D", "cssVar": "--aqua-400", "tonalRamp": ["#0B2A28", "#194D49", "#236A5C", "#2E8970", "#52A88D", "#9AD1A9", "#C0E2B0", "#EEEFCF"] },
+      "sage":       { "role": "secondary", "displayName": "Sage Settled",      "canonical": "#9AD1A9", "cssVar": "--sage-200", "tonalRamp": ["#0B2A28", "#194D49", "#236A5C", "#2E8970", "#52A88D", "#9AD1A9", "#C0E2B0", "#EEEFCF"] },
+      "mist":       { "role": "tertiary",  "displayName": "Pale Mist (gradient stop)", "canonical": "#ABE4D0", "cssVar": "--mist-100", "tonalRamp": ["#0B2A28", "#194D49", "#236A5C", "#2E8970", "#52A88D", "#ABE4D0", "#C0E2B0", "#EEEFCF"] },
+      "lime":       { "role": "tertiary",  "displayName": "Lime Haze",         "canonical": "#C0E2B0", "cssVar": "--lime-200", "tonalRamp": ["#2F3A1A", "#4F6130", "#6E8747", "#A2BA6E", "#C0E2B0", "#D6ECC8", "#E6F1D8", "#EEEFCF"] },
+      "lime-olive": { "role": "tertiary",  "displayName": "Lime Olive (declared, orb-only)", "canonical": "#A2BA6E", "cssVar": "--lime-500", "tonalRamp": ["#2F3A1A", "#4F6130", "#6E8747", "#A2BA6E", "#C0E2B0", "#D6ECC8", "#E6F1D8", "#EEEFCF"] },
+      "ground":     { "role": "neutral",   "displayName": "Luminous Ground",   "canonical": "#EEEFCF", "cssVar": "--ground / --glow-50", "tonalRamp": ["#194D49", "#3B5F4E", "#5E7A5A", "#8FA07A", "#BFC4A0", "#DCDDB8", "#EEEFCF", "#F5F5E2"] },
+      "plane":      { "role": "neutral",   "displayName": "Reading Plane",     "canonical": "color-mix(in oklab, #EEEFCF 58%, white)", "cssVar": "--plane", "tonalRamp": ["#194D49", "#3B5F4E", "#5E7A5A", "#8FA07A", "#BFC4A0", "#DCDDB8", "#EEEFCF", "#F6F6E9"] },
+      "ink-2":      { "role": "neutral",   "displayName": "Ink 2 (secondary text)", "canonical": "color-mix(in oklab, #194D49 76%, #EEEFCF)", "cssVar": "--ink-2", "contrast": "4.62:1 on ground, 4.95:1 on plane", "tonalRamp": ["#194D49", "#3B5F4E", "#5E7A5A", "#8FA07A", "#BFC4A0", "#DCDDB8", "#EEEFCF", "#F5F5E2"] },
+      "ink-3":      { "role": "neutral",   "displayName": "Ink 3 (ghost)",     "canonical": "color-mix(in oklab, #194D49 58%, #EEEFCF)", "cssVar": "--ink-3", "tonalRamp": ["#194D49", "#3B5F4E", "#5E7A5A", "#8FA07A", "#BFC4A0", "#DCDDB8", "#EEEFCF", "#F5F5E2"] },
+      "ink-4":      { "role": "neutral",   "displayName": "Ink 4 (disabled / decoration)", "canonical": "color-mix(in oklab, #194D49 36%, #EEEFCF)", "cssVar": "--ink-4", "tonalRamp": ["#194D49", "#3B5F4E", "#5E7A5A", "#8FA07A", "#BFC4A0", "#DCDDB8", "#EEEFCF", "#F5F5E2"] },
+      "hair":       { "role": "neutral",   "displayName": "Hair (emphatic rule)", "canonical": "color-mix(in oklab, #194D49 20%, #EEEFCF)", "cssVar": "--hair", "tonalRamp": ["#194D49", "#3B5F4E", "#5E7A5A", "#8FA07A", "#BFC4A0", "#DCDDB8", "#EEEFCF", "#F5F5E2"] },
+      "hair-2":     { "role": "neutral",   "displayName": "Hair 2 (structural rule)", "canonical": "color-mix(in oklab, #194D49 11%, #EEEFCF)", "cssVar": "--hair-2", "tonalRamp": ["#194D49", "#3B5F4E", "#5E7A5A", "#8FA07A", "#BFC4A0", "#DCDDB8", "#EEEFCF", "#F5F5E2"] },
+      "wash":       { "role": "secondary", "displayName": "Lime Wash (read-along highlight)", "canonical": "color-mix(in oklab, #C0E2B0 48%, transparent)", "cssVar": "--wash", "tonalRamp": ["#2F3A1A", "#4F6130", "#6E8747", "#A2BA6E", "#C0E2B0", "#D6ECC8", "#E6F1D8", "#EEEFCF"] },
+      "peach":      { "role": "secondary", "displayName": "Peach Playhead",    "canonical": "#F1C9A7", "cssVar": "--peach-200", "tonalRamp": ["#4A2E1A", "#7A4C2C", "#A86C42", "#D19A6E", "#F1C9A7", "#FBD8BB", "#FCE6D2", "#FDF1E6"] },
+      "peach-light":{ "role": "tertiary",  "displayName": "Peach Light (declared, orb-only)", "canonical": "#FBD8BB", "cssVar": "--peach-100", "tonalRamp": ["#4A2E1A", "#7A4C2C", "#A86C42", "#D19A6E", "#F1C9A7", "#FBD8BB", "#FCE6D2", "#FDF1E6"] }
+    },
+    "typographyMeta": {
+      "display":  { "displayName": "Display",   "purpose": "The welcome greeting only (.welcome-title); 26px ≤880px." },
+      "headline": { "displayName": "Headline",  "purpose": "The article title in the drawer (.drawer-title)." },
+      "title":    { "displayName": "Title",     "purpose": "The user's question as a ruled heading (.q); the Impact heading at 18px; 18px ≤880px." },
+      "body":     { "displayName": "Body",      "purpose": "Answer paragraphs, lists and the Impact passage (.ai-para, .ai-list, .impact-text), max 66ch; 16px ≤880px." },
+      "body-sm":  { "displayName": "Body small","purpose": "Lede, quick questions, orb caption, drawer summary; source rows / takeaways / drawer questions at 14.5px." },
+      "label":    { "displayName": "Label",     "purpose": "Control text: actions, rail names, KB title, drawer block titles. Never uppercase." },
+      "meta":     { "displayName": "Meta",      "purpose": "Dates, counts, tags, the grounding note, source numbers (tabular-nums)." }
+    },
+    "fontLoading": {
+      "family": "Google Sans Flex",
+      "method": "Google Fonts CSS2 API (next/font/google 14.2 lacks the family)",
+      "href": "https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,300..800&display=swap",
+      "declaredOn": "html (no :root/body variable hand-off)",
+      "opticalSizing": "auto",
+      "weightsUsed": [400, 500, 600]
+    },
+    "shadows": [
+      { "name": "lift",           "value": "0 18px 40px -18px color-mix(in oklab, #194D49 28%, transparent), 0 2px 10px -4px color-mix(in oklab, #194D49 14%, transparent)", "cssVar": "--lift", "purpose": "The article drawer only. The single drop shadow in the system." },
+      { "name": "inset-hairline", "value": "inset 0 0 0 1px var(--hair)", "purpose": "Pressed rail button; a 1px stroke drawn with box-shadow, not a lift." },
+      { "name": "orb-focus-ring", "value": "0 0 0 3px var(--ground), 0 0 0 5px var(--aqua-400)", "purpose": "The orb's :focus-visible ring (everything else uses outline 2px aqua, offset 2px)." }
+    ],
+    "motion": [
+      { "name": "ease-out-quart",   "value": "cubic-bezier(0.25, 1, 0.5, 1)", "cssVar": "--ease-out-quart", "purpose": "The authored easing: orb drift, drawer and KB slides, mark rotation." },
+      { "name": "orb-drift",        "value": "transform .4s var(--ease-out-quart)", "purpose": "The orb moving between poses; transform only, compositor-safe." },
+      { "name": "orb-pose",         "value": "transform .3s / filter .3s / opacity .3s", "purpose": "Core, bloom and ring changes between the 4 poses." },
+      { "name": "orb-breathe",      "value": "6s ease-in-out infinite, scale 1 → 1.035", "purpose": "Idle breathing (4s while speaking, 2.4s big-breathe while listening)." },
+      { "name": "orb-shimmer",      "value": "16s linear infinite (4s while thinking)", "purpose": "The conic soft-light shimmer turning in the core." },
+      { "name": "orb-ripple",       "value": "2.4s ease-out infinite (4s speaking), scale .9 → 1.6, opacity .5 → 0", "purpose": "The two sage rings while listening / speaking." },
+      { "name": "playhead-step",    "value": "background-color .2s ease, color .2s ease", "purpose": "Sentence highlight and the tick colour; colour only, no reflow." },
+      { "name": "panel-slide",      "value": "transform .25s var(--ease-out-quart); grid-template-columns .25s ease", "purpose": "Drawer slide, KB collapse (desktop grid) and KB overlay (mobile)." },
+      { "name": "control-hover",    "value": "background-color .15s ease, color .15s ease, border-color .15s ease", "purpose": "Rows, buttons and chips." },
+      { "name": "scrim-in",         "value": ".2s ease-out, opacity 0 → 1", "purpose": "Mobile KB scrim." },
+      { "name": "liveness",         "value": "blink 1.2s (thinking bars), caret 1s step-end, wv .8s ease-in-out (sound wave), spin .9s linear, score-shimmer 1.4s", "purpose": "Small state indicators." },
+      { "name": "reduced-motion",   "value": "@media (prefers-reduced-motion: no-preference) gates every transition and animation", "purpose": "Under reduced motion the 4 orb poses are static and every position change is an instant swap." }
+    ],
+    "breakpoints": [
+      { "name": "mobile", "value": "880px", "purpose": "≤880px: one column, rail as a 48px top strip, KB overlay, full-width drawer, orb 120/60 with 2 homes, track 24px; the desktop-guard test holds layouts above it." }
+    ],
+    "geometry": [
+      { "name": "rail", "value": "56px", "cssVar": "--rail" },
+      { "name": "kb", "value": "300px", "cssVar": "--kb" },
+      { "name": "content-max", "value": "700px", "cssVar": "--content-max" },
+      { "name": "welcome-col", "value": "620px", "cssVar": "--welcome-col" },
+      { "name": "track", "value": "34px (24px ≤880px)", "cssVar": "--track" },
+      { "name": "orb-centre", "value": "144px (120px ≤880px)", "cssVar": "--orb-centre" },
+      { "name": "orb-home", "value": "72px (60px ≤880px)", "cssVar": "--orb-home" },
+      { "name": "drawer", "value": "400px (100% ≤880px)" },
+      { "name": "kb-overlay", "value": "min(86vw, 360px)" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Rail button",
+      "kind": "nav",
+      "refersTo": "rail-button",
+      "description": "40px glyph button on the icon rail; name appears beside it on hover/focus; aria-pressed draws an inset hairline.",
+      "html": "<nav class=\"ds-rail\"><button class=\"ds-rail-btn\" aria-pressed=\"true\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M12 1.5c.55 6.3 3.4 9.15 9.7 9.7-6.3.55-9.15 3.4-9.7 9.7-.55-6.3-3.4-9.15-9.7-9.7 6.3-.55 9.15-3.4 9.7-9.7Z\"/></svg><span class=\"ds-rail-name\">Knowledge base</span></button><button class=\"ds-rail-btn\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" aria-hidden=\"true\"><path d=\"M12 5v14\"/><path d=\"M5 12h14\"/></svg><span class=\"ds-rail-name\">New chat</span></button><button class=\"ds-rail-btn\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3\" y=\"6\" width=\"18\" height=\"12\" rx=\"2\"/><path d=\"M7 10h.01M11 10h.01M15 10h.01M7 14h10\"/></svg><span class=\"ds-rail-name\">Type instead</span></button></nav>",
+      "css": ".ds-rail { display: inline-flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 8px; background: var(--ground, #EEEFCF); border-right: 1px solid var(--hair-2, #D6D9BC); font-family: 'Google Sans Flex', system-ui, sans-serif; } .ds-rail-btn { position: relative; width: 40px; height: 40px; border: 0; border-radius: 10px; background: transparent; color: var(--ink-2, #3E655F); display: grid; place-items: center; cursor: pointer; transition: background-color .15s ease, color .15s ease; } .ds-rail-btn:hover, .ds-rail-btn:focus-visible { background: var(--plane, #F6F6E9); color: var(--ink, #194D49); outline: none; } .ds-rail-btn[aria-pressed=\"true\"] { color: var(--ink, #194D49); background: var(--plane, #F6F6E9); box-shadow: inset 0 0 0 1px var(--hair, #C3CBB4); } .ds-rail-btn:focus-visible { outline: 2px solid var(--aqua-400, #52A88D); outline-offset: 2px; } .ds-rail-name { position: absolute; left: calc(100% + 10px); top: 50%; translate: 0 -50%; white-space: nowrap; font-size: 13px; font-weight: 500; color: var(--ink, #194D49); background: var(--plane, #F6F6E9); border: 1px solid var(--hair-2, #D6D9BC); border-radius: 6px; padding: 5px 9px; opacity: 0; pointer-events: none; transition: opacity .15s ease; } .ds-rail-btn:hover .ds-rail-name, .ds-rail-btn:focus-visible .ds-rail-name { opacity: 1; }"
+    },
+    {
+      "name": "Action button",
+      "kind": "button",
+      "refersTo": "action-button",
+      "description": "Copy / Read aloud / Like under an answer: 13px/500 text on nothing; hover → plane; on → lime wash + link teal.",
+      "html": "<div class=\"ds-actions\"><button class=\"ds-act\">Copy</button><button class=\"ds-act ds-act-on\"><span class=\"ds-wave\" aria-hidden=\"true\"><i></i><i></i><i></i></span>Read aloud</button><button class=\"ds-act\">Like</button><button class=\"ds-act\" disabled>Like</button></div>",
+      "css": ".ds-actions { display: flex; gap: 4px; font-family: 'Google Sans Flex', system-ui, sans-serif; } .ds-act { display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; color: var(--ink-2, #3E655F); font-size: 13px; font-weight: 500; padding: 6px 10px; border-radius: 6px; cursor: pointer; transition: background-color .15s ease, color .15s ease; } .ds-act:hover { color: var(--ink, #194D49); background: var(--plane, #F6F6E9); } .ds-act:focus-visible { outline: 2px solid var(--aqua-400, #52A88D); outline-offset: 2px; } .ds-act-on { color: var(--accent-ink, #24675C); background: var(--wash, rgba(192,226,176,.48)); } .ds-act:disabled { color: var(--ink-4, #8FA394); cursor: default; background: transparent; } .ds-wave { display: inline-flex; align-items: center; gap: 2px; height: 14px; } .ds-wave i { display: block; width: 2px; border-radius: 2px; background: var(--aqua-400, #52A88D); } .ds-wave i:nth-child(1) { height: 8px; } .ds-wave i:nth-child(2) { height: 14px; } .ds-wave i:nth-child(3) { height: 6px; } @media (prefers-reduced-motion: no-preference) { .ds-wave i { animation: ds-wv .8s ease-in-out infinite; } .ds-wave i:nth-child(2) { animation-delay: -.2s; } .ds-wave i:nth-child(3) { animation-delay: -.4s; } } @keyframes ds-wv { 0%, 100% { height: 3px; } 50% { height: 14px; } }"
+    },
+    {
+      "name": "Composer",
+      "kind": "input",
+      "refersTo": "composer",
+      "description": "The text fallback: one ruled line, transparent textarea, plain send glyph; the rule darkens to ink on focus.",
+      "html": "<form class=\"ds-composer\"><textarea class=\"ds-composer-ta\" rows=\"1\" placeholder=\"Ask about the latest AI news…\" aria-label=\"Your question\"></textarea><button class=\"ds-send\" type=\"button\" aria-label=\"Send\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14\"/><path d=\"M13 6l6 6-6 6\"/></svg></button></form>",
+      "css": ".ds-composer { display: flex; align-items: flex-end; gap: 8px; width: 100%; max-width: 560px; border-bottom: 1px solid var(--hair, #C3CBB4); padding: 2px 0; background: var(--ground, #EEEFCF); font-family: 'Google Sans Flex', system-ui, sans-serif; } .ds-composer:focus-within { border-bottom-color: var(--ink, #194D49); } .ds-composer-ta { flex: 1; min-width: 0; border: 0; outline: 0; resize: none; background: transparent; font: inherit; font-size: 16px; line-height: 1.5; color: var(--ink, #194D49); padding: 8px 0; max-height: 160px; } .ds-composer-ta::placeholder { color: var(--ink-2, #3E655F); } .ds-send { flex: none; width: 36px; height: 36px; margin-bottom: 4px; border: 0; border-radius: 6px; background: transparent; color: var(--ink, #194D49); display: grid; place-items: center; cursor: pointer; transition: background-color .15s ease; } .ds-send:hover:not(:disabled) { background: var(--plane, #F6F6E9); } .ds-send:focus-visible { outline: 2px solid var(--aqua-400, #52A88D); outline-offset: 2px; } .ds-send:disabled { color: var(--ink-4, #8FA394); cursor: default; }"
+    },
+    {
+      "name": "Ruled question row",
+      "kind": "nav",
+      "refersTo": "ruled-row",
+      "description": "Quick questions on the welcome (and 'Ask the tutor' in the drawer): full-width text rows separated by hairlines; hover → link teal on the plane.",
+      "html": "<ul class=\"ds-asks\"><li><button class=\"ds-ask\">What changed in Claude this week?</button></li><li><button class=\"ds-ask\">Explain prompt caching for a product manager</button></li><li><button class=\"ds-ask\">Which posts matter for engineers?</button></li></ul>",
+      "css": ".ds-asks { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--hair-2, #D6D9BC); max-width: 620px; background: var(--ground, #EEEFCF); font-family: 'Google Sans Flex', system-ui, sans-serif; } .ds-ask { display: block; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--hair-2, #D6D9BC); background: transparent; color: var(--ink, #194D49); padding: 12px 10px 13px; font: inherit; font-size: 15px; line-height: 1.4; cursor: pointer; transition: background-color .15s ease, color .15s ease; } .ds-ask:hover { color: var(--accent-ink, #24675C); background: var(--plane, #F6F6E9); } .ds-ask:focus-visible { outline: 2px solid var(--aqua-400, #52A88D); outline-offset: 2px; }"
+    },
+    {
+      "name": "Source chip",
+      "kind": "chip",
+      "refersTo": "source-chip",
+      "description": "Not a pill: a numbered, hairline-ruled row linking to the post; hover → link teal.",
+      "html": "<div class=\"ds-sources\"><div class=\"ds-sources-label\">Sources</div><ol class=\"ds-sources-list\"><li><a class=\"ds-source-chip\" href=\"#\"><span class=\"ds-source-num\">1</span><span>Claude for Teachers is now a free Enterprise offering</span></a></li><li><a class=\"ds-source-chip\" href=\"#\"><span class=\"ds-source-num\">2</span><span>Prompt caching optimization and effort calibration</span></a></li></ol></div>",
+      "css": ".ds-sources { max-width: 560px; background: var(--ground, #EEEFCF); font-family: 'Google Sans Flex', system-ui, sans-serif; } .ds-sources-label { font-size: 13px; color: var(--ink-2, #3E655F); margin-bottom: 4px; } .ds-sources-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--hair-2, #D6D9BC); } .ds-sources-list li { border-bottom: 1px solid var(--hair-2, #D6D9BC); } .ds-source-chip { display: flex; align-items: baseline; gap: 12px; padding: 9px 4px; color: var(--ink, #194D49); text-decoration: none; font-size: 14.5px; line-height: 1.4; transition: color .15s ease; } .ds-source-chip:hover { color: var(--accent-ink, #24675C); } .ds-source-chip:focus-visible { outline: 2px solid var(--aqua-400, #52A88D); outline-offset: 2px; } .ds-source-num { flex: none; min-width: 1.4em; font-size: 12.5px; color: var(--ink-2, #3E655F); font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Knowledge base row",
+      "kind": "nav",
+      "refersTo": "kb-row",
+      "description": "A post in the KB: 12px meta over a 13.5px title, hairline-ruled; the active row's title turns link teal at 500.",
+      "html": "<div class=\"ds-kb\"><div class=\"ds-kb-head\"><div class=\"ds-kb-title\">Knowledge base</div><div class=\"ds-kb-meta\"><span class=\"ds-live\"><i class=\"ds-live-dot\"></i>Live</span><span>· 24 sources</span></div></div><button class=\"ds-kb-row ds-kb-row-active\"><span class=\"ds-kb-row-meta\">12 Sep 2026</span><span class=\"ds-kb-row-title\">Claude for Teachers is now a free Enterprise offering</span></button><button class=\"ds-kb-row\"><span class=\"ds-kb-row-meta\">11 Sep 2026</span><span class=\"ds-kb-row-title\">Three Claude API tools for cheaper inference</span></button></div>",
+      "css": ".ds-kb { width: 300px; background: var(--plane, #F6F6E9); border-right: 1px solid var(--hair-2, #D6D9BC); color: var(--ink, #194D49); font-family: 'Google Sans Flex', system-ui, sans-serif; } .ds-kb-head { padding: 16px 20px 12px; border-bottom: 1px solid var(--hair-2, #D6D9BC); } .ds-kb-title { font-size: 13px; font-weight: 500; } .ds-kb-meta { display: flex; align-items: center; gap: 6px; margin-top: 5px; font-size: 12.5px; color: var(--ink-2, #3E655F); } .ds-live { display: inline-flex; align-items: center; gap: 6px; } .ds-live-dot { display: block; width: 8px; height: 2px; border-radius: 1px; background: var(--aqua-400, #52A88D); } .ds-kb-row { display: block; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--hair-2, #D6D9BC); background: transparent; color: inherit; padding: 11px 20px 12px; font: inherit; cursor: pointer; transition: background-color .15s ease; } .ds-kb-row:hover { background: var(--plane, #F6F6E9); } .ds-kb-row:focus-visible { outline: 2px solid var(--aqua-400, #52A88D); outline-offset: -2px; } .ds-kb-row-meta { display: block; font-size: 12px; color: var(--ink-2, #3E655F); margin-bottom: 3px; } .ds-kb-row-title { display: block; font-size: 13.5px; line-height: 1.35; letter-spacing: -0.003em; } .ds-kb-row-active .ds-kb-row-title { color: var(--accent-ink, #24675C); font-weight: 500; }"
+    },
+    {
+      "name": "Question heading + sentence track",
+      "kind": "custom",
+      "refersTo": "body",
+      "description": "The user's question as a ruled heading, then the answer beside its margin track: hairline rule, chapter ticks, peach playhead on the spoken sentence, sage ticks on read ones.",
+      "html": "<div class=\"ds-thread\"><p class=\"ds-q\">What did Anthropic ship for small businesses?</p><div class=\"ds-ai-body\"><p class=\"ds-para\"><span class=\"ds-s ds-s-read\">Anthropic's workshops with 1,000+ small business owners found the physical economy is the most eager adopter.</span> <span class=\"ds-s ds-s-active\">The two real blockers were data security concerns and lack of hands-on training.<sup class=\"ds-cite\"><a href=\"#\">[2]</a></sup></span> <span class=\"ds-s\">A Claude SMB Trainer Program is rolling out to address that.</span></p></div></div>",
+      "css": ".ds-thread { padding: 24px 24px 24px 58px; max-width: 700px; background: var(--ground, #EEEFCF); color: var(--ink, #194D49); font-family: 'Google Sans Flex', system-ui, sans-serif; font-optical-sizing: auto; } .ds-q { font-size: 20px; font-weight: 500; line-height: 1.3; letter-spacing: -0.01em; padding-bottom: 14px; margin: 0 0 20px; border-bottom: 1px solid var(--hair, #C3CBB4); text-wrap: balance; } .ds-ai-body { position: relative; } .ds-ai-body::before { content: \"\"; position: absolute; top: .2em; bottom: 0; left: -22px; width: 1px; background: var(--hair, #C3CBB4); } .ds-para { font-size: 17px; line-height: 1.6; letter-spacing: -0.002em; margin: 0; max-width: 66ch; text-wrap: pretty; } .ds-s::before { content: \"\"; position: absolute; left: -26px; width: 9px; height: 1px; margin-top: .72em; background: var(--hair, #C3CBB4); border-radius: 1px; } .ds-s-active { background: var(--wash, rgba(192,226,176,.48)); border-radius: 3px; box-decoration-break: clone; -webkit-box-decoration-break: clone; } .ds-s-active::before { background: var(--peach-200, #F1C9A7); width: 16px; height: 3px; margin-top: calc(.72em - 1px); border-radius: 2px; } .ds-s-read { color: var(--ink-2, #3E655F); } .ds-s-read::before { background: var(--sage-200, #9AD1A9); } .ds-cite { font-size: .68em; line-height: 0; } .ds-cite a { color: var(--accent-ink, #24675C); text-decoration: none; padding: 0 1px; } .ds-cite a:hover { text-decoration: underline; text-underline-offset: 2px; } @media (prefers-reduced-motion: no-preference) { .ds-s, .ds-s::before { transition: background-color .2s ease, color .2s ease; } }"
+    },
+    {
+      "name": "Orb",
+      "kind": "custom",
+      "refersTo": "orb",
+      "description": "The one object carrying the full gradient and the sparkle; shown here in its idle pose at home size (72px). Four poses exist: idle, listening, thinking, speaking.",
+      "html": "<div class=\"ds-orb-stage\"><button class=\"ds-orb\" data-orb-state=\"idle\" aria-label=\"Start voice input\"><span class=\"ds-orb-bloom\"></span><span class=\"ds-orb-core\"></span><span class=\"ds-orb-ring\"></span><svg class=\"ds-orb-spark\" viewBox=\"0 0 24 24\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M12 1.5c.55 6.3 3.4 9.15 9.7 9.7-6.3.55-9.15 3.4-9.7 9.7-.55-6.3-3.4-9.15-9.7-9.7 6.3-.55 9.15-3.4 9.7-9.7Z\"/></svg></button></div>",
+      "css": ".ds-orb-stage { padding: 40px; background: var(--ground, #EEEFCF); display: grid; place-items: center; } .ds-orb { --size: 72px; position: relative; width: var(--size); height: var(--size); border: 0; padding: 0; background: transparent; border-radius: 50%; display: grid; place-items: center; isolation: isolate; cursor: pointer; } .ds-orb:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ground, #EEEFCF), 0 0 0 5px var(--aqua-400, #52A88D); } .ds-orb-core { position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle at 28% 26%, #ABE4D0 0%, transparent 38%), radial-gradient(circle at 72% 78%, #F1C9A7 0%, transparent 42%), radial-gradient(circle at 46% 62%, #C0E2B0 0%, transparent 46%), linear-gradient(135deg, #194D49 0%, #2E8970 20%, #52A88D 40%, #9AD1A9 58%, #C0E2B0 72%, #EEEFCF 86%, #F1C9A7 100%); box-shadow: inset 0 0 calc(var(--size) * .22) rgba(238,239,207,.55), inset calc(var(--size) * -.06) calc(var(--size) * -.08) calc(var(--size) * .24) rgba(25,77,73,.45); } .ds-orb-core::after { content: \"\"; position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 0deg, transparent 0deg, rgba(238,239,207,.6) 90deg, transparent 160deg, rgba(171,228,208,.55) 250deg, transparent 360deg); mix-blend-mode: soft-light; opacity: .9; } .ds-orb-bloom { position: absolute; inset: -26%; border-radius: 50%; pointer-events: none; background: radial-gradient(circle at 50% 50%, rgba(154,209,169,.62) 0%, rgba(192,226,176,.4) 40%, transparent 70%); filter: blur(calc(var(--size) * .12)); opacity: .75; z-index: -1; } .ds-orb-ring { position: absolute; inset: 0; border-radius: 50%; border: 1px solid #9AD1A9; opacity: 0; z-index: -1; } .ds-orb-spark { position: absolute; left: 60%; top: 60%; width: 20%; height: 20%; color: #EEEFCF; filter: drop-shadow(0 0 calc(var(--size) * .04) rgba(251,216,187,.8)); z-index: 2; } .ds-orb[data-orb-state=\"listening\"] .ds-orb-core { transform: scale(1.1); } .ds-orb[data-orb-state=\"listening\"] .ds-orb-ring { opacity: .55; transform: scale(1.28); } .ds-orb[data-orb-state=\"thinking\"] .ds-orb-core { filter: saturate(.72); } .ds-orb[data-orb-state=\"thinking\"] .ds-orb-spark { rotate: 45deg; } .ds-orb[data-orb-state=\"speaking\"] .ds-orb-spark { color: #fff; } @media (prefers-reduced-motion: no-preference) { .ds-orb-core { animation: ds-orb-breathe 6s ease-in-out infinite; transition: transform .3s cubic-bezier(.25,1,.5,1), filter .3s ease; } .ds-orb-core::after { animation: ds-orb-shimmer 16s linear infinite; } } @keyframes ds-orb-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.035); } } @keyframes ds-orb-shimmer { to { transform: rotate(360deg); } }"
+    },
+    {
+      "name": "Drawer block",
+      "kind": "card",
+      "refersTo": "drawer",
+      "description": "A score-card block inside the article drawer: hair top rule, 13px/500 block title, tl;dr, takeaways, bare tags joined by dots.",
+      "html": "<aside class=\"ds-drawer\"><div class=\"ds-drawer-head\"><span class=\"ds-drawer-date\">12 Sep 2026</span><button class=\"ds-drawer-close\" aria-label=\"Close article\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" aria-hidden=\"true\"><path d=\"M6 6l12 12M18 6L6 18\"/></svg></button></div><h2 class=\"ds-drawer-title\">Claude for Teachers is now a free Enterprise offering</h2><section class=\"ds-dblock\"><h3 class=\"ds-dblock-title\">What it says</h3><p class=\"ds-score-tldr\">K-12 districts in the U.S. can now run Claude for Teachers at no cost, with admin controls and data protections.</p><ul class=\"ds-score-takeaways\"><li>Free tier scoped to educators, not students.</li><li>Rollout starts with districts already on Google Workspace.</li></ul><p class=\"ds-drawer-tags\"><span class=\"ds-tag\">education</span><span class=\"ds-tag\">enterprise</span></p></section></aside>",
+      "css": ".ds-drawer { width: 400px; max-width: 100%; background: var(--plane, #F6F6E9); color: var(--ink, #194D49); border-left: 1px solid var(--hair-2, #D6D9BC); box-shadow: 0 18px 40px -18px rgba(25,77,73,.28), 0 2px 10px -4px rgba(25,77,73,.14); padding: 20px 28px 48px; display: flex; flex-direction: column; gap: 26px; font-family: 'Google Sans Flex', system-ui, sans-serif; } .ds-drawer-head { display: flex; align-items: center; justify-content: space-between; } .ds-drawer-date { font-size: 13px; color: var(--ink-2, #3E655F); } .ds-drawer-close { width: 32px; height: 32px; border-radius: 6px; border: 0; background: transparent; color: var(--ink-2, #3E655F); display: grid; place-items: center; cursor: pointer; transition: background-color .15s ease, color .15s ease; } .ds-drawer-close:hover { background: var(--ground, #EEEFCF); color: var(--ink, #194D49); } .ds-drawer-close:focus-visible { outline: 2px solid var(--aqua-400, #52A88D); outline-offset: 2px; } .ds-drawer-title { font-size: 24px; font-weight: 500; line-height: 1.25; letter-spacing: -0.012em; margin: -8px 0 0; text-wrap: balance; } .ds-dblock { border-top: 1px solid var(--hair, #C3CBB4); padding-top: 14px; } .ds-dblock-title { font-size: 13px; font-weight: 500; color: var(--ink-2, #3E655F); margin: 0 0 10px; } .ds-score-tldr { font-size: 16px; line-height: 1.55; margin: 0 0 12px; text-wrap: pretty; } .ds-score-takeaways { list-style: disc; margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 14.5px; line-height: 1.5; } .ds-score-takeaways li::marker { color: var(--ink-2, #3E655F); } .ds-drawer-tags { display: flex; flex-wrap: wrap; gap: 4px 6px; margin: 12px 0 0; font-size: 13px; color: var(--ink-2, #3E655F); } .ds-tag + .ds-tag::before { content: \"· \"; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Score Follower",
+    "overview": "The tutor is a companion that reads to you, and the page is the score it follows. One luminous object, the orb, is the agent: it waits centre stage on the welcome, leaves the reading column when the first answer begins, drifts to its home at the foot, and can be dragged anywhere on the plane. Everything else is text set in one face on one light ground, ruled by hairlines. Beside every answer runs a sentence track in the margin: a hairline rule with a chapter tick per sentence, a peach playhead that walks it while the voice reads, and sage ticks where the read measures settle. That track is the proof that the voice and the text are one document.\n\nThe surface is quiet by count, not by volume. There are no bubbles, no avatars per turn, no composer bar owning the foot, no card stacks, no frosted glass, no blur on surfaces, no grey. The palette (teal → aqua → sage → lime → glow → peach) exists in full in exactly one place, soft-focus inside the orb; the rest of the page borrows single stops for meaning only: peach for the playhead, sage for what has been read, aqua for liveness and focus. Density is a reading column: 700px max, 17px/1.6 body, 44px between turns.\n\nConfirmed rejections: the chat-app arrangement (bubbles, per-turn avatars, a foot-owning composer bar, a floating mic widget); frosted glass and backdrop blur; blue-tinted or hard shadows; card stacks; 4-hue category colours; uppercase labels and monospace.",
+    "keyCharacteristics": [
+      "One family (Google Sans Flex, optical sizing on), one ground, one ink; every secondary tone is mixed from ink and ground in OKLAB.",
+      "Hairlines rule everything: rail, KB rows, quick questions, source list, drawer blocks, the composer, the sentence track.",
+      "The orb is the only circle, the only object with the full gradient, the only object with the sparkle, and the only thing that moves on its own.",
+      "Flat surfaces; the single shadow is the teal-tinted lift under the article drawer.",
+      "Small radii (6px, 10px); the rest of the geometry is straight rules.",
+      "Motion is one gated grammar: orb drift 400ms ease-out-quart on transform only, playhead step 200ms by colour, drawer and KB 250ms; reduced motion leaves 4 still orb poses."
+    ],
+    "rules": [
+      { "name": "The One Object Rule", "body": "The full teal → aqua → sage → lime → glow → peach gradient appears on exactly one object: the orb. No background, button, border or text may carry it, in part or in whole.", "section": "colors" },
+      { "name": "The Borrowed Stop Rule", "body": "Outside the orb a palette stop is used only to mean something: peach = the playhead, sage = read, aqua = live/focus. A stop never decorates.", "section": "colors" },
+      { "name": "The No-Grey Rule", "body": "Every secondary tone is color-mix(in oklab, ink, ground). There is no grey, no #000, and (except the orb's speaking sparkle) no pure white anywhere.", "section": "colors" },
+      { "name": "The One Face Rule", "body": "Google Sans Flex is the only family. No serif, no mono, no icon font; a second face is a defect.", "section": "typography" },
+      { "name": "The Two Weights Rule", "body": "400 for reading, 500 for controls and headings. 600 exists only for inline strong inside an answer.", "section": "typography" },
+      { "name": "The No Kicker Rule", "body": "No uppercase, tracked or eyebrow labels anywhere. A smaller size in the same face and one ink step lighter is the whole meta grammar.", "section": "typography" },
+      { "name": "The One Lift Rule", "body": "The drawer is the only surface with a drop shadow. Any other box-shadow is either a 1px inset stroke or a focus ring; a new lift is a defect.", "section": "elevation" },
+      { "name": "The Teal-Tint Rule", "body": "Where a shadow or scrim exists it is mixed from teal-900, never black, never blue.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do set every surface on the ground (#EEEFCF) or the plane (ground 58% → white) and separate with 1px hairlines mixed from ink; hair-2 (11%) structural, hair (20%) emphatic.",
+      "Do keep the full gradient, the sparkle at its warm core, and every circle inside the orb; borrow single stops elsewhere only for meaning (peach playhead, sage read, aqua live/focus).",
+      "Do use Google Sans Flex at 400 for reading and 500 for controls, with negative tracking that grows with size (-0.002em → -0.015em), and keep meta in the same face at 12–13px in ink-2.",
+      "Do keep body ink at ≥4.5:1: ink for text, ink-2 for secondary text, accent-ink for small links and \"on\" states; ink-3 and ink-4 only for ghosts, disabled and decoration.",
+      "Do gate every transition and animation behind prefers-reduced-motion: no-preference, move the orb on transform only (400ms cubic-bezier(0.25, 1, 0.5, 1)), step the playhead by colour in 200ms, and slide the drawer and KB in 250ms.",
+      "Do draw a missing state in place (ghost rows, skeleton blocks, the dashed Impact passage, the hero placeholder mark) rather than leaving a blank.",
+      "Do round controls at 6px and containers at 10px; leave rows, lists, the composer and the drawer square."
+    ],
+    "donts": [
+      "Don't add a chat-app arrangement: no bubbles, no per-turn avatar, no composer bar owning the foot, no floating mic widget — the user's question is a ruled heading and the composer is one ruled line.",
+      "Don't use grey, black, blue-tinted shadows, frosted glass or backdrop blur anywhere; the scrim and the drawer lift are teal-900 at low alpha.",
+      "Don't add a second shadow, a card, a filled primary button, a pill or a bordered box; the drawer lift is the only lift.",
+      "Don't put the gradient on backgrounds, text, borders or buttons, and don't draw another circle: the orb is the only object with either.",
+      "Don't set anything uppercase, tracked-out, in a second family or in monospace; don't add kickers or eyebrow labels.",
+      "Don't re-render the answer to highlight it; toggle classes on the stable [data-s] spans and move follow-scroll only on sentence change.",
+      "Don't reintroduce category colours or a 4-hue tag system; tags are bare text joined by \" · \"."
+    ]
+  }
+}

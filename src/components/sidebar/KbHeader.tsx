@@ -1,4 +1,4 @@
-// Knowledge-base header: title, refresh button, live dot + source count.
+// Knowledge-base header: title, liveness (live dot + source count), refresh.
 
 import { RefreshIcon } from '../icons';
 
@@ -25,10 +25,12 @@ export default function KbHeader({ count, loading, onRefresh }: KbHeaderProps) {
       </div>
       <div className="kb-meta">
         <span className="kb-live">
-          <span className="live-dot" />
-          Live
+          <span className="live-dot" aria-hidden="true" />
+          {loading ? 'Refreshing' : 'Live'}
         </span>
-        <span className="kb-mono">{count} sources</span>
+        <span className="kb-count">
+          {count === 0 && loading ? '…' : `${count} ${count === 1 ? 'source' : 'sources'}`}
+        </span>
       </div>
     </div>
   );

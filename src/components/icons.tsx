@@ -1,4 +1,4 @@
-// Inline SVG icon glyphs reconstructed from the mockup.
+// Inline SVG icon glyphs, one stroke weight throughout.
 // All are decorative (aria-hidden); accessibility lives on the wrapping button.
 
 import type { SVGProps } from 'react';
@@ -11,7 +11,7 @@ const base = (size: number): IconProps => ({
   viewBox: '0 0 24 24',
   fill: 'none',
   stroke: 'currentColor',
-  strokeWidth: 1.8,
+  strokeWidth: 1.6,
   strokeLinecap: 'round' as const,
   strokeLinejoin: 'round' as const,
   'aria-hidden': true,
@@ -26,13 +26,20 @@ export function RefreshIcon({ size = 14, ...rest }: IconProps & { size?: number 
   );
 }
 
-export function MicIcon({ size = 18, ...rest }: IconProps & { size?: number }) {
+export function PlusIcon({ size = 18, ...rest }: IconProps & { size?: number }) {
   return (
     <svg {...base(size)} {...rest}>
-      <rect x="9" y="2" width="6" height="12" rx="3" />
-      <path d="M5 10a7 7 0 0 0 14 0" />
-      <path d="M12 17v4" />
-      <path d="M8 21h8" />
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
+    </svg>
+  );
+}
+
+export function KeyboardIcon({ size = 18, ...rest }: IconProps & { size?: number }) {
+  return (
+    <svg {...base(size)} {...rest}>
+      <rect x="3" y="6" width="18" height="12" rx="2" />
+      <path d="M7 10h.01M11 10h.01M15 10h.01M7 14h10" />
     </svg>
   );
 }
@@ -40,7 +47,8 @@ export function MicIcon({ size = 18, ...rest }: IconProps & { size?: number }) {
 export function SendIcon({ size = 18, ...rest }: IconProps & { size?: number }) {
   return (
     <svg {...base(size)} {...rest}>
-      <path d="M4 12l16-8-6 16-3-7-7-1z" />
+      <path d="M5 12h14" />
+      <path d="M13 6l6 6-6 6" />
     </svg>
   );
 }
