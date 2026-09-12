@@ -293,6 +293,9 @@ p { margin: 0; }
   text-wrap: pretty;
 }
 .ai-para strong { font-weight: 600; }
+/* Tailwind's preflight strips list markers; the answer contract has real lists. */
+ul.ai-list { list-style: disc; }
+ol.ai-list { list-style: decimal; }
 .ai-list { margin: 0 0 14px; padding-left: 22px; font-size: 17px; line-height: 1.6; max-width: 66ch; }
 .ai-list-item { margin-bottom: 6px; }
 .ai-list-item:last-child { margin-bottom: 0; }
@@ -540,7 +543,7 @@ p { margin: 0; }
 .dblock-title { font-size: 13px; font-weight: 500; color: var(--ink-2); margin: 0 0 10px; }
 .score-card { display: flex; flex-direction: column; gap: 26px; }
 .score-tldr { font-size: 16px; line-height: 1.55; margin: 0 0 12px; text-wrap: pretty; }
-.score-takeaways { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 14.5px; line-height: 1.5; }
+.score-takeaways { list-style: disc; margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 14.5px; line-height: 1.5; }
 .score-takeaways li::marker { color: var(--ink-2); }
 .score-why { font-size: 15px; line-height: 1.55; }
 .drawer-tags { display: flex; flex-wrap: wrap; gap: 4px 6px; margin-top: 12px; font-size: 13px; color: var(--ink-2); }
