@@ -675,7 +675,7 @@ p { margin: 0; }
 
   /* The orb's mobile home is bottom-right (decision 3): the slot moves to the
      end of the foot row, after the text line when that is showing. */
-  .foot { padding: 6px 16px calc(12px + env(safe-area-inset-bottom) + var(--kb-inset, 0px)) 16px; gap: 4px 12px; justify-content: flex-end; }
+  .foot { padding: 6px 16px calc(12px + env(safe-area-inset-bottom) + var(--kb-inset, 0px)) 16px; gap: 10px 12px; justify-content: flex-end; }
   .foot-slot { order: 2; }
   .foot-note { order: 3; }
   .composer-ta { font-size: 15px; }
