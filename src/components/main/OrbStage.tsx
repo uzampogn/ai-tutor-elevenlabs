@@ -134,8 +134,9 @@ export default function OrbStage({
       y = clamp(placed.y, edge, Math.max(edge, pr.height - size - edge));
     } else {
       const anchor = plane.querySelector<HTMLElement>(`[data-orb-anchor="${pose}"]`);
-      if (anchor) {
-        const ar = anchor.getBoundingClientRect();
+      const ar = anchor?.getBoundingClientRect();
+      // A slot that has not laid out yet (zero box) is no anchor.
+      if (ar && ar.width > 0 && ar.height > 0) {
         x = ar.left - pr.left + (ar.width - size) / 2;
         y = ar.top - pr.top + (ar.height - size) / 2;
       } else {
@@ -241,7 +242,9 @@ export default function OrbStage({
   actRef.current = { toggle, sendNow };
 
   function activate() {
-    if (suppressClickRef.current) return;
+    // Thinking is a pose, not a disabled control: the orb stays focusable and
+    // simply ignores taps until the answer lands.
+    if (suppressClickRef.current || isLoading) return;
     if (listening) actRef.current.sendNow();
     else actRef.current.toggle();
   }
@@ -310,7 +313,7 @@ export default function OrbStage({
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerCancel}
         >
-          <Orb state={orbState} onClick={activate} disabled={isLoading || !supported} />
+          <Orb state={orbState} onClick={activate} disabled={!supported} />
         </div>
       )}
       {box && caption !== null && (

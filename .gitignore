@@ -41,3 +41,10 @@ eval/last-run.json
 *.db
 .beads-credential-key
 .beads/proxieddb/
+
+# Impeccable — local session state (the surface briefs, design sidecar and review captures are committed)
+.impeccable/hook.cache.json
+.impeccable/questions/
+.impeccable/live/
+.impeccable/review/dev.log
+.impeccable/review/detect.txt

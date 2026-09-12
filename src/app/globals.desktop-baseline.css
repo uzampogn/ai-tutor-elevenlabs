@@ -140,7 +140,7 @@ p { margin: 0; }
 /* ── knowledge base ────────────────────────────────────────────────────── */
 .sidebar {
   border-right: 1px solid var(--hair-2);
-  background: var(--ground);
+  background: var(--plane);
   display: flex; flex-direction: column;
   min-height: 0; min-width: 0;
   overflow: hidden;
@@ -170,7 +170,7 @@ p { margin: 0; }
 .kb-meta { display: flex; align-items: center; gap: 6px; margin-top: 5px; font-size: 12.5px; color: var(--ink-2); }
 .kb-live { display: inline-flex; align-items: center; gap: 6px; }
 .kb-count::before { content: "· "; }
-.live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--aqua-400); }
+.live-dot { width: 8px; height: 2px; border-radius: 1px; background: var(--aqua-400); }
 
 .kb-list { overflow-y: auto; flex: 1; min-height: 0; padding: 0 0 24px; }
 .kb-row {
@@ -204,7 +204,7 @@ p { margin: 0; }
 .thread {
   max-width: var(--content-max);
   margin: 0 auto;
-  padding: 44px 24px 32px calc(24px + var(--track));
+  padding: 44px 24px 72px calc(24px + var(--track));
 }
 /* Welcome only: the block is centred vertically in the plane. Auto margins
    collapse to 0 when the content is taller than the viewport, so a tall
@@ -281,8 +281,8 @@ p { margin: 0; }
   height: 24px; margin-bottom: 8px;
   font-size: 14px; color: var(--ink-2);
 }
-.thinking-dots { display: inline-flex; gap: 4px; align-items: center; }
-.thinking-dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--aqua-400); opacity: .35; }
+.thinking-dots { display: inline-flex; gap: 3px; align-items: center; }
+.thinking-dots i { width: 2px; height: 10px; border-radius: 1px; background: var(--aqua-400); opacity: .35; }
 .thinking-dots i:nth-child(2) { animation-delay: .2s; }
 .thinking-dots i:nth-child(3) { animation-delay: .4s; }
 @keyframes blink { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
@@ -356,17 +356,15 @@ p { margin: 0; }
 
 /* ── foot: the orb's home and the text fallback ────────────────────────── */
 .foot {
-  position: relative; flex: none;
+  flex: none;
   width: 100%; max-width: var(--content-max);
   margin: 0 auto;
-  padding: 8px 24px 26px calc(24px + var(--track));
-  display: flex; align-items: center; gap: 16px;
+  padding: 8px 24px 14px calc(24px + var(--track));
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px;
 }
 .foot-slot { width: var(--orb-home); height: var(--orb-home); flex: none; }
-.foot-note {
-  position: absolute; left: calc(24px + var(--track)); bottom: 6px;
-  font-size: 12px; color: var(--ink-2);
-}
+/* the grounding note sits in flow under the row, never under the orb */
+.foot-note { flex-basis: 100%; font-size: 12px; line-height: 1.4; color: var(--ink-2); }
 /* The text fallback: a single ruled line with the orb as its mic. */
 .composer {
   flex: 1; min-width: 0;

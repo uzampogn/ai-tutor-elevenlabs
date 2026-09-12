@@ -124,9 +124,13 @@ describe('OrbStage — tap and keyboard', () => {
     ta.remove();
   });
 
-  it('orb is disabled while isLoading', () => {
-    renderStage({ isLoading: true });
-    expect(screen.getByRole('button', { name: 'Thinking…' })).toBeDisabled();
+  it('the orb ignores taps while thinking but stays enabled (thinking is a pose, not voice-off)', async () => {
+    const user = userEvent.setup();
+    const { props } = renderStage({ isLoading: true });
+    const orb = screen.getByRole('button', { name: 'Thinking…' });
+    expect(orb).toBeEnabled();
+    await user.click(orb);
+    expect(props.setListening).not.toHaveBeenCalled();
   });
 });
 
